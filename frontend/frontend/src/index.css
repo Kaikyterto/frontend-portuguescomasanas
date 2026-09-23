@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Estilização da barra de rolagem Neo-brutalista */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 12px; /* Largura da barra vertical */
+}
+
+/* O fundo da barra (Track) */
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f4efe6; /* Mesmo tom bege dos cards */
+  border-left: 2px solid #000000; /* Linha preta marcando a divisão */
+  border-radius: 4px;
+}
+
+/* O indicador de rolagem (Thumb) */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #22d3ee; /* Cor Cyan-400 combinando com os botões e barras de progresso */
+  border: 2px solid #000000; /* Borda preta em volta do indicador */
+  border-radius: 4px;
+}
+
+/* Efeito ao passar o mouse no indicador */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4; /* Escurece levemente o cyan ao passar o mouse */
+  cursor: grab;
+}
