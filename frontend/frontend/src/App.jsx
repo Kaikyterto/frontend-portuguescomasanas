@@ -7,7 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import TermsPage from "./pages/TermsPage";
 import StudentsPage from "./pages/StudentsPage";
-import CursePage from "./pages/CursePage"; // Ou CoursePage, mantendo o nome do seu import
+import CursePage from "./pages/CursePage";
 
 export default function App() {
   return (
