@@ -63,6 +63,9 @@ export default function StudentsPage() {
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [selectedUserToEnroll, setSelectedUserToEnroll] = useState("");
 
+  // Estado para bloquear cliques múltiplos no botão de matricular
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     type: "success",
@@ -189,7 +192,6 @@ export default function StudentsPage() {
     setLoadingStudentDetails(true);
 
     try {
-      // Chamada otimizada direto para o endpoint específico do backend
       const respostasAluno = await listarRespostasPorAluno(studentId, token);
 
       const totalRespondidas = respostasAluno.length;
@@ -231,9 +233,10 @@ export default function StudentsPage() {
 
   const handleEnrollStudent = async (e) => {
     e.preventDefault();
-    if (!selectedUserToEnroll || !selectedCourse) return;
+    if (!selectedUserToEnroll || !selectedCourse || isEnrolling) return;
 
     const courseId = selectedCourse.id || selectedCourse._id;
+    setIsEnrolling(true);
 
     try {
       await cursoService.matricular(courseId, selectedUserToEnroll, token);
@@ -256,6 +259,8 @@ export default function StudentsPage() {
         type: "error",
         message: error.message || "Erro ao matricular aluno.",
       });
+    } finally {
+      setIsEnrolling(false);
     }
   };
 
@@ -628,7 +633,8 @@ export default function StudentsPage() {
                 </h3>
                 <button
                   onClick={() => setIsEnrollModalOpen(false)}
-                  className="bg-white border-2 border-black rounded-lg px-2 py-0.5 text-xs font-black"
+                  disabled={isEnrolling}
+                  className="bg-white border-2 border-black rounded-lg px-2 py-0.5 text-xs font-black disabled:opacity-50"
                 >
                   X
                 </button>
@@ -643,7 +649,8 @@ export default function StudentsPage() {
                     value={selectedUserToEnroll}
                     onChange={(e) => setSelectedUserToEnroll(e.target.value)}
                     required
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none text-sm cursor-pointer"
+                    disabled={isEnrolling}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none text-sm cursor-pointer disabled:opacity-50"
                   >
                     <option value="" disabled>
                       Escolha um usuário...
@@ -662,14 +669,16 @@ export default function StudentsPage() {
                 <div className="flex gap-2 pt-2">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#00D2DF] text-black border-2 border-black rounded-xl py-2.5 text-xs font-black shadow-[3px_3px_0_black]"
+                    disabled={isEnrolling}
+                    className="flex-1 bg-[#00D2DF] text-black border-2 border-black rounded-xl py-2.5 text-xs font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed transition"
                   >
-                    Confirmar
+                    {isEnrolling ? "Matriculando..." : "Confirmar"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEnrollModalOpen(false)}
-                    className="bg-white text-black border-2 border-black rounded-xl px-3 py-2.5 text-xs font-black shadow-[3px_3px_0_black]"
+                    disabled={isEnrolling}
+                    className="bg-white text-black border-2 border-black rounded-xl px-3 py-2.5 text-xs font-black shadow-[3px_3px_0_black] disabled:opacity-50"
                   >
                     Cancelar
                   </button>

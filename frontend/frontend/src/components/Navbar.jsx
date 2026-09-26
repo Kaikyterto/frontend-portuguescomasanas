@@ -1,9 +1,12 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import Logo from "../assets/logo-sem-fundo.png";
 
 export default function Navbar({ links = [], usuario }) {
   const nomeUsuario = usuario?.nome || "Estudante";
   const location = useLocation();
+
+  // Verifica se o usuário é administrador (ajuste conforme a propriedade real do seu backend, ex: role === 'ADMIN' ou isAdmin === true)
+  const isAdmin = usuario?.perfil === "ADMIN" || usuario?.perfi === "admin";
 
   return (
     <nav
@@ -49,7 +52,6 @@ export default function Navbar({ links = [], usuario }) {
         "
         >
           {links.map((link, index) => {
-            // Verifica se o href do link corresponde à URL atual
             const isActive = location.pathname === link.href;
 
             return (
@@ -60,9 +62,7 @@ export default function Navbar({ links = [], usuario }) {
                 transition-all duration-150
                 hover:text-black hover:translate-y-[-1px]
                 ${
-                  isActive
-                    ? "border-b-2 border-black pb-0.5" // Aplica a listra se estiver ativo
-                    : "text-slate-600"
+                  isActive ? "border-b-2 border-black pb-0.5" : "text-slate-600"
                 }
                 `}
               >
@@ -72,7 +72,17 @@ export default function Navbar({ links = [], usuario }) {
           })}
         </div>
 
-        <div className="flex items-center">
+        {/* ÁREA DO USUÁRIO E BOTÃO ADMIN */}
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="bg-[#FFD700] text-black text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#ffde21] transition"
+            >
+              Painel Admin
+            </Link>
+          )}
+
           <div className="flex items-center gap-2.5 bg-white border border-black rounded-lg px-3.5 py-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 border border-black shrink-0" />
             <span className="text-xs font-black tracking-widest text-black uppercase max-w-[140px] sm:max-w-[185px] truncate block">

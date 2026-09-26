@@ -17,6 +17,14 @@ export default function ContentsPage() {
   // Estado para armazenar o usuário logado
   const [usuario, setUsuario] = useState(null);
 
+  // Estados de Carregamento (Loading States) para evitar cliques múltiplos por formulário/ação
+  const [isSubmittingCourse, setIsSubmittingCourse] = useState(false);
+  const [isSubmittingVideo, setIsSubmittingVideo] = useState(false);
+  const [isSubmittingAssunto, setIsSubmittingAssunto] = useState(false);
+  const [isSubmittingBanca, setIsSubmittingBanca] = useState(false);
+  const [isSubmittingModulo, setIsSubmittingModulo] = useState(false);
+  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
+
   // Estados de Alerta Personalizado
   const [alertConfig, setAlertConfig] = useState({
     isOpen: false,
@@ -148,6 +156,8 @@ export default function ContentsPage() {
   // Cadastrar nova aula/vídeo vinculada ao módulo selecionado
   const handleCreateVideoAula = async (e) => {
     e.preventDefault();
+    if (isSubmittingVideo) return;
+
     if (
       !selectedCursoForVideo ||
       !selectedModuloForVideo ||
@@ -160,6 +170,7 @@ export default function ContentsPage() {
       return;
     }
 
+    setIsSubmittingVideo(true);
     try {
       const payload = {
         youtubeUrlOuId: youtubeUrlOuId.trim(),
@@ -174,15 +185,21 @@ export default function ContentsPage() {
       setModulosDisponiveisParaVideo([]);
     } catch (error) {
       showAlert(`Erro ao cadastrar aula: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingVideo(false);
     }
   };
 
   const handleSaveAssunto = async (e) => {
     e.preventDefault();
+    if (isSubmittingAssunto) return;
+
     if (!assuntoNome.trim()) {
       showAlert("Digite o nome do assunto.", "error");
       return;
     }
+
+    setIsSubmittingAssunto(true);
     try {
       const payload = {
         nome: assuntoNome.trim(),
@@ -204,6 +221,8 @@ export default function ContentsPage() {
       fetchData();
     } catch (error) {
       showAlert(`Erro ao salvar assunto: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingAssunto(false);
     }
   };
 
@@ -228,10 +247,14 @@ export default function ContentsPage() {
 
   const handleSaveBanca = async (e) => {
     e.preventDefault();
+    if (isSubmittingBanca) return;
+
     if (!bancaNome.trim()) {
       showAlert("Digite o nome da banca.", "error");
       return;
     }
+
+    setIsSubmittingBanca(true);
     try {
       if (editingBancaId) {
         await bancaService.atualizar(
@@ -250,6 +273,8 @@ export default function ContentsPage() {
       fetchData();
     } catch (error) {
       showAlert(`Erro ao salvar banca: ${error.message}`, "error");
+    } finally {
+      setIsSubmittingBanca(false);
     }
   };
 
@@ -273,11 +298,14 @@ export default function ContentsPage() {
 
   const handleCreateModule = async (e) => {
     e.preventDefault();
+    if (isSubmittingCourse) return;
+
     if (!newModuleTitle || !newModuleDescription) {
       showAlert("Por favor, preencha o nome e a descrição do curso!", "error");
       return;
     }
 
+    setIsSubmittingCourse(true);
     try {
       const cursoData = {
         nome: newModuleTitle.trim(),
@@ -293,6 +321,8 @@ export default function ContentsPage() {
       fetchData();
     } catch (error) {
       showAlert(`Erro ao criar curso: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingCourse(false);
     }
   };
 
@@ -325,11 +355,14 @@ export default function ContentsPage() {
 
   const handleSaveModulo = async (e) => {
     e.preventDefault();
+    if (isSubmittingModulo) return;
+
     if (!moduloTitulo.trim() || !selectedCursoForModulo) {
       showAlert("Preencha o título do módulo.", "error");
       return;
     }
 
+    setIsSubmittingModulo(true);
     try {
       const payload = {
         titulo: moduloTitulo.trim(),
@@ -361,6 +394,8 @@ export default function ContentsPage() {
       await carregarModulosDoCurso(selectedCursoForModulo.id);
     } catch (error) {
       showAlert(`Erro ao salvar módulo: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingModulo(false);
     }
   };
 
@@ -389,6 +424,7 @@ export default function ContentsPage() {
 
   const handleSaveQuestion = async (e) => {
     e.preventDefault();
+    if (isSubmittingQuestion) return;
 
     if (!token) {
       showAlert(
@@ -428,6 +464,7 @@ export default function ContentsPage() {
       })),
     };
 
+    setIsSubmittingQuestion(true);
     try {
       if (editingQuestionId) {
         await questaoService.atualizar(editingQuestionId, questaoData, token);
@@ -441,6 +478,8 @@ export default function ContentsPage() {
       fetchData();
     } catch (error) {
       showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingQuestion(false);
     }
   };
 
@@ -540,7 +579,8 @@ export default function ContentsPage() {
                 </h3>
                 <button
                   onClick={() => setShowAssuntoModal(false)}
-                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
+                  disabled={isSubmittingAssunto}
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50"
                 >
                   ✕
                 </button>
@@ -555,8 +595,9 @@ export default function ContentsPage() {
                     type="text"
                     placeholder="Ex: Sintaxe"
                     value={assuntoNome}
+                    disabled={isSubmittingAssunto}
                     onChange={(e) => setAssuntoNome(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -567,28 +608,33 @@ export default function ContentsPage() {
                     type="text"
                     placeholder="Ex: Estudo da estrutura das frases"
                     value={assuntoDescricao}
+                    disabled={isSubmittingAssunto}
                     onChange={(e) => setAssuntoDescricao(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white disabled:opacity-50"
                   />
                 </div>
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black]"
+                    disabled={isSubmittingAssunto}
+                    className="flex-1 bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {editingAssuntoId
+                    {isSubmittingAssunto
+                      ? "Salvando..."
+                      : editingAssuntoId
                       ? "Atualizar Assunto"
                       : "Cadastrar Assunto"}
                   </button>
                   {editingAssuntoId && (
                     <button
                       type="button"
+                      disabled={isSubmittingAssunto}
                       onClick={() => {
                         setEditingAssuntoId(null);
                         setAssuntoNome("");
                         setAssuntoDescricao("");
                       }}
-                      className="bg-slate-200 border-2 border-black rounded-xl px-4 py-3 font-black"
+                      className="bg-slate-200 border-2 border-black rounded-xl px-4 py-3 font-black disabled:opacity-50"
                     >
                       Cancelar
                     </button>
@@ -647,7 +693,8 @@ export default function ContentsPage() {
                 </h3>
                 <button
                   onClick={() => setShowBancaModal(false)}
-                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
+                  disabled={isSubmittingBanca}
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50"
                 >
                   ✕
                 </button>
@@ -662,25 +709,32 @@ export default function ContentsPage() {
                     type="text"
                     placeholder="Ex: CESPE / CEBRASPE"
                     value={bancaNome}
+                    disabled={isSubmittingBanca}
                     onChange={(e) => setBancaNome(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white disabled:opacity-50"
                   />
                 </div>
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black]"
+                    disabled={isSubmittingBanca}
+                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {editingBancaId ? "Atualizar Banca" : "Cadastrar Banca"}
+                    {isSubmittingBanca
+                      ? "Salvando..."
+                      : editingBancaId
+                      ? "Atualizar Banca"
+                      : "Cadastrar Banca"}
                   </button>
                   {editingBancaId && (
                     <button
                       type="button"
+                      disabled={isSubmittingBanca}
                       onClick={() => {
                         setEditingBancaId(null);
                         setBancaNome("");
                       }}
-                      className="bg-slate-200 border-2 border-black rounded-xl px-4 py-3 font-black"
+                      className="bg-slate-200 border-2 border-black rounded-xl px-4 py-3 font-black disabled:opacity-50"
                     >
                       Cancelar
                     </button>
@@ -745,7 +799,8 @@ export default function ContentsPage() {
                 </div>
                 <button
                   onClick={() => setShowModuloModal(false)}
-                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
+                  disabled={isSubmittingModulo}
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50"
                 >
                   ✕
                 </button>
@@ -766,8 +821,9 @@ export default function ContentsPage() {
                     type="text"
                     placeholder="Ex: Introdução à Gramática"
                     value={moduloTitulo}
+                    disabled={isSubmittingModulo}
                     onChange={(e) => setModuloTitulo(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-slate-50"
+                    className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-slate-50 disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -778,8 +834,9 @@ export default function ContentsPage() {
                     type="text"
                     placeholder="Ex: Conceitos fundamentais"
                     value={moduloDescricao}
+                    disabled={isSubmittingModulo}
                     onChange={(e) => setModuloDescricao(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-slate-50"
+                    className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-slate-50 disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -789,27 +846,34 @@ export default function ContentsPage() {
                   <input
                     type="number"
                     value={moduloOrdem}
+                    disabled={isSubmittingModulo}
                     onChange={(e) => setModuloOrdem(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-slate-50"
+                    className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-slate-50 disabled:opacity-50"
                   />
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl py-2 font-black shadow-[2px_2px_0_black]"
+                    disabled={isSubmittingModulo}
+                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl py-2 font-black shadow-[2px_2px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {editingModuloId ? "Atualizar Módulo" : "Salvar Módulo"}
+                    {isSubmittingModulo
+                      ? "Salvando..."
+                      : editingModuloId
+                      ? "Atualizar Módulo"
+                      : "Salvar Módulo"}
                   </button>
                   {editingModuloId && (
                     <button
                       type="button"
+                      disabled={isSubmittingModulo}
                       onClick={() => {
                         setEditingModuloId(null);
                         setModuloTitulo("");
                         setModuloDescricao("");
                         setModuloOrdem(1);
                       }}
-                      className="bg-slate-200 border-2 border-black rounded-xl px-3 py-2 font-black text-sm"
+                      className="bg-slate-200 border-2 border-black rounded-xl px-3 py-2 font-black text-sm disabled:opacity-50"
                     >
                       Cancelar
                     </button>
@@ -871,7 +935,8 @@ export default function ContentsPage() {
                 </h3>
                 <button
                   onClick={handleResetQuestionForm}
-                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
+                  disabled={isSubmittingQuestion}
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50"
                 >
                   ✕
                 </button>
@@ -885,8 +950,9 @@ export default function ContentsPage() {
                   <textarea
                     placeholder="Digite o enunciado completo da questão..."
                     value={questionStatement}
+                    disabled={isSubmittingQuestion}
                     onChange={(e) => setQuestionStatement(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold text-sm bg-white"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold text-sm bg-white disabled:opacity-50"
                     rows={4}
                   />
                 </div>
@@ -898,8 +964,9 @@ export default function ContentsPage() {
                     </label>
                     <select
                       value={questionAssuntoId}
+                      disabled={isSubmittingQuestion}
                       onChange={(e) => setQuestionAssuntoId(e.target.value)}
-                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     >
                       <option value="">Selecione o Assunto</option>
                       {assuntos.map((assunto) => (
@@ -918,8 +985,9 @@ export default function ContentsPage() {
                     </label>
                     <select
                       value={questionBancaId}
+                      disabled={isSubmittingQuestion}
                       onChange={(e) => setQuestionBancaId(e.target.value)}
-                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     >
                       <option value="">Selecione a Banca (Opcional)</option>
                       {bancas.map((banca) => (
@@ -935,8 +1003,9 @@ export default function ContentsPage() {
                     <input
                       type="number"
                       value={questionAno}
+                      disabled={isSubmittingQuestion}
                       onChange={(e) => setQuestionAno(e.target.value)}
-                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -948,8 +1017,9 @@ export default function ContentsPage() {
                     </label>
                     <select
                       value={questionNivel}
+                      disabled={isSubmittingQuestion}
                       onChange={(e) => setQuestionNivel(e.target.value)}
-                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     >
                       <option value="FACIL">Fácil</option>
                       <option value="MEDIO">Médio</option>
@@ -965,8 +1035,9 @@ export default function ContentsPage() {
                       type="text"
                       placeholder="Ex: Prova CESPE 2023"
                       value={questionFonte}
+                      disabled={isSubmittingQuestion}
                       onChange={(e) => setQuestionFonte(e.target.value)}
-                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     />
                   </div>
 
@@ -976,6 +1047,7 @@ export default function ContentsPage() {
                     </label>
                     <select
                       value={correctAnswer}
+                      disabled={isSubmittingQuestion}
                       onChange={(e) => {
                         const novaLetra = e.target.value;
                         setCorrectAnswer(novaLetra);
@@ -986,7 +1058,7 @@ export default function ContentsPage() {
                           }))
                         );
                       }}
-                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     >
                       <option value="A">Alternativa A</option>
                       <option value="B">Alternativa B</option>
@@ -1004,8 +1076,9 @@ export default function ContentsPage() {
                   <textarea
                     placeholder="Explicação detalhada da resolução..."
                     value={questionExplicacao}
+                    disabled={isSubmittingQuestion}
                     onChange={(e) => setQuestionExplicacao(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold text-sm bg-white"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold text-sm bg-white disabled:opacity-50"
                     rows={2}
                   />
                 </div>
@@ -1022,12 +1095,13 @@ export default function ContentsPage() {
                       <input
                         placeholder={`Texto da alternativa ${alt.letra}`}
                         value={alt.texto}
+                        disabled={isSubmittingQuestion}
                         onChange={(e) => {
                           const updated = [...alternatives];
                           updated[index].texto = e.target.value;
                           setAlternatives(updated);
                         }}
-                        className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-white"
+                        className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-white disabled:opacity-50"
                       />
                     </div>
                   ))}
@@ -1036,14 +1110,20 @@ export default function ContentsPage() {
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl px-6 py-3 font-black shadow-[3px_3px_0_black]"
+                    disabled={isSubmittingQuestion}
+                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl px-6 py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {editingQuestionId ? "ATUALIZAR QUESTÃO" : "SALVAR QUESTÃO"}
+                    {isSubmittingQuestion
+                      ? "SALVANDO..."
+                      : editingQuestionId
+                      ? "ATUALIZAR QUESTÃO"
+                      : "SALVAR QUESTÃO"}
                   </button>
                   <button
                     type="button"
+                    disabled={isSubmittingQuestion}
                     onClick={handleResetQuestionForm}
-                    className="bg-slate-200 border-2 border-black rounded-xl px-6 py-3 font-black"
+                    className="bg-slate-200 border-2 border-black rounded-xl px-6 py-3 font-black disabled:opacity-50"
                   >
                     CANCELAR
                   </button>
@@ -1117,8 +1197,9 @@ export default function ContentsPage() {
                     type="text"
                     placeholder="Ex: Português Avançado"
                     value={newModuleTitle}
+                    disabled={isSubmittingCourse}
                     onChange={(e) => setNewModuleTitle(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -1128,8 +1209,9 @@ export default function ContentsPage() {
                   <textarea
                     placeholder="Descrição detalhada do curso..."
                     value={newModuleDescription}
+                    disabled={isSubmittingCourse}
                     onChange={(e) => setNewModuleDescription(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     rows={3}
                   />
                 </div>
@@ -1142,15 +1224,17 @@ export default function ContentsPage() {
                     step="0.01"
                     placeholder="Ex: 199.90"
                     value={newModulePrice}
+                    disabled={isSubmittingCourse}
                     onChange={(e) => setNewModulePrice(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black]"
+                  disabled={isSubmittingCourse}
+                  className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Cadastrar Curso
+                  {isSubmittingCourse ? "Cadastrando..." : "Cadastrar Curso"}
                 </button>
               </form>
             </Card>
@@ -1167,8 +1251,9 @@ export default function ContentsPage() {
                   </label>
                   <select
                     value={selectedCursoForVideo}
+                    disabled={isSubmittingVideo}
                     onChange={(e) => handleCursoVideoChange(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   >
                     <option value="">Escolha o curso...</option>
                     {cursos.map((c) => (
@@ -1187,10 +1272,11 @@ export default function ContentsPage() {
                     value={selectedModuloForVideo}
                     onChange={(e) => setSelectedModuloForVideo(e.target.value)}
                     disabled={
+                      isSubmittingVideo ||
                       !selectedCursoForVideo ||
                       modulosDisponiveisParaVideo.length === 0
                     }
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:bg-slate-100"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:bg-slate-100 disabled:opacity-50"
                   >
                     <option value="">Escolha o módulo...</option>
                     {modulosDisponiveisParaVideo.map((m) => (
@@ -1209,16 +1295,20 @@ export default function ContentsPage() {
                     type="text"
                     placeholder="Ex: https://www.youtube.com/watch?v=..."
                     value={youtubeUrlOuId}
+                    disabled={isSubmittingVideo}
                     onChange={(e) => setYoutubeUrlOuId(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-[#00D2DF] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black]"
+                  disabled={isSubmittingVideo}
+                  className="w-full bg-[#00D2DF] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Cadastrar Aula em Vídeo
+                  {isSubmittingVideo
+                    ? "Cadastrando Aula..."
+                    : "Cadastrar Aula em Vídeo"}
                 </button>
               </form>
             </Card>

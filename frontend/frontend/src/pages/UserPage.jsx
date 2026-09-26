@@ -52,15 +52,6 @@ export default function UserPage() {
   // Estado para armazenar os cursos vindos da API
   const [cursos, setCursos] = useState([]);
 
-  const [currentModule] = useState({
-    id: 0,
-    title: "Módulo de Boas-vindas",
-    description:
-      "Evolua e avance no Português do Zero ao topo, do básico ao avançado.",
-    progress: 75,
-    comprado: true,
-  });
-
   // Função de Adquirir Curso com Integração Real ao Backend e Mercado Pago (Corrigida e Robusta)
   const handleAdquirirCurso = async (curso) => {
     const titulo = curso?.title || "o curso";
@@ -378,7 +369,7 @@ export default function UserPage() {
                     ? `Questão #${questaoSelecionada.id || "Detalhe"}`
                     : exibirBanco
                     ? `${questoes.length} Questões`
-                    : `${cursos.length + 1} Cursos`}
+                    : `${cursos.length} Cursos`}
                 </span>
               </div>
             </div>
@@ -567,34 +558,6 @@ export default function UserPage() {
                   )
                 ) : (
                   <>
-                    {/* MÓDULO EM ANDAMENTO */}
-                    <div className="bg-white/60 p-1.5 rounded-xl border border-dashed border-slate-400 flex flex-col gap-2">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-[#7B5CFA] px-2 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#7B5CFA] animate-pulse"></span>
-                          Em Andamento
-                        </div>
-                      </div>
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                        <div className="flex-1">
-                          <ModuleProgress
-                            currentModule={currentModule}
-                            onAdquirir={() =>
-                              handleAdquirirCurso(currentModule)
-                            }
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center my-1">
-                      <div className="flex-1 h-[1px] bg-slate-300"></div>
-                      <span className="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-widest">
-                        Cursos disponíveis
-                      </span>
-                      <div className="flex-1 h-[1px] bg-slate-300"></div>
-                    </div>
-
                     {/* Renderizando os cursos vindos da API dinamicamente com verificação de acesso limpa e correta */}
                     {cursos.length > 0 ? (
                       cursos.map((curso) => {
@@ -635,7 +598,7 @@ export default function UserPage() {
                         return (
                           <div
                             key={curso.id}
-                            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 rounded-xl border border-slate-300 bg-white/50 transition"
+                            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 rounded-xl border border-slate-300 bg-white/50 transition mb-2"
                           >
                             <div className="flex-1 relative">
                               {!temAcesso && (
@@ -655,7 +618,7 @@ export default function UserPage() {
                         );
                       })
                     ) : (
-                      <div className="text-center font-bold text-slate-600 py-6 text-xs">
+                      <div className="text-center font-bold text-slate-600 py-10 text-xs">
                         Nenhum curso cadastrado na API no momento.
                       </div>
                     )}
