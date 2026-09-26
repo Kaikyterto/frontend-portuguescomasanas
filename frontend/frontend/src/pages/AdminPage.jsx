@@ -4,6 +4,7 @@ import Card from "../components/Card";
 import { listar as listarQuestoes } from "../service/questao";
 import { listar as listarCursos } from "../service/curso";
 import { listar as listarUsuarios } from "../service/user";
+import { gravacaoService } from "../service/gravacao";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 
@@ -11,6 +12,13 @@ export default function AdminPage() {
   const [totalQuestoes, setTotalQuestoes] = useState(0);
   const [totalModulos, setTotalModulos] = useState(0);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
+  const [totalAulas, setTotalAulas] = useState(0);
+
+  // Estados para contadores de hoje
+  const [usuariosHoje, setUsuariosHoje] = useState(0);
+  const [aulasHoje, setAulasHoje] = useState(0);
+  const [questoesHoje, setQuestoesHoje] = useState(0);
+
   const [usuario, setUsuario] = useState(null);
   const [dadosCrescimento, setDadosCrescimento] = useState(Array(12).fill(0));
 
@@ -19,25 +27,47 @@ export default function AdminPage() {
       try {
         const token = localStorage.getItem("@PortuguessComAnas:token");
 
-        const [questoes, cursos, usuarios, dadosUsuario] = await Promise.all([
-          listarQuestoes(token),
-          listarCursos(token),
-          listarUsuarios(token),
-          buscarDadosUsuarioLogado(token),
-        ]);
+        const [questoes, cursos, usuarios, gravacoes, dadosUsuario] =
+          await Promise.all([
+            listarQuestoes(token),
+            listarCursos(token),
+            listarUsuarios(token),
+            gravacaoService.listar(token),
+            buscarDadosUsuarioLogado(token),
+          ]);
 
         setTotalQuestoes(questoes.length);
         setTotalModulos(cursos.length);
         setTotalUsuarios(usuarios.length);
+        setTotalAulas(gravacoes.length);
         setUsuario(dadosUsuario);
 
-        // Processa as datas de cadastro (created_at / createdAt) para montar o gráfico mensal
+        // Data de hoje zerando as horas para comparação exata de dia/mês/ano
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        // Função utilitária para verificar se uma data string é igual ao dia de hoje
+        const ehHoje = (dataStr) => {
+          if (!dataStr) return false;
+          const dataItem = new Date(dataStr);
+          if (isNaN(dataItem.getTime())) return false;
+          dataItem.setHours(0, 0, 0, 0);
+          return dataItem.getTime() === hoje.getTime();
+        };
+
+        // Filtros de Atividade de Hoje
+        let uHoje = 0;
+        let aHoje = 0;
+        let qHoje = 0;
+
+        // Processa as datas de cadastro para o gráfico mensal e contagem de hoje de usuários
         const contagemMeses = Array(12).fill(0);
 
         usuarios.forEach((user) => {
           const dataStr = user.created_at || user.createdAt || user.dataCriacao;
-          console.log(user);
-          console.log(dataStr);
+          if (ehHoje(dataStr)) {
+            uHoje++;
+          }
           if (dataStr) {
             const data = new Date(dataStr);
             if (!isNaN(data.getTime())) {
@@ -47,6 +77,30 @@ export default function AdminPage() {
           }
         });
 
+        // Contagem de aulas (gravações) criadas hoje
+        gravacoes.forEach((aula) => {
+          const dataStr =
+            aula.cadastradaEm ||
+            aula.created_at ||
+            aula.createdAt ||
+            aula.dataCriacao;
+          if (ehHoje(dataStr)) {
+            aHoje++;
+          }
+        });
+
+        // Contagem de questões criadas hoje
+        questoes.forEach((questao) => {
+          const dataStr =
+            questao.created_at || questao.createdAt || questao.dataCriacao;
+          if (ehHoje(dataStr)) {
+            qHoje++;
+          }
+        });
+
+        setUsuariosHoje(uHoje);
+        setAulasHoje(aHoje);
+        setQuestoesHoje(qHoje);
         setDadosCrescimento(contagemMeses);
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
@@ -67,7 +121,11 @@ export default function AdminPage() {
       title: "Cursos",
       value: totalModulos.toLocaleString("pt-BR"),
     },
-    { icon: "🎬", title: "Aulas", value: "180" },
+    {
+      icon: "🎬",
+      title: "Aulas",
+      value: totalAulas.toLocaleString("pt-BR"),
+    },
     {
       icon: "❓",
       title: "Questões",
@@ -90,9 +148,8 @@ export default function AdminPage() {
     "Dez",
   ];
 
-  // Calcula a altura máxima proporcional para as barras do gráfico (evita estouro visual caso haja muitos alunos)
   const maxMes = Math.max(...dadosCrescimento, 1);
-  const alturaMaximaCss = 140; // altura máxima em pixels no container do gráfico
+  const alturaMaximaCss = 140;
 
   return (
     <div className="min-h-screen bg-[#F4EFE6] flex flex-col">
@@ -124,11 +181,10 @@ export default function AdminPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
             <h2 className="font-black mb-5">
-              📊 Crescimento de alunos por mês 
+              📊 Crescimento de alunos por mês
             </h2>
             <div className="h-60 flex items-end gap-2 border-l-2 border-b-2 border-black p-4">
               {dadosCrescimento.map((quantidade, i) => {
-                // Altura proporcional dinâmica baseada no maior mês
                 const alturaCalculada = Math.max(
                   (quantidade / maxMes) * alturaMaximaCss,
                   quantidade > 0 ? 15 : 4
@@ -142,7 +198,6 @@ export default function AdminPage() {
                     <span className="text-[11px] font-black text-slate-800 bg-white/80 border border-black/20 px-1 rounded shadow-sm">
                       {quantidade}
                     </span>
-                    {/* Tooltip ao passar o mouse indicando o total exato do mês */}
                     <span className="absolute -top-7 opacity-0 group-hover:opacity-100 transition bg-black text-white text-[10px] font-black py-0.5 px-1.5 rounded pointer-events-none z-10 whitespace-nowrap">
                       {quantidade} aluno(s)
                     </span>
@@ -162,13 +217,13 @@ export default function AdminPage() {
             <h2 className="font-black mb-4">Atividade hoje</h2>
             <div className="space-y-3">
               <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
-                👨‍🎓 {totalUsuarios} usuários cadastrados no total
+                👨‍🎓 {usuariosHoje} usuário(s) cadastrado(s) hoje
               </div>
               <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
-                ▶️ 980 aulas assistidas
+                ▶️ {aulasHoje} aula(s) assistida(s) hoje
               </div>
               <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
-                📝 250 questões respondidas
+                📝 {questoesHoje} questão(ões) respondida(s) hoje
               </div>
             </div>
           </Card>

@@ -41,7 +41,7 @@ export default function EvolutionChart({ percentage = 0 }) {
               {safePercentage}%
             </span>
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 mt-1">
-              Concluído
+              taxa de acerto
             </span>
           </div>
         </div>

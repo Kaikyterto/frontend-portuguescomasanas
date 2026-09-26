@@ -5,6 +5,7 @@ import Card from "../components/Card";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
+import { gravacaoService } from "../service/gravacao";
 
 export default function CursePage() {
   const navigate = useNavigate();
@@ -12,11 +13,23 @@ export default function CursePage() {
   const [usuario, setUsuario] = useState(null);
   const [cursoData, setCursoData] = useState(null);
   const [modulos, setModulos] = useState([]);
+  const [gravacoes, setGravacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
 
   // Estado para controlar qual módulo está expandido
   const [moduloAtivo, setModuloAtivo] = useState(null);
+
+  // Estado para gerenciar a aula/vídeo selecionada para reprodução
+  const [videoSelecionado, setVideoSelecionado] = useState(null);
+
+  // Estado para armazenar os IDs das aulas assistidas (usando localStorage para persistência local)
+  const [aulasAssistidas, setAulasAssistidas] = useState(() => {
+    const salvo = localStorage.getItem(
+      `@PortuguessComAnas:curso_${cursoId}_assistidas`
+    );
+    return salvo ? JSON.parse(salvo) : [];
+  });
 
   useEffect(() => {
     async function carregarDadosPagina() {
@@ -28,16 +41,19 @@ export default function CursePage() {
 
       try {
         setLoading(true);
-        // Busca simultaneamente os dados do usuário, do curso e os módulos específicos via moduloService
-        const [dadosUsuario, dadosCurso, dadosModulos] = await Promise.all([
-          buscarDadosUsuarioLogado(token),
-          cursoService.buscarPorId(cursoId, token),
-          moduloService.listarModulos(cursoId, token),
-        ]);
+        // Busca simultaneamente os dados do usuário, do curso, os módulos e todas as gravações disponíveis
+        const [dadosUsuario, dadosCurso, dadosModulos, dadosGravacoes] =
+          await Promise.all([
+            buscarDadosUsuarioLogado(token),
+            cursoService.buscarPorId(cursoId, token),
+            moduloService.listarModulos(cursoId, token),
+            gravacaoService.listar(token),
+          ]);
 
         setUsuario(dadosUsuario);
         setCursoData(dadosCurso);
-        setModulos(dadosModulos);
+        setModulos(dadosModulos || []);
+        setGravacoes(dadosGravacoes || []);
 
         // Se houver módulos, define o primeiro da lista como ativo por padrão
         if (dadosModulos && dadosModulos.length > 0) {
@@ -54,8 +70,25 @@ export default function CursePage() {
     carregarDadosPagina();
   }, [cursoId, navigate]);
 
+  // Salva no localStorage sempre que o array de aulas assistidas for alterado
+  useEffect(() => {
+    localStorage.setItem(
+      `@PortuguessComAnas:curso_${cursoId}_assistidas`,
+      JSON.stringify(aulasAssistidas)
+    );
+  }, [aulasAssistidas, cursoId]);
+
   const toggleModulo = (id) => {
     setModuloAtivo(moduloAtivo === id ? null : id);
+  };
+
+  const toggleAssistida = (e, aulaId) => {
+    e.stopPropagation(); // Evita que abra o modal ao clicar no botão de marcar
+    setAulasAssistidas((prev) =>
+      prev.includes(aulaId)
+        ? prev.filter((id) => id !== aulaId)
+        : [...prev, aulaId]
+    );
   };
 
   if (loading) {
@@ -114,22 +147,6 @@ export default function CursePage() {
               </p>
             </div>
 
-            {/* Barra de Progresso Geral do Curso (Caso a API retorne) */}
-            {cursoData.progressoGeral !== undefined && (
-              <div className="bg-white p-3 sm:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-2">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs font-black uppercase text-slate-800 gap-1 sm:gap-0">
-                  <span>Progresso Total do Curso</span>
-                  <span>{cursoData.progressoGeral}% Concluído</span>
-                </div>
-                <div className="w-full bg-slate-200 h-3.5 sm:h-4 rounded-full border-2 border-black overflow-hidden">
-                  <div
-                    className="bg-[#00D2DF] h-full transition-all duration-500"
-                    style={{ width: `${cursoData.progressoGeral}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-
             {/* LISTA DE MÓDULOS */}
             <div className="flex flex-col gap-3 sm:gap-4 mt-1">
               <h2 className="text-xs sm:text-sm font-black uppercase text-slate-900 tracking-wider">
@@ -140,6 +157,14 @@ export default function CursePage() {
                 {modulos && modulos.length > 0 ? (
                   modulos.map((modulo, index) => {
                     const isOpen = moduloAtivo === modulo.id;
+
+                    const aulasDoModulo = gravacoes.filter((g) => {
+                      const gModuloId = g.moduloId || g.modulo?.id;
+                      if (gModuloId) {
+                        return Number(gModuloId) === Number(modulo.id);
+                      }
+                      return true;
+                    });
 
                     return (
                       <div
@@ -159,7 +184,7 @@ export default function CursePage() {
                               <h3 className="font-black text-xs sm:text-sm md:text-base text-slate-900 uppercase leading-snug">
                                 {modulo.titulo}
                               </h3>
-                              <p className="text-[11px] sm:text-xs font-bold text-slate-500 line-clamp-1 sm:line-clamp-none">
+                              <p className="text-[11px] sm:text-xs font-bold text-slate-500 line-clamp-1">
                                 {modulo.descricao ||
                                   "Módulo estruturado do curso"}
                               </p>
@@ -168,12 +193,12 @@ export default function CursePage() {
 
                           <div className="flex items-center self-end sm:self-auto gap-2">
                             <span className="text-[10px] sm:text-xs font-black bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-black">
-                              {isOpen ? "▲ Ocultar" : "▼ Ver Detalhes"}
+                              {isOpen ? "▲ Ocultar Aulas" : "▼ Ver Aulas"}
                             </span>
                           </div>
                         </div>
 
-                        {/* Detalhes do Módulo (Expandido) */}
+                        {/* Detalhes e Aulas do Módulo (Expandido) */}
                         {isOpen && (
                           <div className="bg-slate-50 p-3 sm:p-4 border-t-2 border-black flex flex-col gap-3">
                             <div className="bg-white p-3 rounded-lg border-2 border-black flex flex-col gap-2">
@@ -182,15 +207,78 @@ export default function CursePage() {
                               </span>
                               <p className="text-xs sm:text-sm font-bold text-slate-800 leading-relaxed">
                                 {modulo.descricao ||
-                                  "Nenhuma descrição detalhada informada para este módulo."}
+                                  "Nenhuma descrição detalhada informada."}
                               </p>
-                              {modulo.dataCriacao && (
-                                <div className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1">
-                                  Cadastrado em:{" "}
-                                  {new Date(
-                                    modulo.dataCriacao
-                                  ).toLocaleDateString("pt-BR")}
+                            </div>
+
+                            {/* LISTA DE AULAS / VÍDEOS DESTE MÓDULO */}
+                            <div className="flex flex-col gap-2 mt-1">
+                              <h4 className="text-xs font-black uppercase text-slate-800">
+                                🎥 Aulas do Módulo ({aulasDoModulo.length})
+                              </h4>
+
+                              {aulasDoModulo.length > 0 ? (
+                                <div className="space-y-2">
+                                  {aulasDoModulo.map((aula) => {
+                                    const assistida = aulasAssistidas.includes(
+                                      aula.id
+                                    );
+                                    return (
+                                      <div
+                                        key={aula.id}
+                                        onClick={() =>
+                                          setVideoSelecionado(aula)
+                                        }
+                                        className={`bg-white hover:bg-slate-100 border-2 border-black p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition ${
+                                          assistida ? "bg-emerald-50/60" : ""
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <span
+                                            className={`border border-black p-2 rounded-lg text-xs font-black ${
+                                              assistida
+                                                ? "bg-emerald-400 text-black"
+                                                : "bg-[#00D2DF]"
+                                            }`}
+                                          >
+                                            {assistida ? "✓" : "▶"}
+                                          </span>
+                                          <span
+                                            className={`font-black text-xs sm:text-sm text-slate-900 ${
+                                              assistida
+                                                ? "line-through opacity-75"
+                                                : ""
+                                            }`}
+                                          >
+                                            {aula.titulo}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={(e) =>
+                                              toggleAssistida(e, aula.id)
+                                            }
+                                            className={`text-[10px] sm:text-xs font-black px-2.5 py-1.5 rounded-lg border-2 border-black transition cursor-pointer ${
+                                              assistida
+                                                ? "bg-emerald-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                                : "bg-white text-slate-700 hover:bg-slate-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                            }`}
+                                          >
+                                            {assistida
+                                              ? "✓ Assistida"
+                                              : "Marcar como Assistida"}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
+                              ) : (
+                                <p className="text-xs font-bold text-slate-500 bg-white p-3 rounded-lg border-2 border-black text-center">
+                                  Nenhuma aula em vídeo cadastrada neste módulo
+                                  ainda.
+                                </p>
                               )}
                             </div>
                           </div>
@@ -208,6 +296,56 @@ export default function CursePage() {
           </Card>
         </div>
       </main>
+
+      {/* MODAL PARA REPRODUÇÃO DO VÍDEO DA AULA */}
+      {videoSelecionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-5 max-w-2xl w-full shadow-[8px_8px_0_black]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-black text-base uppercase truncate">
+                {videoSelecionado.titulo}
+              </h3>
+              <button
+                onClick={() => setVideoSelecionado(null)}
+                className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="aspect-video w-full border-2 border-black rounded-xl overflow-hidden bg-black mb-4">
+              <iframe
+                src={videoSelecionado.embedUrl}
+                title={videoSelecionado.titulo}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={(e) => toggleAssistida(e, videoSelecionado.id)}
+                className={`flex-1 border-2 border-black rounded-xl py-2.5 text-xs font-black shadow-[3px_3px_0_black] cursor-pointer transition ${
+                  aulasAssistidas.includes(videoSelecionado.id)
+                    ? "bg-emerald-400 text-black"
+                    : "bg-white text-black hover:bg-slate-50"
+                }`}
+              >
+                {aulasAssistidas.includes(videoSelecionado.id)
+                  ? "✓ Aula Concluída (Desmarcar)"
+                  : "✓ Marcar como Assistida"}
+              </button>
+              <button
+                onClick={() => setVideoSelecionado(null)}
+                className="bg-black text-white border-2 border-black rounded-xl py-2.5 px-6 text-xs font-black shadow-[3px_3px_0_black] cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="bg-[#F4EFE6] py-4 text-center text-[11px] sm:text-xs font-bold text-slate-700 border-t-2 border-black">
         Português com Anas © 2026 - Todos os direitos reservados

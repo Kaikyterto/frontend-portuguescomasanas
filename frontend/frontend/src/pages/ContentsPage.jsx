@@ -7,8 +7,9 @@ import { assuntoService } from "../service/assunto";
 import { bancaService } from "../service/banca";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
+import { gravacaoService } from "../service/gravacao";
 import { buscarDadosUsuarioLogado } from "../service/user";
-import { links } from "../ultils/linksAdmin"; // <- Importação dos links restaurada
+import { links } from "../ultils/linksAdmin";
 
 export default function ContentsPage() {
   const token = localStorage.getItem("@PortuguessComAnas:token");
@@ -28,16 +29,20 @@ export default function ContentsPage() {
     setAlertConfig({ isOpen: true, type, message, onConfirm });
   };
 
-  // Estados de Aulas e Cursos/Módulos
-  const [lessonTitle, setLessonTitle] = useState("");
-  const [selectedModule, setSelectedModule] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  // Estados de Cursos
   const [newModuleTitle, setNewModuleTitle] = useState("");
   const [newModuleDescription, setNewModuleDescription] = useState("");
   const [newModulePrice, setNewModulePrice] = useState("");
 
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
+
+  // Estados para Cadastro de Nova Aula (Vídeo/Gravação)
+  const [selectedCursoForVideo, setSelectedCursoForVideo] = useState("");
+  const [modulosDisponiveisParaVideo, setModulosDisponiveisParaVideo] =
+    useState([]);
+  const [selectedModuloForVideo, setSelectedModuloForVideo] = useState("");
+  const [youtubeUrlOuId, setYoutubeUrlOuId] = useState("");
 
   // Estados para Gerenciamento de Módulos por Curso
   const [showModuloModal, setShowModuloModal] = useState(false);
@@ -123,6 +128,54 @@ export default function ContentsPage() {
   useEffect(() => {
     fetchData();
   }, [token]);
+
+  // Ao selecionar um curso no formulário de Nova Aula, carrega os módulos desse curso
+  const handleCursoVideoChange = async (cursoId) => {
+    setSelectedCursoForVideo(cursoId);
+    setSelectedModuloForVideo("");
+    setModulosDisponiveisParaVideo([]);
+
+    if (!cursoId) return;
+
+    try {
+      const modulos = await moduloService.listarModulos(cursoId, token);
+      setModulosDisponiveisParaVideo(modulos || []);
+    } catch (error) {
+      console.error("Erro ao carregar módulos para o vídeo:", error);
+    }
+  };
+
+  // Cadastrar nova aula/vídeo vinculada ao módulo selecionado
+  const handleCreateVideoAula = async (e) => {
+    e.preventDefault();
+    if (
+      !selectedCursoForVideo ||
+      !selectedModuloForVideo ||
+      !youtubeUrlOuId.trim()
+    ) {
+      showAlert(
+        "Por favor, selecione o curso, o módulo e informe a URL do YouTube.",
+        "error"
+      );
+      return;
+    }
+
+    try {
+      const payload = {
+        youtubeUrlOuId: youtubeUrlOuId.trim(),
+        moduloId: parseInt(selectedModuloForVideo),
+      };
+
+      await gravacaoService.criar(payload, token);
+      showAlert("Aula em vídeo cadastrada com sucesso!");
+      setYoutubeUrlOuId("");
+      setSelectedCursoForVideo("");
+      setSelectedModuloForVideo("");
+      setModulosDisponiveisParaVideo([]);
+    } catch (error) {
+      showAlert(`Erro ao cadastrar aula: ${error.message || error}`, "error");
+    }
+  };
 
   const handleSaveAssunto = async (e) => {
     e.preventDefault();
@@ -387,17 +440,7 @@ export default function ContentsPage() {
       handleResetQuestionForm();
       fetchData();
     } catch (error) {
-      if (
-        error.message?.includes("401") ||
-        error.message?.includes("Status: 401")
-      ) {
-        showAlert(
-          "Erro 401: Não autorizado. Seu token pode estar expirado ou inválido.",
-          "error"
-        );
-      } else {
-        showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
-      }
+      showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
     }
   };
 
@@ -473,7 +516,6 @@ export default function ContentsPage() {
 
   return (
     <div className="min-h-screen bg-[#F4EFE6] flex flex-col">
-      {/* Navbar enviando tanto os dados do usuário quanto os links necessários */}
       <Navbar usuario={usuario} links={links} />
 
       <main className="flex-1 p-4 sm:p-6 md:p-8 bg-gradient-to-br from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE]">
@@ -1061,55 +1103,126 @@ export default function ContentsPage() {
             </div>
           </Card>
 
-          {/* Painel lateral para cadastro rápido de Curso */}
-          <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
-            <h2 className="font-black uppercase mb-5 text-xl">Novo Curso</h2>
-            <form onSubmit={handleCreateModule} className="space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase mb-1">
-                  Nome do Curso
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Português Avançado"
-                  value={newModuleTitle}
-                  onChange={(e) => setNewModuleTitle(e.target.value)}
-                  className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase mb-1">
-                  Descrição
-                </label>
-                <textarea
-                  placeholder="Descrição detalhada do curso..."
-                  value={newModuleDescription}
-                  onChange={(e) => setNewModuleDescription(e.target.value)}
-                  className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase mb-1">
-                  Preço (R$)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 199.90"
-                  value={newModulePrice}
-                  onChange={(e) => setNewModulePrice(e.target.value)}
-                  className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black]"
-              >
-                Cadastrar Curso
-              </button>
-            </form>
-          </Card>
+          {/* Painel lateral com Novo Curso e, abaixo, Nova Aula */}
+          <div className="flex flex-col gap-6">
+            {/* Painel de Novo Curso */}
+            <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
+              <h2 className="font-black uppercase mb-5 text-xl">Novo Curso</h2>
+              <form onSubmit={handleCreateModule} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Nome do Curso
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Português Avançado"
+                    value={newModuleTitle}
+                    onChange={(e) => setNewModuleTitle(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Descrição
+                  </label>
+                  <textarea
+                    placeholder="Descrição detalhada do curso..."
+                    value={newModuleDescription}
+                    onChange={(e) => setNewModuleDescription(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Preço (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Ex: 199.90"
+                    value={newModulePrice}
+                    onChange={(e) => setNewModulePrice(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black]"
+                >
+                  Cadastrar Curso
+                </button>
+              </form>
+            </Card>
+
+            {/* Painel de Nova Aula / Vídeo (Abaixo de Novo Curso) */}
+            <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
+              <h2 className="font-black uppercase mb-5 text-xl">
+                🎥 Nova Aula (Vídeo)
+              </h2>
+              <form onSubmit={handleCreateVideoAula} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Selecione o Curso
+                  </label>
+                  <select
+                    value={selectedCursoForVideo}
+                    onChange={(e) => handleCursoVideoChange(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                  >
+                    <option value="">Escolha o curso...</option>
+                    {cursos.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.titulo || c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Selecione o Módulo / Aula
+                  </label>
+                  <select
+                    value={selectedModuloForVideo}
+                    onChange={(e) => setSelectedModuloForVideo(e.target.value)}
+                    disabled={
+                      !selectedCursoForVideo ||
+                      modulosDisponiveisParaVideo.length === 0
+                    }
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:bg-slate-100"
+                  >
+                    <option value="">Escolha o módulo...</option>
+                    {modulosDisponiveisParaVideo.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        #{m.ordem} - {m.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    URL ou ID do YouTube
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: https://www.youtube.com/watch?v=..."
+                    value={youtubeUrlOuId}
+                    onChange={(e) => setYoutubeUrlOuId(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#00D2DF] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black]"
+                >
+                  Cadastrar Aula em Vídeo
+                </button>
+              </form>
+            </Card>
+          </div>
         </div>
 
         {/* SEÇÃO DE LISTAGEM DE QUESTÕES */}

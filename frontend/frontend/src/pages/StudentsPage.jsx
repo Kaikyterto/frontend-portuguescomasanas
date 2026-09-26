@@ -548,13 +548,6 @@ export default function StudentsPage() {
                   </div>
 
                   <div className="space-y-3 mb-4">
-                    <div className="bg-white border-2 border-black rounded-xl p-4 font-black flex justify-between items-center shadow-[3px_3px_0_black]">
-                      <span>🏆 Taxa de Aproveitamento (Acertos):</span>
-                      <span className="bg-[#00D2DF] border-2 border-black rounded-lg px-3 py-1 text-sm text-black shadow-[2px_2px_0_black]">
-                        {selectedStudent.correctRate}
-                      </span>
-                    </div>
-
                     <div className="bg-white border-2 border-black rounded-xl p-4 shadow-[3px_3px_0_black]">
                       <div className="flex justify-between font-black text-xs uppercase mb-1">
                         <span>Progresso Baseado em Acertos</span>
