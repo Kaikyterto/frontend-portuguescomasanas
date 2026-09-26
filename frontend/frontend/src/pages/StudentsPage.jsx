@@ -9,7 +9,37 @@ import {
   buscarDadosUsuarioLogado,
 } from "../service/user";
 import { cursoService } from "../service/curso";
-import { listarMinhasRespostas } from "../service/answer";
+import { API_URL } from "../config/api";
+
+const getAuthHeaders = (token) => ({
+  "Content-Type": "application/json",
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+});
+
+/**
+ * Busca o histórico de respostas de um aluno específico para o painel do Admin/Professor
+ */
+async function listarRespostasPorAluno(alunoId, token) {
+  try {
+    const response = await fetch(`${API_URL}/api/respostas/aluno/${alunoId}`, {
+      method: "GET",
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          "Erro ao carregar o histórico de respostas do aluno."
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Erro em listarRespostasPorAluno:", error);
+    throw error;
+  }
+}
 
 export default function StudentsPage() {
   const navigate = useNavigate();
@@ -148,9 +178,6 @@ export default function StudentsPage() {
       courses: [
         selectedCourse?.titulo || selectedCourse?.nome || "Curso atual",
       ],
-      joinedDate: targetStudent.joinedDate || "Não informado",
-      lastActive: targetStudent.lastActive || "Não informado",
-      lessonsWatched: targetStudent.lessonsWatched ?? 0,
       questionsAnswered: 0,
       correctRate: "0%",
       correctCount: 0,
@@ -162,13 +189,8 @@ export default function StudentsPage() {
     setLoadingStudentDetails(true);
 
     try {
-      const todasRespostasGerais = await listarMinhasRespostas(token);
-
-      const respostasAluno = (todasRespostasGerais || []).filter(
-        (r) =>
-          String(r.usuarioId || r.userId || r.alunoId || r.aluno?.id) ===
-          String(studentId)
-      );
+      // Chamada otimizada direto para o endpoint específico do backend
+      const respostasAluno = await listarRespostasPorAluno(studentId, token);
 
       const totalRespondidas = respostasAluno.length;
       const acertos = respostasAluno.filter((r) => r.acertou === true).length;
@@ -189,6 +211,11 @@ export default function StudentsPage() {
       }));
     } catch (error) {
       console.error("Erro ao carregar respostas específicas do aluno:", error);
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        message: error.message || "Erro ao buscar estatísticas do aluno.",
+      });
     } finally {
       setLoadingStudentDetails(false);
     }
@@ -388,7 +415,6 @@ export default function StudentsPage() {
                 <div className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
                   {enrolledStudents.length > 0 ? (
                     enrolledStudents.map((matricula) => {
-                      // Garantindo a captura correta do ID do usuário correspondente à matrícula
                       const studentId =
                         matricula.usuarioId ||
                         matricula.usuario?.id ||
@@ -554,21 +580,26 @@ export default function StudentsPage() {
                       selectedStudent.respostasDetalhadas.length > 0 ? (
                         selectedStudent.respostasDetalhadas.map((resp, idx) => (
                           <div
-                            key={idx}
+                            key={resp.id || idx}
                             className="flex justify-between items-center bg-[#F4EFE6] border border-black rounded-lg p-2.5 text-xs font-bold"
                           >
-                            <span>
-                              Questão ID: {resp.questaoId || resp.id || "N/A"}
-                            </span>
-                            <span
-                              className={
-                                resp.acertou
-                                  ? "text-emerald-700 font-black"
-                                  : "text-rose-700 font-black"
-                              }
-                            >
-                              {resp.acertou ? "Acertou ✅" : "Errou ❌"}
-                            </span>
+                            <span>Questão ID: {resp.questaoId || "N/A"}</span>
+                            <div className="flex items-center gap-3">
+                              {resp.tempoGasto !== undefined && (
+                                <span className="text-slate-500 font-normal">
+                                  ⏱️ {resp.tempoGasto}s
+                                </span>
+                              )}
+                              <span
+                                className={
+                                  resp.acertou
+                                    ? "text-emerald-700 font-black"
+                                    : "text-rose-700 font-black"
+                                }
+                              >
+                                {resp.acertou ? "Acertou ✅" : "Errou ❌"}
+                              </span>
+                            </div>
                           </div>
                         ))
                       ) : (

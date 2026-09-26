@@ -77,3 +77,28 @@ export async function listarMinhasRespostas() {
     throw error;
   }
 }
+/**
+ * Busca o histórico de respostas de um aluno específico (Para uso do Admin/Professor)
+ * @param {Number|String} alunoId
+ */
+export async function listarRespostasPorAluno(alunoId) {
+  try {
+    const response = await fetch(`${API_URL}/api/respostas/aluno/${alunoId}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          "Erro ao carregar o histórico de respostas do aluno."
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Erro em listarRespostasPorAluno:", error);
+    throw error;
+  }
+}
