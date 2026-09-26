@@ -65,7 +65,6 @@ export default function UserPage() {
     try {
       const token = localStorage.getItem("@PortuguessComAnas:token");
 
-      // Chamada para o endpoint do backend que utiliza o MercadoPagoGateway
       const response = await fetch(
         `https://backend-portugues-anas-9ffe.onrender.com/api/payments/checkout`,
         {
@@ -88,7 +87,6 @@ export default function UserPage() {
       const data = await response.json();
       console.log("Resposta do pagamento recebida:", data);
 
-      // Tratamento robusto para capturar diferentes variações de propriedades do backend/SDK
       const checkoutUrl =
         data.initPoint ||
         data.sandboxInitPoint ||
@@ -163,7 +161,6 @@ export default function UserPage() {
       try {
         setLoading(true);
 
-        // Busca paralela dos dados do usuário, lista de cursos e cursos do próprio usuário logado
         const [dadosUsuario, dadosCursos, meusCursosRes] = await Promise.all([
           buscarDadosUsuarioLogado(token),
           cursoService.listar(token),
@@ -172,12 +169,10 @@ export default function UserPage() {
 
         setUsuario(dadosUsuario);
 
-        // Cria um conjunto com os IDs dos cursos que o usuário possui acesso/matrícula
         const idsCursosComAcesso = new Set(
           (meusCursosRes || []).map((m) => m.cursoId || m.curso?.id || m.id)
         );
 
-        // Mapeia os cursos injetando a propriedade correta de acesso baseada no back-end
         const cursosComStatus = (dadosCursos || []).map((curso) => ({
           ...curso,
           temAcesso:
@@ -312,7 +307,7 @@ export default function UserPage() {
       <Navbar usuario={usuario} />
 
       <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black lg:overflow-hidden">
-        {/* CONTAINER 1 */}
+        {/* CONTAINER 1 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 order-1 lg:order-3">
           <div className="min-h-[200px] lg:flex-1 flex order-1 lg:order-1">
             <DailyQuestions className="w-full h-full" />
@@ -326,15 +321,15 @@ export default function UserPage() {
           </div>
         </div>
 
-        {/* CONTAINER 2 */}
-        <div className="flex-1 flex flex-col order-2 lg:order-2 w-full">
+        {/* CONTAINER 2 (Ordem Original) */}
+        <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
           <Card className="flex-1 flex flex-col bg-[#F4EFE6] h-full overflow-hidden !p-0 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl">
-            <div className="px-5 py-4 border-b-2 border-black bg-white flex items-center justify-between">
+            <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black bg-white flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="text-xl">
+                <span className="text-lg md:text-xl">
                   {questaoSelecionada ? "✍️" : exibirBanco ? "📂" : "📚"}
                 </span>
-                <h2 className="text-slate-900 text-base md:text-lg font-black tracking-wide uppercase">
+                <h2 className="text-slate-900 text-sm md:text-lg font-black tracking-wide uppercase truncate">
                   {questaoSelecionada
                     ? `Responder Questão (${indiceQuestaoAtual + 1}/${
                         questoes.length
@@ -344,7 +339,7 @@ export default function UserPage() {
                     : "Cursos disponíveis"}
                 </h2>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {questaoSelecionada ? (
                   <button
                     onClick={() => {
@@ -374,9 +369,9 @@ export default function UserPage() {
               </div>
             </div>
 
-            <div className="flex-1 relative p-5 overflow-hidden">
+            <div className="flex-1 relative p-3 md:p-5 overflow-hidden">
               <div
-                className="h-full flex flex-col gap-3 max-h-[350px] sm:max-h-[400px] lg:max-h-[calc(100vh-270px)] overflow-y-auto pr-2 lg:pr-4 custom-scrollbar pb-8"
+                className="h-full flex flex-col gap-3 max-h-[350px] sm:max-h-[400px] lg:max-h-[calc(100vh-270px)] overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-8"
                 style={{
                   maskImage:
                     "linear-gradient(to bottom, black 85%, transparent 100%)",
@@ -387,13 +382,13 @@ export default function UserPage() {
                 {questaoSelecionada ? (
                   <form
                     onSubmit={handleResponderQuestao}
-                    className="flex flex-col gap-4 bg-white p-5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    className="flex flex-col gap-4 bg-white p-4 md:p-5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                   >
                     <div>
                       <span className="text-xs font-black uppercase text-[#7B5CFA] bg-[#7B5CFA]/10 px-2 py-1 rounded border border-[#7B5CFA]/30">
                         {questaoSelecionada.tema || "Questão de Português"}
                       </span>
-                      <p className="font-bold text-slate-900 text-base mt-3 leading-relaxed">
+                      <p className="font-bold text-slate-900 text-sm md:text-base mt-3 leading-relaxed">
                         {questaoSelecionada.enunciado}
                       </p>
                     </div>
@@ -443,9 +438,9 @@ export default function UserPage() {
                                   );
                                 }}
                                 disabled={respostaEnviada}
-                                className="mt-1"
+                                className="mt-1 shrink-0"
                               />
-                              <div className="font-bold text-sm text-slate-800">
+                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words">
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
@@ -492,12 +487,15 @@ export default function UserPage() {
                             <span className="block text-xs font-black uppercase text-slate-700 mb-1">
                               Explicação:
                             </span>
-                            <p className="text-sm font-bold text-slate-800">
+                            <p className="text-xs md:text-sm font-bold text-slate-800">
                               {questaoSelecionada.explicacao}
                             </p>
                           </div>
                         )}
-                        <div ref={fimRespostaRef} className="flex gap-3 pt-2">
+                        <div
+                          ref={fimRespostaRef}
+                          className="flex flex-col sm:flex-row gap-3 pt-2"
+                        >
                           <button
                             type="button"
                             onClick={() => {
@@ -536,17 +534,17 @@ export default function UserPage() {
                           setRespostaEnviada(false);
                           setTempoInicio(Date.now());
                         }}
-                        className="bg-white p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-2 cursor-pointer hover:bg-slate-50 transition"
+                        className="bg-white p-3 md:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-2 cursor-pointer hover:bg-slate-50 transition"
                       >
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-black uppercase text-[#7B5CFA]">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-[10px] md:text-xs font-black uppercase text-[#7B5CFA] truncate">
                             {q.tema || "Questão de Português"}
                           </span>
-                          <span className="bg-[#FFD700] text-black text-[10px] font-black px-2 py-0.5 rounded border border-black">
+                          <span className="bg-[#FFD700] text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shrink-0">
                             Resolver →
                           </span>
                         </div>
-                        <p className="font-bold text-slate-800 text-sm line-clamp-2">
+                        <p className="font-bold text-slate-800 text-xs md:text-sm line-clamp-2">
                           {q.enunciado}
                         </p>
                       </div>
@@ -558,7 +556,6 @@ export default function UserPage() {
                   )
                 ) : (
                   <>
-                    {/* Renderizando os cursos vindos da API dinamicamente com verificação de acesso limpa e correta */}
                     {cursos.length > 0 ? (
                       cursos.map((curso) => {
                         const temAcesso = curso.temAcesso === true;
@@ -629,7 +626,7 @@ export default function UserPage() {
           </Card>
         </div>
 
-        {/* CONTAINER 3 */}
+        {/* CONTAINER 3 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 order-3 lg:order-1 flex flex-col gap-3">
           <button
             onClick={handleCarregarBancoQuestoes}
