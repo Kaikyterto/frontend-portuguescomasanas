@@ -39,7 +39,7 @@ export default function Login() {
         navigate("/user");
       }, 1500);
     } catch (error) {
-      setErrorMessage(error.message || "E-mail ou senha incorretos.");
+      setErrorMessage("E-mail ou senha incorretos.");
     } finally {
       setLoading(false);
     }
