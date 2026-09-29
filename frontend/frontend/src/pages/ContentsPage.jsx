@@ -3,13 +3,126 @@ import Navbar from "../components/Navbar";
 import Card from "../components/Card";
 import AlertModal from "../components/AlertModal";
 import { questaoService } from "../service/questao";
-import { assuntoService } from "../service/assunto";
 import { bancaService } from "../service/banca";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
 import { gravacaoService } from "../service/gravacao";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
+import { API_URL } from "../config/api";
+
+// Serviço de assunto atualizado com listar, criar, atualizar e deletar
+export async function listarAssuntos(token) {
+  try {
+    const response = await fetch(`${API_URL}/api/assuntos`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : [];
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Erro ao listar assuntos (Status: ${response.status})`
+      );
+    }
+
+    return data.content || data;
+  } catch (error) {
+    console.error("Erro em listarAssuntos:", error);
+    throw error;
+  }
+}
+
+export async function criarAssunto(assuntoData, token) {
+  try {
+    const response = await fetch(`${API_URL}/api/assuntos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(assuntoData),
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Erro ao cadastrar assunto (Status: ${response.status})`
+      );
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Erro em criarAssunto:", error);
+    throw error;
+  }
+}
+
+export async function atualizarAssunto(id, assuntoData, token) {
+  try {
+    const response = await fetch(`${API_URL}/api/assuntos/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(assuntoData),
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Erro ao atualizar assunto (Status: ${response.status})`
+      );
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`Erro em atualizarAssunto (ID: ${id}):`, error);
+    throw error;
+  }
+}
+
+export async function deletarAssunto(id, token) {
+  try {
+    const response = await fetch(`${API_URL}/api/assuntos/${id}`, {
+      method: "DELETE",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Erro ao deletar assunto (Status: ${response.status})`
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Erro em deletarAssunto (ID: ${id}):`, error);
+    throw error;
+  }
+}
+
+export const assuntoService = {
+  listarAssuntos,
+  criarAssunto,
+  atualizarAssunto,
+  deletarAssunto,
+};
 
 export default function ContentsPage() {
   const token = localStorage.getItem("@PortuguessComAnas:token");
@@ -208,7 +321,7 @@ export default function ContentsPage() {
       };
 
       if (editingAssuntoId) {
-        await assuntoService.atualizar(editingAssuntoId, payload, token);
+        await assuntoService.atualizarAssunto(editingAssuntoId, payload, token);
         showAlert("Assunto atualizado com sucesso!");
       } else {
         await assuntoService.criarAssunto(payload, token);
@@ -236,7 +349,7 @@ export default function ContentsPage() {
   const handleDeleteAssunto = (id) => {
     showAlert("Deseja realmente excluir este assunto?", "confirm", async () => {
       try {
-        await assuntoService.deletar(id, token);
+        await assuntoService.deletarAssunto(id, token);
         showAlert("Assunto excluído com sucesso!");
         fetchData();
       } catch (error) {
@@ -499,7 +612,7 @@ export default function ContentsPage() {
     setQuestionExplicacao(q.explicacao || "");
     setQuestionFonte(q.fonte || "");
 
-    const listaAlts = q.alternativas || q.alternativas || [];
+    const listaAlts = q.alternativas || [];
     if (listaAlts.length > 0) {
       const formattedAlts = listaAlts.map((a) => ({
         letra: a.letra,

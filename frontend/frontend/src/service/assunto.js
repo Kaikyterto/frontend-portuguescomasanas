@@ -53,7 +53,62 @@ export async function criarAssunto(assuntoData, token) {
   }
 }
 
+export async function atualizarAssunto(id, assuntoData, token) {
+  try {
+    const response = await fetch(`${API_URL}/api/assuntos/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(assuntoData),
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Erro ao atualizar assunto (Status: ${response.status})`
+      );
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`Erro em atualizarAssunto (ID: ${id}):`, error);
+    throw error;
+  }
+}
+
+export async function deletarAssunto(id, token) {
+  try {
+    const response = await fetch(`${API_URL}/api/assuntos/${id}`, {
+      method: "DELETE",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    // Como o backend retorna 204 No Content, o corpo da resposta virá vazio.
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Erro ao deletar assunto (Status: ${response.status})`
+      );
+    }
+
+    return true; // Retorna true indicando sucesso na exclusão
+  } catch (error) {
+    console.error(`Erro em deletarAssunto (ID: ${id}):`, error);
+    throw error;
+  }
+}
+
 export const assuntoService = {
   listarAssuntos,
   criarAssunto,
+  atualizarAssunto,
+  deletarAssunto,
 };
