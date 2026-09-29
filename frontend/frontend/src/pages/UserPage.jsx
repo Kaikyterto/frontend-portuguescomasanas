@@ -616,7 +616,7 @@ export default function UserPage() {
                       })
                     ) : (
                       <div className="text-center font-bold text-slate-600 py-10 text-xs">
-                        Nenhum curso cadastrado na API no momento.
+                        Nenhum curso cadastrado no momento.
                       </div>
                     )}
                   </>
