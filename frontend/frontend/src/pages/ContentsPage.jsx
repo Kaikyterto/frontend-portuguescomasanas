@@ -73,7 +73,7 @@ export default function ContentsPage() {
   const [questionFonte, setQuestionFonte] = useState("");
   const [correctAnswer, setCorrectAnswer] = useState("A");
 
-  const [alternatives, setAlternatives] = useState([
+  const [alternativas, setalternativas] = useState([
     { letra: "A", texto: "", correta: true },
     { letra: "B", texto: "", correta: false },
     { letra: "C", texto: "", correta: false },
@@ -433,7 +433,7 @@ export default function ContentsPage() {
       );
       return;
     }
-    const alternativasPreenchidas = alternatives.filter(
+    const alternativasPreenchidas = alternativas.filter(
       (alt) => alt.texto && alt.texto.trim() !== ""
     );
 
@@ -457,7 +457,7 @@ export default function ContentsPage() {
       nivel: questionNivel,
       explicacao: questionExplicacao,
       fonte: questionFonte,
-      alternatives: alternatives.map((alt) => ({
+      alternativas: alternativas.map((alt) => ({
         letra: alt.letra,
         texto: alt.texto,
         correta: alt.letra === correctAnswer,
@@ -499,14 +499,14 @@ export default function ContentsPage() {
     setQuestionExplicacao(q.explicacao || "");
     setQuestionFonte(q.fonte || "");
 
-    const listaAlts = q.alternatives || q.alternativas || [];
+    const listaAlts = q.alternativas || q.alternativas || [];
     if (listaAlts.length > 0) {
       const formattedAlts = listaAlts.map((a) => ({
         letra: a.letra,
         texto: a.texto,
         correta: Boolean(a.correta),
       }));
-      setAlternatives(formattedAlts);
+      setalternativas(formattedAlts);
 
       const corretaObj = formattedAlts.find((a) => a.correta === true);
       if (corretaObj) {
@@ -543,7 +543,7 @@ export default function ContentsPage() {
     setQuestionExplicacao("");
     setQuestionFonte("");
     setCorrectAnswer("A");
-    setAlternatives([
+    setalternativas([
       { letra: "A", texto: "", correta: true },
       { letra: "B", texto: "", correta: false },
       { letra: "C", texto: "", correta: false },
@@ -1051,8 +1051,8 @@ export default function ContentsPage() {
                       onChange={(e) => {
                         const novaLetra = e.target.value;
                         setCorrectAnswer(novaLetra);
-                        setAlternatives(
-                          alternatives.map((alt) => ({
+                        setalternativas(
+                          alternativas.map((alt) => ({
                             ...alt,
                             correta: alt.letra === novaLetra,
                           }))
@@ -1087,7 +1087,7 @@ export default function ContentsPage() {
                   <label className="block font-black text-sm">
                     Alternativas (A, B, C, D, E)
                   </label>
-                  {alternatives.map((alt, index) => (
+                  {alternativas.map((alt, index) => (
                     <div key={alt.letra} className="flex items-center gap-2">
                       <span className="font-black w-6 text-center">
                         {alt.letra}
@@ -1097,9 +1097,9 @@ export default function ContentsPage() {
                         value={alt.texto}
                         disabled={isSubmittingQuestion}
                         onChange={(e) => {
-                          const updated = [...alternatives];
+                          const updated = [...alternativas];
                           updated[index].texto = e.target.value;
-                          setAlternatives(updated);
+                          setalternativas(updated);
                         }}
                         className="w-full border-2 border-black rounded-xl p-2 font-bold text-sm bg-white disabled:opacity-50"
                       />
