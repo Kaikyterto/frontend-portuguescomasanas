@@ -698,7 +698,7 @@ export default function ContentsPage() {
     setQuestionFonte("");
     setCorrectAnswer("A");
 
-    setalternif (!assuntoNome.trim()) {
+    if (!assuntoNome.trim()) {
       showAlert("Digite o nome do assunto.", "error");
       return;
     }
