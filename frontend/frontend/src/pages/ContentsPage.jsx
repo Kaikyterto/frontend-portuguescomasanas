@@ -697,8 +697,7 @@ export default function ContentsPage() {
     <div className="min-h-screen bg-[#F4EFE6] flex flex-col">
       <Navbar usuario={usuario} links={links} />
 
-      <main className="flex-1 p-4 sm:p-6 md:p-8 bg-gradient-to-br from-[#00D2DF");
-      }
+      <main className="flex-1 p-4 sm:p-6 md:p-8 bg-gradient-to-br from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE]">
 
       setAssuntoNome("");
       setAssuntoDescricao("");
