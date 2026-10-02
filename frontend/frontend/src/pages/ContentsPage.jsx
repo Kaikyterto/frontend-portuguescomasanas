@@ -11,6 +11,10 @@ import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 import { API_URL } from "../config/api";
 
+// ==========================================
+// SERVIÇOS DE ASSUNTOS (API)
+// ==========================================
+
 export async function listarAssuntos(token) {
   try {
     const response = await fetch(`${API_URL}/api/assuntos`, {
@@ -23,13 +27,11 @@ export async function listarAssuntos(token) {
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : [];
-
     if (!response.ok) {
       throw new Error(
         data.message || `Erro ao listar assuntos (Status: ${response.status})`
       );
     }
-
     return data.content || data;
   } catch (error) {
     console.error("Erro em listarAssuntos:", error);
@@ -50,13 +52,11 @@ export async function criarAssunto(assuntoData, token) {
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : {};
-
     if (!response.ok) {
       throw new Error(
         data.message || `Erro ao cadastrar assunto (Status: ${response.status})`
       );
     }
-
     return data;
   } catch (error) {
     console.error("Erro em criarAssunto:", error);
@@ -77,13 +77,11 @@ export async function atualizarAssunto(id, assuntoData, token) {
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : {};
-
     if (!response.ok) {
       throw new Error(
         data.message || `Erro ao atualizar assunto (Status: ${response.status})`
       );
     }
-
     return data;
   } catch (error) {
     console.error(`Erro em atualizarAssunto (ID: ${id}):`, error);
@@ -102,13 +100,11 @@ export async function deletarAssunto(id, token) {
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : {};
-
     if (!response.ok) {
       throw new Error(
         data.message || `Erro ao deletar assunto (Status: ${response.status})`
       );
     }
-
     return true;
   } catch (error) {
     console.error(`Erro em deletarAssunto (ID: ${id}):`, error);
@@ -123,11 +119,16 @@ export const assuntoService = {
   deletarAssunto,
 };
 
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
+
 export default function ContentsPage() {
   const token = localStorage.getItem("@PortuguessComAnas:token");
 
   const [usuario, setUsuario] = useState(null);
 
+  // Estados de Carregamento/Submissão
   const [isSubmittingCourse, setIsSubmittingCourse] = useState(false);
   const [isSubmittingVideo, setIsSubmittingVideo] = useState(false);
   const [isSubmittingAssunto, setIsSubmittingAssunto] = useState(false);
@@ -135,6 +136,7 @@ export default function ContentsPage() {
   const [isSubmittingModulo, setIsSubmittingModulo] = useState(false);
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
 
+  // Alerta Modal
   const [alertConfig, setAlertConfig] = useState({
     isOpen: false,
     type: "success",
@@ -146,20 +148,21 @@ export default function ContentsPage() {
     setAlertConfig({ isOpen: true, type, message, onConfirm });
   };
 
+  // Formulário do Curso
   const [newModuleTitle, setNewModuleTitle] = useState("");
   const [newModuleDescription, setNewModuleDescription] = useState("");
   const [newModulePrice, setNewModulePrice] = useState("");
-  const [newModuleEndDate, setNewModuleEndDate] = useState("");
 
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
 
+  // Formulário de Vídeo / Aula
   const [selectedCursoForVideo, setSelectedCursoForVideo] = useState("");
-  const [modulosDisponiveisParaVideo, setModulosDisponiveisParaVideo] =
-    useState([]);
+  const [modulosDisponiveisParaVideo, setModulosDisponiveisParaVideo] = useState([]);
   const [selectedModuloForVideo, setSelectedModuloForVideo] = useState("");
   const [youtubeUrlOuId, setYoutubeUrlOuId] = useState("");
 
+  // Modal de Módulos
   const [showModuloModal, setShowModuloModal] = useState(false);
   const [selectedCursoForModulo, setSelectedCursoForModulo] = useState(null);
   const [modulosDoCurso, setModulosDoCurso] = useState([]);
@@ -168,6 +171,7 @@ export default function ContentsPage() {
   const [moduloOrdem, setModuloOrdem] = useState(1);
   const [editingModuloId, setEditingModuloId] = useState(null);
 
+  // Modal de Questão
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [questionStatement, setQuestionStatement] = useState("");
@@ -193,6 +197,7 @@ export default function ContentsPage() {
   const [assuntos, setAssuntos] = useState([]);
   const [bancas, setBancas] = useState([]);
 
+  // Modais de Assunto e Banca
   const [showAssuntoModal, setShowAssuntoModal] = useState(false);
   const [assuntoNome, setAssuntoNome] = useState("");
   const [assuntoDescricao, setAssuntoDescricao] = useState("");
@@ -202,6 +207,7 @@ export default function ContentsPage() {
   const [bancaNome, setBancaNome] = useState("");
   const [editingBancaId, setEditingBancaId] = useState(null);
 
+  // Carregar dados iniciais
   const fetchData = async () => {
     if (!token) {
       console.warn("Token não encontrado no localStorage.");
@@ -210,7 +216,6 @@ export default function ContentsPage() {
 
     setLoadingQuestions(true);
     setLoadingCursos(true);
-
     try {
       const [
         dadosUsuario,
@@ -227,10 +232,10 @@ export default function ContentsPage() {
       ]);
 
       setUsuario(dadosUsuario);
-      setQuestions(dataQuestions);
-      setAssuntos(dataAssuntos);
-      setBancas(dataBancas);
-      setCursos(dataCursos);
+      setQuestions(dataQuestions || []);
+      setAssuntos(dataAssuntos || []);
+      setBancas(dataBancas || []);
+      setCursos(dataCursos || []);
     } catch (error) {
       console.error("Erro ao carregar dados do banco:", error);
     } finally {
@@ -243,13 +248,13 @@ export default function ContentsPage() {
     fetchData();
   }, [token]);
 
+  // Handlers para Aulas / Vídeos
   const handleCursoVideoChange = async (cursoId) => {
     setSelectedCursoForVideo(cursoId);
     setSelectedModuloForVideo("");
     setModulosDisponiveisParaVideo([]);
 
     if (!cursoId) return;
-
     try {
       const modulos = await moduloService.listarModulos(cursoId, token);
       setModulosDisponiveisParaVideo(modulos || []);
@@ -273,19 +278,14 @@ export default function ContentsPage() {
       );
       return;
     }
-
     setIsSubmittingVideo(true);
-
     try {
       const payload = {
         youtubeUrlOuId: youtubeUrlOuId.trim(),
         moduloId: parseInt(selectedModuloForVideo),
       };
-
       await gravacaoService.criar(payload, token);
-
       showAlert("Aula em vídeo cadastrada com sucesso!");
-
       setYoutubeUrlOuId("");
       setSelectedCursoForVideo("");
       setSelectedModuloForVideo("");
@@ -297,6 +297,7 @@ export default function ContentsPage() {
     }
   };
 
+  // Handlers para Assuntos
   const handleSaveAssunto = async (e) => {
     e.preventDefault();
     if (isSubmittingAssunto) return;
@@ -305,1161 +306,6 @@ export default function ContentsPage() {
       showAlert("Digite o nome do assunto.", "error");
       return;
     }
-
-    setIsSubmittingAssunto(true);
-
-    try {
-      const payload = {
-        nome: assuntoNome.trim(),
-        descricao: assuntoDescricao.trim() || null,
-        disciplinaId: 1,
-      };
-
-      if (editingAssuntoId) {
-        await assuntoService.atualizarAssunto(editingAssuntoId, payload, token);
-        showAlert("Assunto atualizado com sucesso!");
-      } else {
-        await assuntoService.criarAssunto(payload, token);
-        showAlert("Assunto criado com sucesso!");
-      }
-
-      setAssuntoNome("");
-      setAssuntoDescricao("");
-      setEditingAssuntoId(null);
-      setShowAssuntoModal(false);
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar assunto: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingAssunto(false);
-    }
-  };
-
-  const handleEditAssunto = (assunto) => {
-    setEditingAssuntoId(assunto.id);
-    setAssuntoNome(assunto.nome || assunto.titulo || "");
-    setAssuntoDescricao(assunto.descricao || "");
-    setShowAssuntoModal(true);
-  };
-
-  const handleDeleteAssunto = (id) => {
-    showAlert("Deseja realmente excluir este assunto?", "confirm", async () => {
-      try {
-        await assuntoService.deletarAssunto(id, token);
-        showAlert("Assunto excluído com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir assunto.", "error");
-      }
-    });
-  };
-
-  const handleSaveBanca = async (e) => {
-    e.preventDefault();
-    if (isSubmittingBanca) return;
-
-    if (!bancaNome.trim()) {
-      showAlert("Digite o nome da banca.", "error");
-      return;
-    }
-
-    setIsSubmittingBanca(true);
-
-    try {
-      if (editingBancaId) {
-        await bancaService.atualizar(
-          editingBancaId,
-          { nome: bancaNome },
-          token
-        );
-        showAlert("Banca atualizada com sucesso!");
-      } else {
-        await bancaService.criarBanca({ nome: bancaNome }, token);
-        showAlert("Banca criada com sucesso!");
-      }
-
-      setBancaNome("");
-      setEditingBancaId(null);
-      setShowBancaModal(false);
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar banca: ${error.message}`, "error");
-    } finally {
-      setIsSubmittingBanca(false);
-    }
-  };
-
-  const handleEditBanca = (banca) => {
-    setEditingBancaId(banca.id);
-    setBancaNome(banca.nome || banca.titulo || "");
-    setShowBancaModal(true);
-  };
-
-  const handleDeleteBanca = (id) => {
-    showAlert("Deseja realmente excluir esta banca?", "confirm", async () => {
-      try {
-        await bancaService.deletar(id, token);
-        showAlert("Banca excluída com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir banca.", "error");
-      }
-    });
-  };
-
-  const handleCreateModule = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingCourse) return;
-
-    if (!newModuleTitle || !newModuleDescription || !newModuleEndDate) {
-      showAlert(
-        "Por favor, preencha o nome, a descrição e a data de término do curso!",
-        "error"
-      );
-      return;
-    }
-
-    setIsSubmittingCourse(true);
-
-    try {
-      const cursoData = {
-        nome: newModuleTitle.trim(),
-        descricao: newModuleDescription.trim(),
-        preco: newModulePrice ? parseFloat(newModulePrice) : 0.0,
-        dataTermino: newModuleEndDate,
-      };
-
-      await cursoService.criar(cursoData, token);
-
-      showAlert(`Curso "${newModuleTitle}" criado com sucesso!`);
-
-      setNewModuleTitle("");
-      setNewModuleDescription("");
-      setNewModulePrice("");
-      setNewModuleEndDate("");
-
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao criar curso: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingCourse(false);
-    }
-  };
-
-  const handleDeleteCurso = (id) => {
-    showAlert("Deseja realmente excluir este curso?", "confirm", async () => {
-      try {
-        await cursoService.deletar(id, token);
-        showAlert("Curso excluído com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir curso.", "error");
-      }
-    });
-  };
-
-  const handleOpenModulosModal = async (curso) => {
-    setSelectedCursoForModulo(curso);
-    setShowModuloModal(true);
-    await carregarModulosDoCurso(curso.id);
-  };
-
-  const carregarModulosDoCurso = async (cursoId) => {
-    try {
-      const data = await moduloService.listarModulos(cursoId, token);
-      setModulosDoCurso(data);
-    } catch (error) {
-      console.error("Erro ao listar módulos:", error);
-    }
-  };
-
-  const handleSaveModulo = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingModulo) return;
-
-    if (!moduloTitulo.trim() || !selectedCursoForModulo) {
-      showAlert("Preencha o título do módulo.", "error");
-      return;
-    }
-
-    setIsSubmittingModulo(true);
-
-    try {
-      const payload = {
-        titulo: moduloTitulo.trim(),
-        descricao: moduloDescricao.trim() || null,
-        ordem: parseInt(moduloOrdem) || 1,
-      };
-
-      if (editingModuloId) {
-        await moduloService.atualizarModulo(
-          selectedCursoForModulo.id,
-          editingModuloId,
-          payload,
-          token
-        );
-        showAlert("Módulo atualizado com sucesso!");
-      } else {
-        await moduloService.criarModulo(
-          selectedCursoForModulo.id,
-          payload,
-          token
-        );
-        showAlert("Módulo criado com sucesso!");
-      }
-
-      setModuloTitulo("");
-      setModuloDescricao("");
-      setModuloOrdem(1);
-      setEditingModuloId(null);
-
-      await carregarModulosDoCurso(selectedCursoForModulo.id);
-    } catch (error) {
-      showAlert(`Erro ao salvar módulo: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingModulo(false);
-    }
-  };
-
-  const handleEditModulo = (modulo) => {
-    setEditingModuloId(modulo.id);
-    setModuloTitulo(modulo.titulo || "");
-    setModuloDescricao(modulo.descricao || "");
-    setModuloOrdem(modulo.ordem || 1);
-  };
-
-  const handleDeleteModulo = (moduloId) => {
-    showAlert("Deseja realmente excluir este módulo?", "confirm", async () => {
-      try {
-        await moduloService.deletarModulo(
-          selectedCursoForModulo.id,
-          moduloId,
-          token
-        );
-
-        showAlert("Módulo excluído com sucesso!");
-
-        await carregarModulosDoCurso(selectedCursoForModulo.id);
-      } catch (error) {
-        showAlert("Erro ao excluir módulo.", "error");
-      }
-    });
-  };
-
-  const handleSaveQuestion = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingQuestion) return;
-
-    if (!token) {
-      showAlert(
-        "Sessão não encontrada ou token ausente. Faça login novamente.",
-        "error"
-      );
-      return;
-    }
-
-    const alternativasPreenchidas = alternativas.filter(
-      (alt) => alt.texto && alt.texto.trim() !== ""
-    );
-
-    if (
-      !questionStatement ||
-      !questionAssuntoId ||
-      alternativasPreenchidas.length < 2
-    ) {
-      showAlert(
-        "Por favor, preencha o enunciado, o assunto e pelo menos duas alternativas!",
-        "error"
-      );
-      return;
-    }
-
-    const questaoData = {
-      assuntoId: parseInt(questionAssuntoId),
-      bancaId: questionBancaId ? parseInt(questionBancaId) : null,
-      enunciado: questionStatement,
-      ano: parseInt(questionAno) || new Date().getFullYear(),
-      nivel: questionNivel,
-      explicacao: questionExplicacao,
-      fonte: questionFonte,
-      alternativas: alternativas.map((alt) => ({
-        letra: alt.letra,
-        texto: alt.texto,
-        correta: alt.letra === correctAnswer,
-      })),
-    };
-
-    setIsSubmittingQuestion(true);
-
-    try {
-      if (editingQuestionId) {
-        await questaoService.atualizar(
-          editingQuestionId,
-          questaoData,
-          token
-        );
-        showAlert(`Questão atualizada com sucesso!`);
-      } else {
-        await questaoService.criarQuestao(questaoData, token);
-        showAlert(`Questão criada com sucesso!`);
-      }
-
-      handleResetQuestionForm();
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingQuestion(false);
-    }
-  };
-
-  const handleOpenCreateQuestion = () => {
-    handleResetQuestionForm();
-    setShowQuestionModal(true);
-  };
-
-  const handleEditQuestion = (q) => {
-    const qId = q.id;
-
-    setEditingQuestionId(qId);
-    setQuestionStatement(q.enunciado || "");
-    setQuestionAssuntoId(q.assuntoId || "");
-    setQuestionBancaId(q.bancaId || "");
-    setQuestionAno(q.ano || new Date().getFullYear());
-    setQuestionNivel(q.nivel || "MEDIO");
-    setQuestionExplicacao(q.explicacao || "");
-    setQuestionFonte(q.fonte || "");
-
-    const listaAlts = q.alternativas || [];
-
-    if (listaAlts.length > 0) {
-      const formattedAlts = listaAlts.map((a) => ({
-        letra: a.letra,
-        texto: a.texto,
-        correta: Boolean(a.correta),
-      }));
-
-      setalternativas(formattedAlts);
-
-      const corretaObj = formattedAlts.find((a) => a.correta === true);
-
-      if (corretaObj) {
-        setCorrectAnswer(corretaObj.letra);
-      }
-    }
-
-    setShowQuestionModal(true);
-  };
-
-  const handleDeleteQuestion = (id) => {
-    if (!token) {
-      showAlert("Sessão não encontrada ou token ausente.", "error");
-      return;
-    }
-
-    showAlert("Deseja realmente excluir esta questão?", "confirm", async () => {
-      try {
-        await questaoService.deletar(id, token);
-        showAlert("Questão excluída com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir questão.", "error");
-      }
-    });
-  };
-
-  const handleResetQuestionForm = () => {
-    setEditingQuestionId(null);
-    setQuestionStatement("");
-    setQuestionAssuntoId("");
-    setQuestionBancaId("");
-    setQuestionAno(new Date().getFullYear());
-    setQuestionNivel("MEDIO");
-    setQuestionExplicacao("");
-    setQuestionFonte("");
-    setCorrectAnswer("A");
-
-    setalternativas([
-      { letra: "A", texto: "", correta: true },
-      { letra: "B", texto: "", correta: false },
-      { letra: "C", texto: "", correta: false },
-      { letra: "D", texto: "", correta: false },
-      { letra: "E", texto: "", correta: false },
-    ]);
-
-    setShowQuestionModal(false);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F4EFE6] flex flex-col">
-      <Navbar usuario={usuario} links={links} />
-
-      <main className="flex-1 p-4 sm:p-6 md:p-8 bg-gradient-to-br from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE]">
-
-      setAssuntoNome("");
-      setAssuntoDescricao("");
-      setEditingAssuntoId(null);
-      setShowAssuntoModal(false);
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar assunto: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingAssunto(false);
-    }
-  };
-
-  const handleEditAssunto = (assunto) => {
-    setEditingAssuntoId(assunto.id);
-    setAssuntoNome(assunto.nome || assunto.titulo || "");
-    setAssuntoDescricao(assunto.descricao || "");
-    setShowAssuntoModal(true);
-  };
-
-  const handleDeleteAssunto = (id) => {
-    showAlert("Deseja realmente excluir este assunto?", "confirm", async () => {
-      try {
-        await assuntoService.deletarAssunto(id, token);
-        showAlert("Assunto excluído com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir assunto.", "error");
-      }
-    });
-  };
-
-  const handleSaveBanca = async (e) => {
-    e.preventDefault();
-    if (isSubmittingBanca) return;
-
-    if (!bancaNome.trim()) {
-      showAlert("Digite o nome da banca.", "error");
-      return;
-    }
-
-    setIsSubmittingBanca(true);
-
-    try {
-      if (editingBancaId) {
-        await bancaService.atualizar(
-          editingBancaId,
-          { nome: bancaNome },
-          token
-        );
-        showAlert("Banca atualizada com sucesso!");
-      } else {
-        await bancaService.criarBanca({ nome: bancaNome }, token);
-        showAlert("Banca criada com sucesso!");
-      }
-
-      setBancaNome("");
-      setEditingBancaId(null);
-      setShowBancaModal(false);
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar banca: ${error.message}`, "error");
-    } finally {
-      setIsSubmittingBanca(false);
-    }
-  };
-
-  const handleEditBanca = (banca) => {
-    setEditingBancaId(banca.id);
-    setBancaNome(banca.nome || banca.titulo || "");
-    setShowBancaModal(true);
-  };
-
-  const handleDeleteBanca = (id) => {
-    showAlert("Deseja realmente excluir esta banca?", "confirm", async () => {
-      try {
-        await bancaService.deletar(id, token);
-        showAlert("Banca excluída com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir banca.", "error");
-      }
-    });
-  };
-
-  const handleCreateModule = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingCourse) return;
-
-    if (!newModuleTitle || !newModuleDescription || !newModuleEndDate) {
-      showAlert(
-        "Por favor, preencha o nome, a descrição e a data de término do curso!",
-        "error"
-      );
-      return;
-    }
-
-    setIsSubmittingCourse(true);
-
-    try {
-      const cursoData = {
-        nome: newModuleTitle.trim(),
-        descricao: newModuleDescription.trim(),
-        preco: newModulePrice ? parseFloat(newModulePrice) : 0.0,
-        dataTermino: newModuleEndDate,
-      };
-
-      await cursoService.criar(cursoData, token);
-
-      showAlert(`Curso "${newModuleTitle}" criado com sucesso!`);
-
-      setNewModuleTitle("");
-      setNewModuleDescription("");
-      setNewModulePrice("");
-      setNewModuleEndDate("");
-
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao criar curso: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingCourse(false);
-    }
-  };
-
-  const handleDeleteCurso = (id) => {
-    showAlert("Deseja realmente excluir este curso?", "confirm", async () => {
-      try {
-        await cursoService.deletar(id, token);
-        showAlert("Curso excluído com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir curso.", "error");
-      }
-    });
-  };
-
-  const handleOpenModulosModal = async (curso) => {
-    setSelectedCursoForModulo(curso);
-    setShowModuloModal(true);
-    await carregarModulosDoCurso(curso.id);
-  };
-
-  const carregarModulosDoCurso = async (cursoId) => {
-    try {
-      const data = await moduloService.listarModulos(cursoId, token);
-      setModulosDoCurso(data);
-    } catch (error) {
-      console.error("Erro ao listar módulos:", error);
-    }
-  };
-
-  const handleSaveModulo = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingModulo) return;
-
-    if (!moduloTitulo.trim() || !selectedCursoForModulo) {
-      showAlert("Preencha o título do módulo.", "error");
-      return;
-    }
-
-    setIsSubmittingModulo(true);
-
-    try {
-      const payload = {
-        titulo: moduloTitulo.trim(),
-        descricao: moduloDescricao.trim() || null,
-        ordem: parseInt(moduloOrdem) || 1,
-      };
-
-      if (editingModuloId) {
-        await moduloService.atualizarModulo(
-          selectedCursoForModulo.id,
-          editingModuloId,
-          payload,
-          token
-        );
-        showAlert("Módulo atualizado com sucesso!");
-      } else {
-        await moduloService.criarModulo(
-          selectedCursoForModulo.id,
-          payload,
-          token
-        );
-        showAlert("Módulo criado com sucesso!");
-      }
-
-      setModuloTitulo("");
-      setModuloDescricao("");
-      setModuloOrdem(1);
-      setEditingModuloId(null);
-
-      await carregarModulosDoCurso(selectedCursoForModulo.id);
-    } catch (error) {
-      showAlert(`Erro ao salvar módulo: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingModulo(false);
-    }
-  };
-
-  const handleEditModulo = (modulo) => {
-    setEditingModuloId(modulo.id);
-    setModuloTitulo(modulo.titulo || "");
-    setModuloDescricao(modulo.descricao || "");
-    setModuloOrdem(modulo.ordem || 1);
-  };
-
-  const handleDeleteModulo = (moduloId) => {
-    showAlert("Deseja realmente excluir este módulo?", "confirm", async () => {
-      try {
-        await moduloService.deletarModulo(
-          selectedCursoForModulo.id,
-          moduloId,
-          token
-        );
-
-        showAlert("Módulo excluído com sucesso!");
-
-        await carregarModulosDoCurso(selectedCursoForModulo.id);
-      } catch (error) {
-        showAlert("Erro ao excluir módulo.", "error");
-      }
-    });
-  };
-
-  const handleSaveQuestion = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingQuestion) return;
-
-    if (!token) {
-      showAlert(
-        "Sessão não encontrada ou token ausente. Faça login novamente.",
-        "error"
-      );
-      return;
-    }
-
-    const alternativasPreenchidas = alternativas.filter(
-      (alt) => alt.texto && alt.texto.trim() !== ""
-    );
-
-    if (
-      !questionStatement ||
-      !questionAssuntoId ||
-      alternativasPreenchidas.length < 2
-    ) {
-      showAlert(
-        "Por favor, preencha o enunciado, o assunto e pelo menos duas alternativas!",
-        "error"
-      );
-      return;
-    }
-
-    const questaoData = {
-      assuntoId: parseInt(questionAssuntoId),
-      bancaId: questionBancaId ? parseInt(questionBancaId) : null,
-      enunciado: questionStatement,
-      ano: parseInt(questionAno) || new Date().getFullYear(),
-      nivel: questionNivel,
-      explicacao: questionExplicacao,
-      fonte: questionFonte,
-      alternativas: alternativas.map((alt) => ({
-        letra: alt.letra,
-        texto: alt.texto,
-        correta: alt.letra === correctAnswer,
-      })),
-    };
-
-    setIsSubmittingQuestion(true);
-
-    try {
-      if (editingQuestionId) {
-        await questaoService.atualizar(
-          editingQuestionId,
-          questaoData,
-          token
-        );
-        showAlert(`Questão atualizada com sucesso!`);
-      } else {
-        await questaoService.criarQuestao(questaoData, token);
-        showAlert(`Questão criada com sucesso!`);
-      }
-
-      handleResetQuestionForm();
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingQuestion(false);
-    }
-  };
-
-  const handleOpenCreateQuestion = () => {
-    handleResetQuestionForm();
-    setShowQuestionModal(true);
-  };
-
-  const handleEditQuestion = (q) => {
-    const qId = q.id;
-
-    setEditingQuestionId(qId);
-    setQuestionStatement(q.enunciado || "");
-    setQuestionAssuntoId(q.assuntoId || "");
-    setQuestionBancaId(q.bancaId || "");
-    setQuestionAno(q.ano || new Date().getFullYear());
-    setQuestionNivel(q.nivel || "MEDIO");
-    setQuestionExplicacao(q.explicacao || "");
-    setQuestionFonte(q.fonte || "");
-
-    const listaAlts = q.alternativas || [];
-
-    if (listaAlts.length > 0) {
-      const formattedAlts = listaAlts.map((a) => ({
-        letra: a.letra,
-        texto: a.texto,
-        correta: Boolean(a.correta),
-      }));
-
-      setalternativas(formattedAlts);
-
-      const corretaObj = formattedAlts.find((a) => a.correta === true);
-
-      if (corretaObj) {
-        setCorrectAnswer(corretaObj.letra);
-      }
-    }
-
-    setShowQuestionModal(true);
-  };
-
-  const handleDeleteQuestion = (id) => {
-    if (!token) {
-      showAlert("Sessão não encontrada ou token ausente.", "error");
-      return;
-    }
-
-    showAlert("Deseja realmente excluir esta questão?", "confirm", async () => {
-      try {
-        await questaoService.deletar(id, token);
-        showAlert("Questão excluída com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir questão.", "error");
-      }
-    });
-  };
-
-  const handleResetQuestionForm = () => {
-    setEditingQuestionId(null);
-    setQuestionStatement("");
-    setQuestionAssuntoId("");
-    setQuestionBancaId("");
-    setQuestionAno(new Date().getFullYear());
-    setQuestionNivel("MEDIO");
-    setQuestionExplicacao("");
-    setQuestionFonte("");
-    setCorrectAnswer("A");
-
-    setalternativas([
-      { letra: "A", texto: "", correta: true },
-      { letra: "B", texto: "", correta: false },
-      { letra: "C", texto: "", correta: false },
-      { letra: "D", texto: "", correta: false },
-      { letra: "E", texto: "", correta: false },
-    ]);
-
-    setShowQuestionModal(false);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F4EFE6] flex flex-col">
-      <Navbar usuario={usuario} links={links} />
-
-      <main className="flex-1 p-4 sm:p-6 md:p-8 bg-gradient-to-br from-[#00D2DF }
-
-    setIsSubmittingAssunto(true);
-
-    try {
-      const payload = {
-        nome: assuntoNome.trim(),
-        descricao: assuntoDescricao.trim() || null,
-        disciplinaId: 1,
-      };
-
-      if (editingAssuntoId) {
-        await assuntoService.atualizarAssunto(editingAssuntoId, payload, token);
-        showAlert("Assunto atualizado com sucesso!");
-      } else {
-        await assuntoService.criarAssunto(payload, token);
-        showAlert("Assunto criado com sucesso!");
-      }
-
-      setAssuntoNome("");
-      setAssuntoDescricao("");
-      setEditingAssuntoId(null);
-      setShowAssuntoModal(false);
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar assunto: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingAssunto(false);
-    }
-  };
-
-  const handleEditAssunto = (assunto) => {
-    setEditingAssuntoId(assunto.id);
-    setAssuntoNome(assunto.nome || assunto.titulo || "");
-    setAssuntoDescricao(assunto.descricao || "");
-    setShowAssuntoModal(true);
-  };
-
-  const handleDeleteAssunto = (id) => {
-    showAlert("Deseja realmente excluir este assunto?", "confirm", async () => {
-      try {
-        await assuntoService.deletarAssunto(id, token);
-        showAlert("Assunto excluído com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir assunto.", "error");
-      }
-    });
-  };
-
-  const handleSaveBanca = async (e) => {
-    e.preventDefault();
-    if (isSubmittingBanca) return;
-
-    if (!bancaNome.trim()) {
-      showAlert("Digite o nome da banca.", "error");
-      return;
-    }
-
-    setIsSubmittingBanca(true);
-
-    try {
-      if (editingBancaId) {
-        await bancaService.atualizar(
-          editingBancaId,
-          { nome: bancaNome },
-          token
-        );
-        showAlert("Banca atualizada com sucesso!");
-      } else {
-        await bancaService.criarBanca({ nome: bancaNome }, token);
-        showAlert("Banca criada com sucesso!");
-      }
-
-      setBancaNome("");
-      setEditingBancaId(null);
-      setShowBancaModal(false);
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar banca: ${error.message}`, "error");
-    } finally {
-      setIsSubmittingBanca(false);
-    }
-  };
-
-  const handleEditBanca = (banca) => {
-    setEditingBancaId(banca.id);
-    setBancaNome(banca.nome || banca.titulo || "");
-    setShowBancaModal(true);
-  };
-
-  const handleDeleteBanca = (id) => {
-    showAlert("Deseja realmente excluir esta banca?", "confirm", async () => {
-      try {
-        await bancaService.deletar(id, token);
-        showAlert("Banca excluída com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir banca.", "error");
-      }
-    });
-  };
-
-  const handleCreateModule = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingCourse) return;
-
-    if (
-      !newModuleTitle ||
-      !newModuleDescription ||
-      !newModuleEndDate
-    ) {
-      showAlert(
-        "Por favor, preencha o nome, a descrição e a data de término do curso!",
-        "error"
-      );
-      return;
-    }
-
-    setIsSubmittingCourse(true);
-
-    try {
-      const cursoData = {
-        nome: newModuleTitle.trim(),
-        descricao: newModuleDescription.trim(),
-        preco: newModulePrice ? parseFloat(newModulePrice) : 0.0,
-        dataTermino: newModuleEndDate,
-      };
-
-      await cursoService.criar(cursoData, token);
-
-      showAlert(`Curso "${newModuleTitle}" criado com sucesso!`);
-
-      setNewModuleTitle("");
-      setNewModuleDescription("");
-      setNewModulePrice("");
-      setNewModuleEndDate("");
-
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao criar curso: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingCourse(false);
-    }
-  };
-
-  const handleDeleteCurso = (id) => {
-    showAlert("Deseja realmente excluir este curso?", "confirm", async () => {
-      try {
-        await cursoService.deletar(id, token);
-        showAlert("Curso excluído com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir curso.", "error");
-      }
-    });
-  };
-
-  const handleOpenModulosModal = async (curso) => {
-    setSelectedCursoForModulo(curso);
-    setShowModuloModal(true);
-    await carregarModulosDoCurso(curso.id);
-  };
-
-  const carregarModulosDoCurso = async (cursoId) => {
-    try {
-      const data = await moduloService.listarModulos(cursoId, token);
-      setModulosDoCurso(data);
-    } catch (error) {
-      console.error("Erro ao listar módulos:", error);
-    }
-  };
-
-  const handleSaveModulo = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingModulo) return;
-
-    if (!moduloTitulo.trim() || !selectedCursoForModulo) {
-      showAlert("Preencha o título do módulo.", "error");
-      return;
-    }
-
-    setIsSubmittingModulo(true);
-
-    try {
-      const payload = {
-        titulo: moduloTitulo.trim(),
-        descricao: moduloDescricao.trim() || null,
-        ordem: parseInt(moduloOrdem) || 1,
-      };
-
-      if (editingModuloId) {
-        await moduloService.atualizarModulo(
-          selectedCursoForModulo.id,
-          editingModuloId,
-          payload,
-          token
-        );
-        showAlert("Módulo atualizado com sucesso!");
-      } else {
-        await moduloService.criarModulo(
-          selectedCursoForModulo.id,
-          payload,
-          token
-        );
-        showAlert("Módulo criado com sucesso!");
-      }
-
-      setModuloTitulo("");
-      setModuloDescricao("");
-      setModuloOrdem(1);
-      setEditingModuloId(null);
-
-      await carregarModulosDoCurso(selectedCursoForModulo.id);
-    } catch (error) {
-      showAlert(`Erro ao salvar módulo: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingModulo(false);
-    }
-  };
-
-  const handleEditModulo = (modulo) => {
-    setEditingModuloId(modulo.id);
-    setModuloTitulo(modulo.titulo || "");
-    setModuloDescricao(modulo.descricao || "");
-    setModuloOrdem(modulo.ordem || 1);
-  };
-
-  const handleDeleteModulo = (moduloId) => {
-    showAlert("Deseja realmente excluir este módulo?", "confirm", async () => {
-      try {
-        await moduloService.deletarModulo(
-          selectedCursoForModulo.id,
-          moduloId,
-          token
-        );
-
-        showAlert("Módulo excluído com sucesso!");
-
-        await carregarModulosDoCurso(selectedCursoForModulo.id);
-      } catch (error) {
-        showAlert("Erro ao excluir módulo.", "error");
-      }
-    });
-  };
-
-  const handleSaveQuestion = async (e) => {
-    e.preventDefault();
-
-    if (isSubmittingQuestion) return;
-
-    if (!token) {
-      showAlert(
-        "Sessão não encontrada ou token ausente. Faça login novamente.",
-        "error"
-      );
-      return;
-    }
-
-    const alternativasPreenchidas = alternativas.filter(
-      (alt) => alt.texto && alt.texto.trim() !== ""
-    );
-
-    if (
-      !questionStatement ||
-      !questionAssuntoId ||
-      alternativasPreenchidas.length < 2
-    ) {
-      showAlert(
-        "Por favor, preencha o enunciado, o assunto e pelo menos duas alternativas!",
-        "error"
-      );
-      return;
-    }
-
-    const questaoData = {
-      assuntoId: parseInt(questionAssuntoId),
-      bancaId: questionBancaId ? parseInt(questionBancaId) : null,
-      enunciado: questionStatement,
-      ano: parseInt(questionAno) || new Date().getFullYear(),
-      nivel: questionNivel,
-      explicacao: questionExplicacao,
-      fonte: questionFonte,
-      alternativas: alternativas.map((alt) => ({
-        letra: alt.letra,
-        texto: alt.texto,
-        correta: alt.letra === correctAnswer,
-      })),
-    };
-
-    setIsSubmittingQuestion(true);
-
-    try {
-      if (editingQuestionId) {
-        await questaoService.atualizar(
-          editingQuestionId,
-          questaoData,
-          token
-        );
-        showAlert(`Questão atualizada com sucesso!`);
-      } else {
-        await questaoService.criarQuestao(questaoData, token);
-        showAlert(`Questão criada com sucesso!`);
-      }
-
-      handleResetQuestionForm();
-      fetchData();
-    } catch (error) {
-      showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
-    } finally {
-      setIsSubmittingQuestion(false);
-    }
-  };
-
-  const handleOpenCreateQuestion = () => {
-    handleResetQuestionForm();
-    setShowQuestionModal(true);
-  };
-
-  const handleEditQuestion = (q) => {
-    const qId = q.id;
-
-    setEditingQuestionId(qId);
-    setQuestionStatement(q.enunciado || "");
-    setQuestionAssuntoId(q.assuntoId || "");
-    setQuestionBancaId(q.bancaId || "");
-    setQuestionAno(q.ano || new Date().getFullYear());
-    setQuestionNivel(q.nivel || "MEDIO");
-    setQuestionExplicacao(q.explicacao || "");
-    setQuestionFonte(q.fonte || "");
-
-    const listaAlts = q.alternativas || [];
-
-    if (listaAlts.length > 0) {
-      const formattedAlts = listaAlts.map((a) => ({
-        letra: a.letra,
-        texto: a.texto,
-        correta: Boolean(a.correta),
-      }));
-
-      setalternativas(formattedAlts);
-
-      const corretaObj = formattedAlts.find((a) => a.correta === true);
-
-      if (corretaObj) {
-        setCorrectAnswer(corretaObj.letra);
-      }
-    }
-
-    setShowQuestionModal(true);
-  };
-
-  const handleDeleteQuestion = (id) => {
-    if (!token) {
-      showAlert("Sessão não encontrada ou token ausente.", "error");
-      return;
-    }
-
-    showAlert("Deseja realmente excluir esta questão?", "confirm", async () => {
-      try {
-        await questaoService.deletar(id, token);
-        showAlert("Questão excluída com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir questão.", "error");
-      }
-    });
-  };
-
-  const handleResetQuestionForm = () => {
-    setEditingQuestionId(null);
-    setQuestionStatement("");
-    setQuestionAssuntoId("");
-    setQuestionBancaId("");
-    setQuestionAno(new Date().getFullYear());
-    setQuestionNivel("MEDIO");
-    setQuestionExplicacao("");
-    setQuestionFonte("");
-    setCorrectAnswer("A");
-
-    if (!assuntoNome.trim()) {
-      showAlert("Digite o nome do assunto.", "error");
-      return;
-    }
-
     setIsSubmittingAssunto(true);
     try {
       const payload = {
@@ -1467,7 +313,6 @@ export default function ContentsPage() {
         descricao: assuntoDescricao.trim() || null,
         disciplinaId: 1,
       };
-
       if (editingAssuntoId) {
         await assuntoService.atualizarAssunto(editingAssuntoId, payload, token);
         showAlert("Assunto atualizado com sucesso!");
@@ -1506,6 +351,7 @@ export default function ContentsPage() {
     });
   };
 
+  // Handlers para Bancas
   const handleSaveBanca = async (e) => {
     e.preventDefault();
     if (isSubmittingBanca) return;
@@ -1514,7 +360,6 @@ export default function ContentsPage() {
       showAlert("Digite o nome da banca.", "error");
       return;
     }
-
     setIsSubmittingBanca(true);
     try {
       if (editingBancaId) {
@@ -1533,7 +378,7 @@ export default function ContentsPage() {
       setShowBancaModal(false);
       fetchData();
     } catch (error) {
-      showAlert(`Erro ao salvar banca: ${error.message}`, "error");
+      showAlert(`Erro ao salvar banca: ${error.message || error}`, "error");
     } finally {
       setIsSubmittingBanca(false);
     }
@@ -1557,6 +402,7 @@ export default function ContentsPage() {
     });
   };
 
+  // Handlers para Cursos
   const handleCreateModule = async (e) => {
     e.preventDefault();
     if (isSubmittingCourse) return;
@@ -1565,7 +411,6 @@ export default function ContentsPage() {
       showAlert("Por favor, preencha o nome e a descrição do curso!", "error");
       return;
     }
-
     setIsSubmittingCourse(true);
     try {
       const cursoData = {
@@ -1573,7 +418,6 @@ export default function ContentsPage() {
         descricao: newModuleDescription.trim(),
         preco: newModulePrice ? parseFloat(newModulePrice) : 0.0,
       };
-
       await cursoService.criar(cursoData, token);
       showAlert(`Curso "${newModuleTitle}" criado com sucesso!`);
       setNewModuleTitle("");
@@ -1599,6 +443,7 @@ export default function ContentsPage() {
     });
   };
 
+  // Handlers para Módulos de um Curso
   const handleOpenModulosModal = async (curso) => {
     setSelectedCursoForModulo(curso);
     setShowModuloModal(true);
@@ -1608,7 +453,7 @@ export default function ContentsPage() {
   const carregarModulosDoCurso = async (cursoId) => {
     try {
       const data = await moduloService.listarModulos(cursoId, token);
-      setModulosDoCurso(data);
+      setModulosDoCurso(data || []);
     } catch (error) {
       console.error("Erro ao listar módulos:", error);
     }
@@ -1622,7 +467,6 @@ export default function ContentsPage() {
       showAlert("Preencha o título do módulo.", "error");
       return;
     }
-
     setIsSubmittingModulo(true);
     try {
       const payload = {
@@ -1630,7 +474,6 @@ export default function ContentsPage() {
         descricao: moduloDescricao.trim() || null,
         ordem: parseInt(moduloOrdem) || 1,
       };
-
       if (editingModuloId) {
         await moduloService.atualizarModulo(
           selectedCursoForModulo.id,
@@ -1647,7 +490,6 @@ export default function ContentsPage() {
         );
         showAlert("Módulo criado com sucesso!");
       }
-
       setModuloTitulo("");
       setModuloDescricao("");
       setModuloOrdem(1);
@@ -1681,6 +523,32 @@ export default function ContentsPage() {
         showAlert("Erro ao excluir módulo.", "error");
       }
     });
+  };
+
+  // Handlers para Questões
+  const handleResetQuestionForm = () => {
+    setEditingQuestionId(null);
+    setQuestionStatement("");
+    setQuestionAssuntoId("");
+    setQuestionBancaId("");
+    setQuestionAno(new Date().getFullYear());
+    setQuestionNivel("MEDIO");
+    setQuestionExplicacao("");
+    setQuestionFonte("");
+    setCorrectAnswer("A");
+    setalternativas([
+      { letra: "A", texto: "", correta: true },
+      { letra: "B", texto: "", correta: false },
+      { letra: "C", texto: "", correta: false },
+      { letra: "D", texto: "", correta: false },
+      { letra: "E", texto: "", correta: false },
+    ]);
+    setShowQuestionModal(false);
+  };
+
+  const handleOpenCreateQuestion = () => {
+    handleResetQuestionForm();
+    setShowQuestionModal(true);
   };
 
   const handleSaveQuestion = async (e) => {
@@ -1734,7 +602,6 @@ export default function ContentsPage() {
         await questaoService.criarQuestao(questaoData, token);
         showAlert(`Questão criada com sucesso!`);
       }
-
       handleResetQuestionForm();
       fetchData();
     } catch (error) {
@@ -1742,11 +609,6 @@ export default function ContentsPage() {
     } finally {
       setIsSubmittingQuestion(false);
     }
-  };
-
-  const handleOpenCreateQuestion = () => {
-    handleResetQuestionForm();
-    setShowQuestionModal(true);
   };
 
   const handleEditQuestion = (q) => {
@@ -1768,7 +630,6 @@ export default function ContentsPage() {
         correta: Boolean(a.correta),
       }));
       setalternativas(formattedAlts);
-
       const corretaObj = formattedAlts.find((a) => a.correta === true);
       if (corretaObj) {
         setCorrectAnswer(corretaObj.letra);
@@ -1794,31 +655,12 @@ export default function ContentsPage() {
     });
   };
 
-  const handleResetQuestionForm = () => {
-    setEditingQuestionId(null);
-    setQuestionStatement("");
-    setQuestionAssuntoId("");
-    setQuestionBancaId("");
-    setQuestionAno(new Date().getFullYear());
-    setQuestionNivel("MEDIO");
-    setQuestionExplicacao("");
-    setQuestionFonte("");
-    setCorrectAnswer("A");
-    setalternativas([
-      { letra: "A", texto: "", correta: true },
-      { letra: "B", texto: "", correta: false },
-      { letra: "C", texto: "", correta: false },
-      { letra: "D", texto: "", correta: false },
-      { letra: "E", texto: "", correta: false },
-    ]);
-    setShowQuestionModal(false);
-  };
-
   return (
-    <div className="min-h-screen bg-[#F4EFE6] flex flex-col">
+    <div className="min-h-screen flex flex-col bg-slate-100">
       <Navbar usuario={usuario} links={links} />
 
       <main className="flex-1 p-4 sm:p-6 md:p-8 bg-gradient-to-br from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE]">
+        {/* Cabeçalho */}
         <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-5 sm:p-6 shadow-[6px_6px_0_black] mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase">
@@ -1830,7 +672,7 @@ export default function ContentsPage() {
           </div>
         </div>
 
-        {/* MODAL / SEÇÃO DE ASSUNTOS */}
+        {/* MODAL DE ASSUNTOS */}
         {showAssuntoModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-lg w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
@@ -1846,7 +688,6 @@ export default function ContentsPage() {
                   ✕
                 </button>
               </div>
-
               <form onSubmit={handleSaveAssunto} className="space-y-3 mb-6">
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
@@ -1902,9 +743,7 @@ export default function ContentsPage() {
                   )}
                 </div>
               </form>
-
               <hr className="border-2 border-black mb-4" />
-
               <h4 className="font-black uppercase text-sm mb-2">
                 Assuntos Cadastrados
               </h4>
@@ -1944,7 +783,7 @@ export default function ContentsPage() {
           </div>
         )}
 
-        {/* MODAL / SEÇÃO DE BANCAS */}
+        {/* MODAL DE BANCAS */}
         {showBancaModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-lg w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
@@ -1960,7 +799,6 @@ export default function ContentsPage() {
                   ✕
                 </button>
               </div>
-
               <form onSubmit={handleSaveBanca} className="space-y-3 mb-6">
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
@@ -2002,9 +840,7 @@ export default function ContentsPage() {
                   )}
                 </div>
               </form>
-
               <hr className="border-2 border-black mb-4" />
-
               <h4 className="font-black uppercase text-sm mb-2">
                 Bancas Cadastradas
               </h4>
@@ -2044,7 +880,7 @@ export default function ContentsPage() {
           </div>
         )}
 
-        {/* MODAL DE GERENCIAMENTO DE MÓDULOS DE UM CURSO */}
+        {/* MODAL DE MÓDULOS DE UM CURSO */}
         {showModuloModal && selectedCursoForModulo && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-xl w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
@@ -2054,8 +890,7 @@ export default function ContentsPage() {
                     Módulos do Curso
                   </h3>
                   <p className="text-xs font-bold text-slate-600">
-                    {selectedCursoForModulo.titulo ||
-                      selectedCursoForModulo.nome}
+                    {selectedCursoForModulo.titulo || selectedCursoForModulo.nome}
                   </p>
                 </div>
                 <button
@@ -2066,7 +901,6 @@ export default function ContentsPage() {
                   ✕
                 </button>
               </div>
-
               <form
                 onSubmit={handleSaveModulo}
                 className="space-y-3 mb-6 bg-white p-4 border-2 border-black rounded-xl"
@@ -2186,7 +1020,7 @@ export default function ContentsPage() {
           </div>
         )}
 
-        {/* MODAL DE CADASTRO/EDIÇÃO DE QUESTÃO */}
+        {/* MODAL DE QUESTÃO */}
         {showQuestionModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-2xl w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
@@ -2202,7 +1036,6 @@ export default function ContentsPage() {
                   ✕
                 </button>
               </div>
-
               <form onSubmit={handleSaveQuestion} className="space-y-4">
                 <div>
                   <label className="block font-black text-sm mb-1">
@@ -2217,7 +1050,6 @@ export default function ContentsPage() {
                     rows={4}
                   />
                 </div>
-
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <label className="block font-black text-sm mb-1">
@@ -2239,7 +1071,6 @@ export default function ContentsPage() {
                       ))}
                     </select>
                   </div>
-
                   <div>
                     <label className="block font-black text-sm mb-1">
                       Banca
@@ -2258,7 +1089,6 @@ export default function ContentsPage() {
                       ))}
                     </select>
                   </div>
-
                   <div>
                     <label className="block font-black text-sm mb-1">Ano</label>
                     <input
@@ -2270,7 +1100,6 @@ export default function ContentsPage() {
                     />
                   </div>
                 </div>
-
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <label className="block font-black text-sm mb-1">
@@ -2287,7 +1116,6 @@ export default function ContentsPage() {
                       <option value="DIFICIL">Difícil</option>
                     </select>
                   </div>
-
                   <div>
                     <label className="block font-black text-sm mb-1">
                       Fonte
@@ -2301,7 +1129,6 @@ export default function ContentsPage() {
                       className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     />
                   </div>
-
                   <div>
                     <label className="block font-black text-sm mb-1">
                       Alternativa Correta
@@ -2329,7 +1156,6 @@ export default function ContentsPage() {
                     </select>
                   </div>
                 </div>
-
                 <div>
                   <label className="block font-black text-sm mb-1">
                     Explicação
@@ -2343,7 +1169,6 @@ export default function ContentsPage() {
                     rows={2}
                   />
                 </div>
-
                 <div className="space-y-2 pt-2">
                   <label className="block font-black text-sm">
                     Alternativas (A, B, C, D, E)
@@ -2367,7 +1192,6 @@ export default function ContentsPage() {
                     </div>
                   ))}
                 </div>
-
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     type="submit"
@@ -2394,6 +1218,7 @@ export default function ContentsPage() {
           </div>
         )}
 
+        {/* LISTAGEM DE CURSOS E FORMULÁRIOS LATERAIS */}
         <div className="grid xl:grid-cols-3 gap-6 mb-6">
           <Card className="xl:col-span-2 bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
             <h2 className="font-black uppercase mb-5 text-xl">
@@ -2444,9 +1269,9 @@ export default function ContentsPage() {
             </div>
           </Card>
 
-          {/* Painel lateral com Novo Curso e, abaixo, Nova Aula */}
+          {/* PAINEL LATERAL (NOVO CURSO E NOVA AULA) */}
           <div className="flex flex-col gap-6">
-            {/* Painel de Novo Curso */}
+            {/* Formulário Novo Curso */}
             <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
               <h2 className="font-black uppercase mb-5 text-xl">Novo Curso</h2>
               <form onSubmit={handleCreateModule} className="space-y-4">
@@ -2500,7 +1325,7 @@ export default function ContentsPage() {
               </form>
             </Card>
 
-            {/* Painel de Nova Aula / Vídeo (Abaixo de Novo Curso) */}
+            {/* Formulário Nova Aula em Vídeo */}
             <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
               <h2 className="font-black uppercase mb-5 text-xl">
                 🎥 Nova Aula (Vídeo)
@@ -2524,7 +1349,6 @@ export default function ContentsPage() {
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
                     Selecione o Módulo / Aula
@@ -2547,7 +1371,6 @@ export default function ContentsPage() {
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
                     URL ou ID do YouTube
@@ -2561,7 +1384,6 @@ export default function ContentsPage() {
                     className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   />
                 </div>
-
                 <button
                   type="submit"
                   disabled={isSubmittingVideo}
@@ -2576,13 +1398,12 @@ export default function ContentsPage() {
           </div>
         </div>
 
-        {/* SEÇÃO DE LISTAGEM DE QUESTÕES */}
+        {/* LISTAGEM DE QUESTÕES */}
         <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
           <div className="flex justify-between items-center mb-5">
             <h2 className="font-black uppercase text-xl">
               Questões Cadastradas ({questions.length})
             </h2>
-
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowAssuntoModal(true)}
@@ -2604,7 +1425,6 @@ export default function ContentsPage() {
               </button>
             </div>
           </div>
-
           <div className="space-y-4">
             {loadingQuestions ? (
               <p className="font-bold text-slate-500">Carregando questões...</p>
