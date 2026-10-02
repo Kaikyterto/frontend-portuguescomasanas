@@ -152,6 +152,7 @@ export default function ContentsPage() {
   const [newModuleTitle, setNewModuleTitle] = useState("");
   const [newModuleDescription, setNewModuleDescription] = useState("");
   const [newModulePrice, setNewModulePrice] = useState("");
+  const [newModuleDataTermino, setNewModuleDataTermino] = useState("");
 
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
@@ -307,6 +308,342 @@ export default function ContentsPage() {
       return;
     }
     setIsSubmittingAssunto(true);
+    try {
+      const payload = {
+        nome: assuntoNome.trim(),
+        descricao: assuntoDescricao.trim() || null,
+        disciplinaId: 1,
+      };
+      if (editingAssuntoId) {
+        await assuntoService.atualizarAssunto(editingAssuntoId, payload, token);
+        showAlert("Assunto atualizado com sucesso!");
+      } else {
+        await assuntoService.criarAssunto(payload, token);
+        showAlert("Assunto criado com sucesso!");
+      }
+      setAssuntoNome("");
+      setAssuntoDescricao("");
+      setEditingAssuntoId(null);
+      setShowAssuntoModal(false);
+      fetchData();
+    } catch (error) {
+      showAlert(`Erro ao salvar assunto: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingAssunto(false);
+    }
+  };
+
+  const handleEditAssunto = (assunto) => {
+    setEditingAssuntoId(assunto.id);
+    setAssuntoNome(assunto.nome || assunto.titulo || "");
+    setAssuntoDescricao(assunto.descricao || "");
+    setShowAssuntoModal(true);
+  };
+
+  const handleDeleteAssunto = (id) => {
+    showAlert("Deseja realmente excluir este assunto?", "confirm", async () => {
+      try {
+        await assuntoService.deletarAssunto(id, token);
+        showAlert("Assunto excluído com sucesso!");
+        fetchData();
+      } catch (error) {
+        showAlert("Erro ao excluir assunto.", "error");
+      }
+    });
+  };
+
+  // Handlers para Bancas
+  const handleSaveBanca = async (e) => {
+    e.preventDefault();
+    if (isSubmittingBanca) return;
+
+    if (!bancaNome.trim()) {
+      showAlert("Digite o nome da banca.", "error");
+      return;
+    }
+    setIsSubmittingBanca(true);
+    try {
+      if (editingBancaId) {
+        await bancaService.atualizar(
+          editingBancaId,
+          { nome: bancaNome },
+          token
+        );
+        showAlert("Banca atualizada com sucesso!");
+      } else {
+        await bancaService.criarBanca({ nome: bancaNome }, token);
+        showAlert("Banca criada com sucesso!");
+      }
+      setBancaNome("");
+      setEditingBancaId(null);
+      setShowBancaModal(false);
+      fetchData();
+    } catch (error) {
+      showAlert(`Erro ao salvar banca: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingBanca(false);
+    }
+  };
+
+  const handleEditBanca = (banca) => {
+    setEditingBancaId(banca.id);
+    setBancaNome(banca.nome || banca.titulo || "");
+    setShowBancaModal(true);
+  };
+
+  const handleDeleteBanca = (id) => {
+    showAlert("Deseja realmente excluir esta banca?", "confirm", async () => {
+      try {
+        await bancaService.deletar(id, token);
+        showAlert("Banca excluída com sucesso!");
+        fetchData();
+      } catch (error) {
+        showAlert("Erro ao excluir banca.", "error");
+      }
+    });
+  };
+
+  // Handlers para Cursos
+  const handleCreateModule = async (e) => {
+    e.preventDefault();
+    if (isSubmittingCourse) return;
+
+    if (!newModuleTitle || !newModuleDescription) {
+      showAlert("Por favor, preencha o nome e a descrição do curso!", "error");
+      return;
+    }
+    setIsSubmittingCourse(true);
+    try {
+      const cursoData = {
+        nome: newModuleTitle.trim(),
+        descricao: newModuleDescription.trim(),
+        preco: newModulePrice ? parseFloat(newModulePrice) : 0.0,
+        dataTermino: newModuleDataTermino || null,
+      };
+      await cursoService.criar(cursoData, token);
+      showAlert(`Curso "${newModuleTitle}" criado com sucesso!`);
+      setNewModuleTitle("");
+      setNewModuleDescription("");
+      setNewModulePrice("");
+      setNewModuleDataTermino("");
+      fetchData();
+    } catch (error) {
+      showAlert(`Erro ao criar curso: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingCourse(false);
+    }
+  };
+
+  const handleDeleteCurso = (id) => {
+    showAlert("Deseja realmente excluir este curso?", "confirm", async () => {
+      try {
+        await cursoService.deletar(id, token);
+        showAlert("Curso excluído com sucesso!");
+        fetchData();
+      } catch (error) {
+        showAlert("Erro ao excluir curso.", "error");
+      }
+    });
+  };
+
+  // Handlers para Módulos de um Curso
+  const handleOpenModulosModal = async (curso) => {
+    setSelectedCursoForModulo(curso);
+    setShowModuloModal(true);
+    await carregarModulosDoCurso(curso.id);
+  };
+
+  const carregarModulosDoCurso = async (cursoId) => {
+    try {
+      const data = await moduloService.listarModulos(cursoId, token);
+      setModulosDoCurso(data || []);
+    } catch (error) {
+      console.error("Erro ao listar módulos:", error);
+    }
+  };
+
+  const handleSaveModulo = async (e) => {
+    e.preventDefault();
+    if (isSubmittingModulo) return;
+
+    if (!moduloTitulo.trim() || !selectedCursoForModulo) {
+      showAlert("Preencha o título do módulo.", "error");
+      return;
+    }
+    setIsSubmittingModulo(true);
+    try {
+      const payload = {
+        titulo: moduloTitulo.trim(),
+        descricao: moduloDescricao.trim() || null,
+        ordem: parseInt(moduloOrdem) || 1,
+      };
+      if (editingModuloId) {
+        await moduloService.atualizarModulo(
+          selectedCursoForModulo.id,
+          editingModuloId,
+          payload,
+          token
+        );
+        showAlert("Módulo atualizado com sucesso!");
+      } else {
+        await moduloService.criarModulo(
+          selectedCursoForModulo.id,
+          payload,
+          token
+        );
+        showAlert("Módulo criado com sucesso!");
+      }
+      setModuloTitulo("");
+      setModuloDescricao("");
+      setModuloOrdem(1);
+      setEditingModuloId(null);
+      await carregarModulosDoCurso(selectedCursoForModulo.id);
+    } catch (error) {
+      showAlert(`Erro ao salvar módulo: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingModulo(false);
+    }
+  };
+
+  const handleEditModulo = (modulo) => {
+    setEditingModuloId(modulo.id);
+    setModuloTitulo(modulo.titulo || "");
+    setModuloDescricao(modulo.descricao || "");
+    setModuloOrdem(modulo.ordem || 1);
+  };
+
+  const handleDeleteModulo = (moduloId) => {
+    showAlert("Deseja realmente excluir este módulo?", "confirm", async () => {
+      try {
+        await moduloService.deletarModulo(
+          selectedCursoForModulo.id,
+          moduloId,
+          token
+        );
+        showAlert("Módulo excluído com sucesso!");
+        await carregarModulosDoCurso(selectedCursoForModulo.id);
+      } catch (error) {
+        showAlert("Erro ao excluir módulo.", "error");
+      }
+    });
+  };
+
+  // Handlers para Questões
+  const handleResetQuestionForm = () => {
+    setEditingQuestionId(null);
+    setQuestionStatement("");
+    setQuestionAssuntoId("");
+    setQuestionBancaId("");
+    setQuestionAno(new Date().getFullYear());
+    setQuestionNivel("MEDIO");
+    setQuestionExplicacao("");
+    setQuestionFonte("");
+    setCorrectAnswer("A");
+    setalternativas([
+      { letra: "A", texto: "", correta: true },
+      { letra: "B", texto: "", correta: false },
+      { letra: "C", texto: "", correta: false },
+      { letra: "D", texto: "", correta: false },
+      { letra: "E", texto: "", correta: false },
+    ]);
+    setShowQuestionModal(false);
+  };
+
+  const handleOpenCreateQuestion = () => {
+    handleResetQuestionForm();
+    setShowQuestionModal(true);
+  };
+
+  const handleSaveQuestion = async (e) => {
+    e.preventDefault();
+    if (isSubmittingQuestion) return;
+
+    if (!token) {
+      showAlert(
+        "Sessão não encontrada ou token ausente. Faça login novamente.",
+        "error"
+      );
+      return;
+    }
+    const alternativasPreenchidas = alternativas.filter(
+      (alt) => alt.texto && alt.texto.trim() !== ""
+    );
+
+    if (
+      !questionStatement ||
+      !questionAssuntoId ||
+      alternativasPreenchidas.length < 2
+    ) {
+      showAlert(
+        "Por favor, preencha o enunciado, o assunto e pelo menos duas alternativas!",
+        "error"
+      );
+      return;
+    }
+
+    const questaoData = {
+      assuntoId: parseInt(questionAssuntoId),
+      bancaId: questionBancaId ? parseInt(questionBancaId) : null,
+      enunciado: questionStatement,
+      ano: parseInt(questionAno) || new Date().getFullYear(),
+      nivel: questionNivel,
+      explicacao: questionExplicacao,
+      fonte: questionFonte,
+      alternativas: alternativas.map((alt) => ({
+        letra: alt.letra,
+        texto: alt.texto,
+        correta: alt.letra === correctAnswer,
+      })),
+    };
+
+    setIsSubmittingQuestion(true);
+    try {
+      if (editingQuestionId) {
+        await questaoService.atualizar(editingQuestionId, questaoData, token);
+        showAlert(`Questão atualizada com sucesso!`);
+      } else {
+        await questaoService.criarQuestao(questaoData, token);
+        showAlert(`Questão criada com sucesso!`);
+      }
+      handleResetQuestionForm();
+      fetchData();
+    } catch (error) {
+      showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingQuestion(false);
+    }
+  };
+
+  const handleEditQuestion = (q) => {
+    const qId = q.id;
+    setEditingQuestionId(qId);
+    setQuestionStatement(q.enunciado || "");
+    setQuestionAssuntoId(q.assuntoId || "");
+    setQuestionBancaId(q.bancaId || "");
+    setQuestionAno(q.ano || new Date().getFullYear());
+    setQuestionNivel(q.nivel || "MEDIO");
+    setQuestionExplicacao(q.explicacao || "");
+    setQuestionFonte(q.fonte || "");
+
+    const listaAlts = q.alternativas || [];
+    if (listaAlts.length > 0) {
+      const formattedAlts = listaAlts.map((a) => ({
+        letra: a.letra,
+        texto: a.texto,
+        correta: Boolean(a.correta),
+      }));
+      setalternativas(formattedAlts);
+      const corretaObj = formattedAlts.find((a) => a.correta === true);
+      if (corretaObj) {
+        setCorrectAnswer(corretaObj.letra);
+      }
+    }
+    setShowQuestionModal(true);
+  };
+
+  const handleDeleteQuestion = (id) => {
+    if (!token) {
+      showAlert("Sessão não encontrada ou token ausente.", "errotingAssunto(true);
     try {
       const payload = {
         nome: assuntoNome.trim(),
