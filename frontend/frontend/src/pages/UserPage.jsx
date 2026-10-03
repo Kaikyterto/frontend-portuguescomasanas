@@ -389,7 +389,7 @@ export default function UserPage() {
                       <span className="text-xs font-black uppercase text-[#7B5CFA] bg-[#7B5CFA]/10 px-2 py-1 rounded border border-[#7B5CFA]/30">
                         {questaoSelecionada.tema || "Questão de Português"}
                       </span>
-                      <div className="font-bold text-slate-900 text-sm md:text-base mt-3 leading-relaxed markdown-content">
+                      <div className=" text-slate-900 text-sm md:text-base mt-3 leading-relaxed markdown-content">
                         <ReactMarkdown>
                           {questaoSelecionada.enunciado}
                         </ReactMarkdown>

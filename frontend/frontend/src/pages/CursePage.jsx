@@ -5,7 +5,8 @@ import Card from "../components/Card";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
-import { gravacaoService } from "../service/gravacao";
+// Supondo que você tenha ou crie um serviço de aulas equivalente a este:
+import { aulaService } from "../service/aula";
 
 export default function CursePage() {
   const navigate = useNavigate();
@@ -13,7 +14,10 @@ export default function CursePage() {
   const [usuario, setUsuario] = useState(null);
   const [cursoData, setCursoData] = useState(null);
   const [modulos, setModulos] = useState([]);
-  const [gravacoes, setGravacoes] = useState([]);
+
+  // Estado para armazenar as aulas mapeadas por ID do módulo: { [moduloId]: [aulas...] }
+  const [aulasPorModulo, setAulasPorModulo] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -41,23 +45,42 @@ export default function CursePage() {
 
       try {
         setLoading(true);
-        // Busca simultaneamente os dados do usuário, do curso, os módulos e todas as gravações disponíveis
-        const [dadosUsuario, dadosCurso, dadosModulos, dadosGravacoes] =
-          await Promise.all([
-            buscarDadosUsuarioLogado(token),
-            cursoService.buscarPorId(cursoId, token),
-            moduloService.listarModulos(cursoId, token),
-            gravacaoService.listar(token),
-          ]);
+        // 1. Busca dados básicos do usuário, do curso e os módulos
+        const [dadosUsuario, dadosCurso, dadosModulos] = await Promise.all([
+          buscarDadosUsuarioLogado(token),
+          cursoService.buscarPorId(cursoId, token),
+          moduloService.listarModulos(cursoId, token),
+        ]);
 
         setUsuario(dadosUsuario);
         setCursoData(dadosCurso);
         setModulos(dadosModulos || []);
-        setGravacoes(dadosGravacoes || []);
 
-        // Se houver módulos, define o primeiro da lista como ativo por padrão
+        // Se houver módulos, busca as aulas de cada módulo separadamente conforme o backend exige
         if (dadosModulos && dadosModulos.length > 0) {
           setModuloAtivo(dadosModulos[0].id);
+
+          const mapaAulas = {};
+          await Promise.all(
+            dadosModulos.map(async (modulo) => {
+              try {
+                // Aqui o backend usa a rota equivalente a: GET /cursos/{cursoId}/modulos/{moduloId}/aulas
+                const aulasDoMod = await aulaService.listar(
+                  cursoId,
+                  modulo.id,
+                  token
+                );
+                mapaAulas[modulo.id] = aulasDoMod || [];
+              } catch (err) {
+                console.error(
+                  `Erro ao carregar aulas do módulo ${modulo.id}:`,
+                  err
+                );
+                mapaAulas[modulo.id] = [];
+              }
+            })
+          );
+          setAulasPorModulo(mapaAulas);
         }
       } catch (error) {
         console.error("Erro ao carregar dados da página do curso:", error);
@@ -83,7 +106,7 @@ export default function CursePage() {
   };
 
   const toggleAssistida = (e, aulaId) => {
-    e.stopPropagation(); // Evita que abra o modal ao clicar no botão de marcar
+    e.stopPropagation(); // Evita abrir o modal ao clicar no botão de marcar
     setAulasAssistidas((prev) =>
       prev.includes(aulaId)
         ? prev.filter((id) => id !== aulaId)
@@ -157,14 +180,8 @@ export default function CursePage() {
                 {modulos && modulos.length > 0 ? (
                   modulos.map((modulo, index) => {
                     const isOpen = moduloAtivo === modulo.id;
-
-                    const aulasDoModulo = gravacoes.filter((g) => {
-                      const gModuloId = g.moduloId || g.modulo?.id;
-                      if (gModuloId) {
-                        return Number(gModuloId) === Number(modulo.id);
-                      }
-                      return true;
-                    });
+                    // Recupera as aulas específicas deste módulo utilizando o state organizado
+                    const aulasDoModulo = aulasPorModulo[modulo.id] || [];
 
                     return (
                       <div
@@ -211,7 +228,7 @@ export default function CursePage() {
                               </p>
                             </div>
 
-                            {/* LISTA DE AULAS / VÍDEOS DESTE MÓDULO */}
+                            {/* LISTA DE AULAS DESTE MÓDULO */}
                             <div className="flex flex-col gap-2 mt-1">
                               <h4 className="text-xs font-black uppercase text-slate-800">
                                 🎥 Aulas do Módulo ({aulasDoModulo.length})
@@ -276,8 +293,7 @@ export default function CursePage() {
                                 </div>
                               ) : (
                                 <p className="text-xs font-bold text-slate-500 bg-white p-3 rounded-lg border-2 border-black text-center">
-                                  Nenhuma aula em vídeo cadastrada neste módulo
-                                  ainda.
+                                  Nenhuma aula cadastrada neste módulo ainda.
                                 </p>
                               )}
                             </div>
@@ -313,15 +329,24 @@ export default function CursePage() {
               </button>
             </div>
 
-            <div className="aspect-video w-full border-2 border-black rounded-xl overflow-hidden bg-black mb-4">
-              <iframe
-                src={videoSelecionado.embedUrl}
-                title={videoSelecionado.titulo}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
+            {videoSelecionado.embedUrl ? (
+              <div className="aspect-video w-full border-2 border-black rounded-xl overflow-hidden bg-black mb-4">
+                <iframe
+                  src={videoSelecionado.embedUrl}
+                  title={videoSelecionado.titulo}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            ) : (
+              <div className="p-6 bg-white border-2 border-black rounded-xl text-center font-bold text-xs mb-4">
+                Esta aula não possui vídeo vinculado. Conteúdo textual:
+                <p className="mt-2 text-slate-700 font-normal">
+                  {videoSelecionado.conteudo}
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-2">
               <button
