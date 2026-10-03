@@ -583,17 +583,24 @@ export default function UserPage() {
                           curso.preco || curso.valor || 97.0
                         );
 
+                        // Cálculo dinâmico da porcentagem de progresso por aulas assistidas
+                        const progressoCalculado =
+                          curso.aulasAssistidas !== undefined &&
+                          curso.totalAulas > 0
+                            ? Math.round(
+                                (curso.aulasAssistidas / curso.totalAulas) * 100
+                              )
+                            : curso.progresso !== undefined
+                            ? curso.progresso
+                            : curso.progressoGeral || 0;
+
                         const cursoFormatado = {
                           id: curso.id,
                           title:
                             curso.titulo || curso.nome || "Curso sem título",
                           description:
                             curso.descricao || "Sem descrição disponível.",
-                          progress: temAcesso
-                            ? curso.progresso !== undefined
-                              ? curso.progresso
-                              : curso.progressoGeral || 0
-                            : 0,
+                          progress: temAcesso ? progressoCalculado : 0,
                           comprado: temAcesso,
                           preco: precoFormatado,
                           precoNum: precoNumVal,
