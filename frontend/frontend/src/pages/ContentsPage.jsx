@@ -188,7 +188,7 @@ export default function ContentsPage() {
   );
   const [selectedModuloForAula, setSelectedModuloForAula] = useState("");
   const [aulaTitulo, setAulaTitulo] = useState("");
-  const [aulaConteudo, setAulaConteudo] = useState("");
+
   const [aulaOrdem, setAulaOrdem] = useState(1);
   const [aulaLinkVideo, setAulaLinkVideo] = useState("");
 
@@ -308,7 +308,7 @@ export default function ContentsPage() {
     try {
       const payload = {
         titulo: aulaTitulo.trim(),
-        conteudo: aulaConteudo.trim() || null,
+
         ordem: parseInt(aulaOrdem) || 1,
         linkVideo: aulaLinkVideo.trim() || null,
       };
@@ -322,7 +322,7 @@ export default function ContentsPage() {
       showAlert("Aula cadastrada com sucesso!");
 
       setAulaTitulo("");
-      setAulaConteudo("");
+
       setAulaOrdem(1);
       setAulaLinkVideo("");
       setSelectedCursoForAula("");
@@ -1387,9 +1387,7 @@ export default function ContentsPage() {
 
             {/* Formulário Nova Aula com Link Direto do Vídeo */}
             <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
-              <h2 className="font-black uppercase mb-5 text-xl">
-                📖 Nova Aula
-              </h2>
+              <h2 className="font-black uppercase mb-5 text-xl">Nova Aula</h2>
               <form onSubmit={handleCreateAula} className="space-y-4">
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
@@ -1458,7 +1456,7 @@ export default function ContentsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
-                    Link do Vídeo da Aula (Opcional)
+                    Link do Vídeo da Aula
                   </label>
                   <input
                     type="text"
@@ -1469,19 +1467,7 @@ export default function ContentsPage() {
                     className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-black uppercase mb-1">
-                    Conteúdo / Texto (Opcional)
-                  </label>
-                  <textarea
-                    placeholder="Texto de apoio ou descrição da aula..."
-                    value={aulaConteudo}
-                    disabled={isSubmittingVideo}
-                    onChange={(e) => setAulaConteudo(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
-                    rows={2}
-                  />
-                </div>
+
                 <button
                   type="submit"
                   disabled={isSubmittingVideo}
