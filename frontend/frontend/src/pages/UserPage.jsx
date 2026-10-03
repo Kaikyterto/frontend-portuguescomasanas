@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { buscarDadosUsuarioLogado, listarMeusCursos } from "../service/user";
 import { criarResposta, listarMinhasRespostas } from "../service/answer";
 import { cursoService } from "../service/curso";
+import ReactMarkdown from "react-markdown";
 import Navbar from "../components/Navbar";
 import SidebarStats from "../components/SidebarStats";
 import ModuleProgress from "../components/ModuleProgress";
@@ -388,9 +389,11 @@ export default function UserPage() {
                       <span className="text-xs font-black uppercase text-[#7B5CFA] bg-[#7B5CFA]/10 px-2 py-1 rounded border border-[#7B5CFA]/30">
                         {questaoSelecionada.tema || "Questão de Português"}
                       </span>
-                      <p className="font-bold text-slate-900 text-sm md:text-base mt-3 leading-relaxed">
-                        {questaoSelecionada.enunciado}
-                      </p>
+                      <div className="font-bold text-slate-900 text-sm md:text-base mt-3 leading-relaxed markdown-content">
+                        <ReactMarkdown>
+                          {questaoSelecionada.enunciado}
+                        </ReactMarkdown>
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-2 mt-2">
