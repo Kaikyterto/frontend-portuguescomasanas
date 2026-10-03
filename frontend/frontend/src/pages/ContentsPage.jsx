@@ -6,7 +6,7 @@ import { questaoService } from "../service/questao";
 import { bancaService } from "../service/banca";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
-import { gravacaoService } from "../service/gravacao";
+
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 import { API_URL } from "../config/api";
@@ -181,7 +181,7 @@ export default function ContentsPage() {
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
 
-  // Formulário de Aula
+  // Formulário de Aula (Com link direto do vídeo/gravação)
   const [selectedCursoForAula, setSelectedCursoForAula] = useState("");
   const [modulosDisponiveisParaAula, setModulosDisponiveisParaAula] = useState(
     []
@@ -190,7 +190,7 @@ export default function ContentsPage() {
   const [aulaTitulo, setAulaTitulo] = useState("");
   const [aulaConteudo, setAulaConteudo] = useState("");
   const [aulaOrdem, setAulaOrdem] = useState(1);
-  const [aulaGravacaoId, setAulaGravacaoId] = useState("");
+  const [aulaLinkVideo, setAulaLinkVideo] = useState("");
 
   // Modal de Módulos
   const [showModuloModal, setShowModuloModal] = useState(false);
@@ -310,7 +310,7 @@ export default function ContentsPage() {
         titulo: aulaTitulo.trim(),
         conteudo: aulaConteudo.trim() || null,
         ordem: parseInt(aulaOrdem) || 1,
-        gravacaoId: aulaGravacaoId ? parseInt(aulaGravacaoId) : null,
+        linkVideo: aulaLinkVideo.trim() || null,
       };
 
       await aulaService.criar(
@@ -324,7 +324,7 @@ export default function ContentsPage() {
       setAulaTitulo("");
       setAulaConteudo("");
       setAulaOrdem(1);
-      setAulaGravacaoId("");
+      setAulaLinkVideo("");
       setSelectedCursoForAula("");
       setSelectedModuloForAula("");
       setModulosDisponiveisParaAula([]);
@@ -1385,7 +1385,7 @@ export default function ContentsPage() {
               </form>
             </Card>
 
-            {/* Formulário Nova Aula */}
+            {/* Formulário Nova Aula com Link Direto do Vídeo */}
             <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
               <h2 className="font-black uppercase mb-5 text-xl">
                 📖 Nova Aula
@@ -1458,14 +1458,14 @@ export default function ContentsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
-                    ID da Gravação (Opcional)
+                    Link do Vídeo da Aula (Opcional)
                   </label>
                   <input
-                    type="number"
-                    placeholder="Ex: ID do vídeo cadastrado"
-                    value={aulaGravacaoId}
+                    type="text"
+                    placeholder="Ex: https://youtube.com/watch?v=..."
+                    value={aulaLinkVideo}
                     disabled={isSubmittingVideo}
-                    onChange={(e) => setAulaGravacaoId(e.target.value)}
+                    onChange={(e) => setAulaLinkVideo(e.target.value)}
                     className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   />
                 </div>
