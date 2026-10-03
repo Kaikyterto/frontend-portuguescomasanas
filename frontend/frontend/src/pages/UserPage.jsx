@@ -447,7 +447,9 @@ export default function UserPage() {
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
-                                {textoAlt}
+                                <ReactMarkdown components={{ p: "span" }}>
+                                  {textoAlt}
+                                </ReactMarkdown>
                               </div>
                             </label>
                           );
@@ -490,9 +492,11 @@ export default function UserPage() {
                             <span className="block text-xs font-black uppercase text-slate-700 mb-1">
                               Explicação:
                             </span>
-                            <p className="text-xs md:text-sm font-bold text-slate-800">
-                              {questaoSelecionada.explicacao}
-                            </p>
+                            <div className="text-xs md:text-sm font-bold text-slate-800 markdown-content">
+                              <ReactMarkdown>
+                                {questaoSelecionada.explicacao}
+                              </ReactMarkdown>
+                            </div>
                           </div>
                         )}
                         <div
@@ -547,9 +551,11 @@ export default function UserPage() {
                             Resolver →
                           </span>
                         </div>
-                        <p className="font-bold text-slate-800 text-xs md:text-sm line-clamp-2">
-                          {q.enunciado}
-                        </p>
+                        <div className="font-bold text-slate-800 text-xs md:text-sm line-clamp-2">
+                          <ReactMarkdown components={{ p: "span" }}>
+                            {q.enunciado}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                     ))
                   ) : (
