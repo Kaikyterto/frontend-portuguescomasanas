@@ -120,6 +120,30 @@ export const assuntoService = {
 };
 
 // ==========================================
+// SERVIÇO DE AULAS (API)
+// ==========================================
+
+export const aulaService = {
+  async criar(cursoId, moduloId, aulaData, token) {
+    const response = await fetch(
+      `${API_URL}/api/cursos/${cursoId}/modulos/${moduloId}/aulas`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(aulaData),
+      }
+    );
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!response.ok) throw new Error(data.message || "Erro ao criar aula");
+    return data;
+  },
+};
+
+// ==========================================
 // COMPONENTE PRINCIPAL
 // ==========================================
 
@@ -157,11 +181,16 @@ export default function ContentsPage() {
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
 
-  // Formulário de Vídeo / Aula
-  const [selectedCursoForVideo, setSelectedCursoForVideo] = useState("");
-  const [modulosDisponiveisParaVideo, setModulosDisponiveisParaVideo] = useState([]);
-  const [selectedModuloForVideo, setSelectedModuloForVideo] = useState("");
-  const [youtubeUrlOuId, setYoutubeUrlOuId] = useState("");
+  // Formulário de Aula
+  const [selectedCursoForAula, setSelectedCursoForAula] = useState("");
+  const [modulosDisponiveisParaAula, setModulosDisponiveisParaAula] = useState(
+    []
+  );
+  const [selectedModuloForAula, setSelectedModuloForAula] = useState("");
+  const [aulaTitulo, setAulaTitulo] = useState("");
+  const [aulaConteudo, setAulaConteudo] = useState("");
+  const [aulaOrdem, setAulaOrdem] = useState(1);
+  const [aulaGravacaoId, setAulaGravacaoId] = useState("");
 
   // Modal de Módulos
   const [showModuloModal, setShowModuloModal] = useState(false);
@@ -249,32 +278,28 @@ export default function ContentsPage() {
     fetchData();
   }, [token]);
 
-  // Handlers para Aulas / Vídeos
-  const handleCursoVideoChange = async (cursoId) => {
-    setSelectedCursoForVideo(cursoId);
-    setSelectedModuloForVideo("");
-    setModulosDisponiveisParaVideo([]);
+  // Handlers para Aulas
+  const handleCursoAulaChange = async (cursoId) => {
+    setSelectedCursoForAula(cursoId);
+    setSelectedModuloForAula("");
+    setModulosDisponiveisParaAula([]);
 
     if (!cursoId) return;
     try {
       const modulos = await moduloService.listarModulos(cursoId, token);
-      setModulosDisponiveisParaVideo(modulos || []);
+      setModulosDisponiveisParaAula(modulos || []);
     } catch (error) {
-      console.error("Erro ao carregar módulos para o vídeo:", error);
+      console.error("Erro ao carregar módulos para a aula:", error);
     }
   };
 
-  const handleCreateVideoAula = async (e) => {
+  const handleCreateAula = async (e) => {
     e.preventDefault();
     if (isSubmittingVideo) return;
 
-    if (
-      !selectedCursoForVideo ||
-      !selectedModuloForVideo ||
-      !youtubeUrlOuId.trim()
-    ) {
+    if (!selectedCursoForAula || !selectedModuloForAula || !aulaTitulo.trim()) {
       showAlert(
-        "Por favor, selecione o curso, o módulo e informe a URL do YouTube.",
+        "Por favor, selecione o curso, o módulo e informe o título da aula.",
         "error"
       );
       return;
@@ -282,15 +307,27 @@ export default function ContentsPage() {
     setIsSubmittingVideo(true);
     try {
       const payload = {
-        youtubeUrlOuId: youtubeUrlOuId.trim(),
-        moduloId: parseInt(selectedModuloForVideo),
+        titulo: aulaTitulo.trim(),
+        conteudo: aulaConteudo.trim() || null,
+        ordem: parseInt(aulaOrdem) || 1,
+        gravacaoId: aulaGravacaoId ? parseInt(aulaGravacaoId) : null,
       };
-      await gravacaoService.criar(payload, token);
-      showAlert("Aula em vídeo cadastrada com sucesso!");
-      setYoutubeUrlOuId("");
-      setSelectedCursoForVideo("");
-      setSelectedModuloForVideo("");
-      setModulosDisponiveisParaVideo([]);
+
+      await aulaService.criar(
+        selectedCursoForAula,
+        selectedModuloForAula,
+        payload,
+        token
+      );
+      showAlert("Aula cadastrada com sucesso!");
+
+      setAulaTitulo("");
+      setAulaConteudo("");
+      setAulaOrdem(1);
+      setAulaGravacaoId("");
+      setSelectedCursoForAula("");
+      setSelectedModuloForAula("");
+      setModulosDisponiveisParaAula([]);
     } catch (error) {
       showAlert(`Erro ao cadastrar aula: ${error.message || error}`, "error");
     } finally {
@@ -893,7 +930,8 @@ export default function ContentsPage() {
                     Módulos do Curso
                   </h3>
                   <p className="text-xs font-bold text-slate-600">
-                    {selectedCursoForModulo.titulo || selectedCursoForModulo.nome}
+                    {selectedCursoForModulo.titulo ||
+                      selectedCursoForModulo.nome}
                   </p>
                 </div>
                 <button
@@ -1347,20 +1385,20 @@ export default function ContentsPage() {
               </form>
             </Card>
 
-            {/* Formulário Nova Aula em Vídeo */}
+            {/* Formulário Nova Aula */}
             <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
               <h2 className="font-black uppercase mb-5 text-xl">
-                🎥 Nova Aula (Vídeo)
+                📖 Nova Aula
               </h2>
-              <form onSubmit={handleCreateVideoAula} className="space-y-4">
+              <form onSubmit={handleCreateAula} className="space-y-4">
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
                     Selecione o Curso
                   </label>
                   <select
-                    value={selectedCursoForVideo}
+                    value={selectedCursoForAula}
                     disabled={isSubmittingVideo}
-                    onChange={(e) => handleCursoVideoChange(e.target.value)}
+                    onChange={(e) => handleCursoAulaChange(e.target.value)}
                     className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   >
                     <option value="">Escolha o curso...</option>
@@ -1373,20 +1411,20 @@ export default function ContentsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
-                    Selecione o Módulo / Aula
+                    Selecione o Módulo
                   </label>
                   <select
-                    value={selectedModuloForVideo}
-                    onChange={(e) => setSelectedModuloForVideo(e.target.value)}
+                    value={selectedModuloForAula}
+                    onChange={(e) => setSelectedModuloForAula(e.target.value)}
                     disabled={
                       isSubmittingVideo ||
-                      !selectedCursoForVideo ||
-                      modulosDisponiveisParaVideo.length === 0
+                      !selectedCursoForAula ||
+                      modulosDisponiveisParaAula.length === 0
                     }
                     className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:bg-slate-100 disabled:opacity-50"
                   >
                     <option value="">Escolha o módulo...</option>
-                    {modulosDisponiveisParaVideo.map((m) => (
+                    {modulosDisponiveisParaAula.map((m) => (
                       <option key={m.id} value={m.id}>
                         #{m.ordem} - {m.titulo}
                       </option>
@@ -1395,15 +1433,53 @@ export default function ContentsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black uppercase mb-1">
-                    URL ou ID do YouTube
+                    Título da Aula
                   </label>
                   <input
                     type="text"
-                    placeholder="Ex: https://www.youtube.com/watch?v=..."
-                    value={youtubeUrlOuId}
+                    placeholder="Ex: Introdução aos Verbos"
+                    value={aulaTitulo}
                     disabled={isSubmittingVideo}
-                    onChange={(e) => setYoutubeUrlOuId(e.target.value)}
+                    onChange={(e) => setAulaTitulo(e.target.value)}
                     className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Ordem da Aula
+                  </label>
+                  <input
+                    type="number"
+                    value={aulaOrdem}
+                    disabled={isSubmittingVideo}
+                    onChange={(e) => setAulaOrdem(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    ID da Gravação (Opcional)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: ID do vídeo cadastrado"
+                    value={aulaGravacaoId}
+                    disabled={isSubmittingVideo}
+                    onChange={(e) => setAulaGravacaoId(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Conteúdo / Texto (Opcional)
+                  </label>
+                  <textarea
+                    placeholder="Texto de apoio ou descrição da aula..."
+                    value={aulaConteudo}
+                    disabled={isSubmittingVideo}
+                    onChange={(e) => setAulaConteudo(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                    rows={2}
                   />
                 </div>
                 <button
@@ -1411,9 +1487,7 @@ export default function ContentsPage() {
                   disabled={isSubmittingVideo}
                   className="w-full bg-[#00D2DF] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {isSubmittingVideo
-                    ? "Cadastrando Aula..."
-                    : "Cadastrar Aula em Vídeo"}
+                  {isSubmittingVideo ? "Cadastrando Aula..." : "Cadastrar Aula"}
                 </button>
               </form>
             </Card>
