@@ -19,11 +19,19 @@ export default function UserPage() {
   const [loading, setLoading] = useState(true);
   const [erroAuth, setErroAuth] = useState("");
 
-  // Estados para lidar com o Banco de Questões
+  // Estados para lidar com o Banco de Questões e Paginação
   const [questoes, setQuestoes] = useState([]);
   const [carregandoQuestoes, setCarregandoQuestoes] = useState(false);
   const [erroQuestoes, setErroQuestoes] = useState("");
   const [exibirBanco, setExibirBanco] = useState(false);
+
+  // Estados de paginação (Zero-based)
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const [tamanhoPagina] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [isFirst, setIsFirst] = useState(true);
+  const [isLast, setIsLast] = useState(false);
 
   // Estados para responder a questão selecionada e medir o tempo
   const [questaoSelecionada, setQuestaoSelecionada] = useState(null);
@@ -53,7 +61,7 @@ export default function UserPage() {
   // Estado para armazenar os cursos vindos da API
   const [cursos, setCursos] = useState([]);
 
-  // Função de Adquirir Curso com Integração Real ao Backend e Mercado Pago (Corrigida e Robusta)
+  // Função de Adquirir Curso com Integração Real ao Backend e Mercado Pago
   const handleAdquirirCurso = async (curso) => {
     const titulo = curso?.title || "o curso";
 
@@ -199,13 +207,35 @@ export default function UserPage() {
     verificarAutenticacao();
   }, [navigate]);
 
-  const handleCarregarBancoQuestoes = async () => {
+  // Função para carregar o banco de questões com suporte a paginação (zero-based)
+  const handleCarregarBancoQuestoes = async (paginaDesejada = 0) => {
     try {
       setCarregandoQuestoes(true);
       setErroQuestoes("");
       const token = localStorage.getItem("@PortuguessComAnas:token");
-      const dadosQuestao = await listar(token);
-      setQuestoes(dadosQuestao);
+
+      const dadosRetorno = await listar(token, paginaDesejada, tamanhoPagina);
+
+      // Tratamento se o retorno for o objeto paginado padrão ou array legado
+      if (dadosRetorno && Array.isArray(dadosRetorno.content)) {
+        setQuestoes(dadosRetorno.content);
+        setPaginaAtual(dadosRetorno.page);
+        setTotalPages(dadosRetorno.totalPages);
+        setTotalElements(dadosRetorno.totalElements);
+        setIsFirst(dadosRetorno.first);
+        setIsLast(dadosRetorno.last);
+      } else if (Array.isArray(dadosRetorno)) {
+        // Compatibilidade legada caso o backend retorne apenas um array
+        setQuestoes(dadosRetorno);
+        setPaginaAtual(0);
+        setTotalPages(1);
+        setTotalElements(dadosRetorno.length);
+        setIsFirst(true);
+        setIsLast(true);
+      } else {
+        setQuestoes([]);
+      }
+
       setExibirBanco(true);
       setQuestaoSelecionada(null);
       setIndiceQuestaoAtual(0);
@@ -215,6 +245,12 @@ export default function UserPage() {
       setErroQuestoes("Erro ao carregar as questões do banco.");
     } finally {
       setCarregandoQuestoes(false);
+    }
+  };
+
+  const handleMudarPagina = (novaPagina) => {
+    if (novaPagina >= 0 && novaPagina < totalPages) {
+      handleCarregarBancoQuestoes(novaPagina);
     }
   };
 
@@ -267,7 +303,7 @@ export default function UserPage() {
       setModalConfig({
         isOpen: true,
         type: "success",
-        message: "Você concluiu todas as questões deste bloco!",
+        message: "Você concluiu todas as questões desta página!",
       });
       setQuestaoSelecionada(null);
       setAlternativaSelecionada("");
@@ -324,9 +360,9 @@ export default function UserPage() {
 
         {/* CONTAINER 2 (Ordem Original) */}
         <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
-          <Card className="flex-1 flex flex-col bg-[#F4EFE6] h-full overflow-hidden !p-0 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl">
+          <Card className="flex-1 flex flex-col bg-[#F4EFE6] h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl">
             <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black bg-white flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ">
                 <span className="text-lg md:text-xl">
                   {questaoSelecionada ? "✍️" : exibirBanco ? "📂" : "📚"}
                 </span>
@@ -336,7 +372,9 @@ export default function UserPage() {
                         questoes.length
                       })`
                     : exibirBanco
-                    ? "Banco de Questões"
+                    ? `Banco de Questões (Pág. ${paginaAtual + 1} de ${
+                        totalPages || 1
+                      })`
                     : "Cursos disponíveis"}
                 </h2>
               </div>
@@ -364,15 +402,15 @@ export default function UserPage() {
                   {questaoSelecionada
                     ? `Questão #${questaoSelecionada.id || "Detalhe"}`
                     : exibirBanco
-                    ? `${questoes.length} Questões`
+                    ? `${totalElements} Total`
                     : `${cursos.length} Cursos`}
                 </span>
               </div>
             </div>
 
-            <div className="flex-1 relative p-3 md:p-5 overflow-hidden">
+            <div className="flex-1 relative p-3 md:p-5 overflow-hidden flex flex-col">
               <div
-                className="h-full flex flex-col gap-3 max-h-[350px] sm:max-h-[400px] lg:max-h-[calc(100vh-270px)] overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-8"
+                className="flex-1 flex flex-col gap-3 max-h-[300px] sm:max-h-[350px] lg:max-h-[calc(100vh-320px)] overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4"
                 style={{
                   maskImage:
                     "linear-gradient(to bottom, black 85%, transparent 100%)",
@@ -380,7 +418,11 @@ export default function UserPage() {
                     "linear-gradient(to bottom, black 85%, transparent 100%)",
                 }}
               >
-                {questaoSelecionada ? (
+                {carregandoQuestoes && exibirBanco ? (
+                  <div className="text-center font-bold text-slate-700 py-10 animate-pulse">
+                    Carregando questões...
+                  </div>
+                ) : questaoSelecionada ? (
                   <form
                     onSubmit={handleResponderQuestao}
                     className="flex flex-col gap-4 bg-white p-4 md:p-5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
@@ -559,7 +601,7 @@ export default function UserPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center font-bold text-slate-600 py-10">
+                    <div className="text-center font-bold text-slate-600 py-10 ">
                       Nenhuma questão encontrada no banco.
                     </div>
                   )
@@ -631,6 +673,39 @@ export default function UserPage() {
                   </>
                 )}
               </div>
+
+              {/* Rodapé de Paginação do Banco de Questões */}
+              {exibirBanco && !questaoSelecionada && totalPages > 1 && (
+                <div className="pt-3 border-t-2 border-black flex items-center justify-between bg-white px-3 py-2 rounded-xl mt-2">
+                  <button
+                    onClick={() => handleMudarPagina(paginaAtual - 1)}
+                    disabled={isFirst || carregandoQuestoes}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition ${
+                      isFirst || carregandoQuestoes
+                        ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                        : "bg-[#00D2DF] text-black hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none cursor-pointer"
+                    }`}
+                  >
+                    ← Anterior
+                  </button>
+
+                  <span className="text-xs font-black text-slate-800">
+                    Página {paginaAtual + 1}/{totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => handleMudarPagina(paginaAtual + 1)}
+                    disabled={isLast || carregandoQuestoes}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition ${
+                      isLast || carregandoQuestoes
+                        ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                        : "bg-[#7B5CFA] text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none cursor-pointer"
+                    }`}
+                  >
+                    Próxima →
+                  </button>
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -638,7 +713,7 @@ export default function UserPage() {
         {/* CONTAINER 3 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 order-3 lg:order-1 flex flex-col gap-3">
           <button
-            onClick={handleCarregarBancoQuestoes}
+            onClick={() => handleCarregarBancoQuestoes(0)}
             disabled={carregandoQuestoes}
             className="bg-cyan-300 border-2 border-black rounded-full py-2.5 px-4 text-center font-extrabold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer active:translate-x-1 active:translate-y-1"
           >

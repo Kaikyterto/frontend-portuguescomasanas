@@ -14,12 +14,12 @@ export default function ModuleProgress({ currentModule, onAdquirir }) {
 
   return (
     <Card
-      className={`w-full flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-4 p-3.5 transition-colors ${
+      className={`w-full flex flex-col  sm:flex-row justify-between sm:items-center gap-3 sm:gap-4 p-3.5 transition-colors ${
         !comprado ? "bg-slate-100 opacity-80 border-slate-400" : "bg-white"
       }`}
     >
       {/* Área de Texto e Progresso */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 ">
         <h2
           className={`text-base font-black tracking-tight mb-0.5 whitespace-normal sm:truncate flex items-center gap-2 ${
             !comprado ? "text-slate-500" : "text-slate-900"
@@ -61,7 +61,7 @@ export default function ModuleProgress({ currentModule, onAdquirir }) {
       {comprado ? (
         <button
           onClick={() => handleVerModulosCurso(currentModule.id)}
-          className="w-full sm:w-auto text-center bg-cyan-300 border-2 border-black rounded-lg px-4 py-2 sm:py-1.5 text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer whitespace-nowrap shrink-0 self-end sm:self-auto"
+          className="w-full sm:w-auto disable text-center bg-cyan-300 border-2 border-black rounded-lg px-4 py-2 sm:py-1.5 text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer whitespace-nowrap shrink-0 self-end sm:self-auto"
         >
           VER MÓDULO
         </button>

@@ -27,15 +27,18 @@ export async function criarQuestao(questaoData, token) {
   }
 }
 
-export async function listar(token) {
+export async function listar(token, page = 0, size = 20) {
   try {
-    const response = await fetch(`${API_URL}/api/questoes`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
+    const response = await fetch(
+      `${API_URL}/api/questoes?page=${page}&size=${size}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      }
+    );
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : [];
