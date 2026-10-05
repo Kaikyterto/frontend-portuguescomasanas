@@ -11,7 +11,7 @@ export default function RegisterPage() {
     email: "",
     senha: "",
     confirmarSenha: "",
-    termos: false, // Corrigido para "termos" para bater com o name do input do checkbox
+    termos: false,
   });
 
   const [loading, setLoading] = useState(false);
@@ -21,6 +21,13 @@ export default function RegisterPage() {
   // Estados para controle do Modal e da validação real de leitura
   const [modalAberto, setModalAberto] = useState(false);
   const [termoRealmenteLido, setTermoRealmenteLido] = useState(false);
+
+  // Validações individuais da senha para exibição em tempo real
+  const senha = form.senha;
+  const temTamanhoMinimo = senha.length >= 8;
+  const temMaiuscula = /[A-Z]/.test(senha);
+  const temNumero = /\d/.test(senha);
+  const temEspecial = /[!@#$%^&*(),.?":{}|<>]/.test(senha);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -54,9 +61,8 @@ export default function RegisterPage() {
     setErrorMessage("");
     setSuccessMessage("");
 
-    // 1. Validação da Senha (Regra do Back-end)
-    const senhaRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
-    if (!senhaRegex.test(form.senha)) {
+    // 1. Validação completa da Senha (Regra do Back-end)
+    if (!temTamanhoMinimo || !temMaiuscula || !temNumero || !temEspecial) {
       setErrorMessage(
         "A senha deve ter pelo menos 8 caracteres, uma letra maiúscula, um número e um caractere especial."
       );
@@ -175,10 +181,48 @@ export default function RegisterPage() {
                   placeholder="Crie uma senha forte"
                   className="w-full rounded-2xl border-[3px] border-black px-5 py-3 outline-none transition-all duration-200 focus:border-[#57C2FF] focus:shadow-md"
                 />
-                <span className="text-xs text-gray-500 mt-1 block">
-                  Mínimo de 8 caracteres, 1 letra maiúscula, 1 número e 1
-                  caractere especial.
-                </span>
+
+                {/* Lista de Requisitos Dinâmicos */}
+                {form.senha.length > 0 && (
+                  <ul className="mt-2 text-xs space-y-1 bg-white p-3 rounded-xl border-2 border-black">
+                    <li
+                      className={
+                        temTamanhoMinimo
+                          ? "text-green-600 font-bold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      {temTamanhoMinimo ? "✓" : "✕"} Mínimo de 8 caracteres
+                    </li>
+                    <li
+                      className={
+                        temMaiuscula
+                          ? "text-green-600 font-bold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      {temMaiuscula ? "✓" : "✕"} Uma letra maiúscula
+                    </li>
+                    <li
+                      className={
+                        temNumero
+                          ? "text-green-600 font-bold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      {temNumero ? "✓" : "✕"} Um número
+                    </li>
+                    <li
+                      className={
+                        temEspecial
+                          ? "text-green-600 font-bold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      {temEspecial ? "✓" : "✕"} Um caractere especial (!@#$%...)
+                    </li>
+                  </ul>
+                )}
               </div>
 
               <div>
