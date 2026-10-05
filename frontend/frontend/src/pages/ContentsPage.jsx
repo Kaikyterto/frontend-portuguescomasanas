@@ -237,7 +237,7 @@ export default function ContentsPage() {
   const [bancaNome, setBancaNome] = useState("");
   const [editingBancaId, setEditingBancaId] = useState(null);
 
-  // Carregar dados iniciais
+  // Carregar dados iniciais com suporte ao formato paginado ou array direto
   const fetchData = async () => {
     if (!token) {
       console.warn("Token não encontrado no localStorage.");
@@ -249,10 +249,10 @@ export default function ContentsPage() {
     try {
       const [
         dadosUsuario,
-        dataQuestions,
+        dataQuestionsRes,
         dataAssuntos,
-        dataBancas,
-        dataCursos,
+        dataBancasRes,
+        dataCursosRes,
       ] = await Promise.all([
         buscarDadosUsuarioLogado(token),
         questaoService.listar(token),
@@ -261,11 +261,21 @@ export default function ContentsPage() {
         cursoService.listar(token),
       ]);
 
+      const dataQuestions = Array.isArray(dataQuestionsRes)
+        ? dataQuestionsRes
+        : dataQuestionsRes?.content || [];
+      const dataCursos = Array.isArray(dataCursosRes)
+        ? dataCursosRes
+        : dataCursosRes?.content || [];
+      const dataBancas = Array.isArray(dataBancasRes)
+        ? dataBancasRes
+        : dataBancasRes?.content || [];
+
       setUsuario(dadosUsuario);
-      setQuestions(dataQuestions || []);
+      setQuestions(dataQuestions);
       setAssuntos(dataAssuntos || []);
-      setBancas(dataBancas || []);
-      setCursos(dataCursos || []);
+      setBancas(dataBancas);
+      setCursos(dataCursos);
     } catch (error) {
       console.error("Erro ao carregar dados do banco:", error);
     } finally {

@@ -27,14 +27,33 @@ export default function AdminPage() {
       try {
         const token = localStorage.getItem("@PortuguessComAnas:token");
 
-        const [questoes, cursos, usuarios, gravacoes, dadosUsuario] =
-          await Promise.all([
-            listarQuestoes(token),
-            listarCursos(token),
-            listarUsuarios(token),
-            gravacaoService.listar(token),
-            buscarDadosUsuarioLogado(token),
-          ]);
+        const [
+          questoesRes,
+          cursosRes,
+          usuariosRes,
+          gravacoesRes,
+          dadosUsuario,
+        ] = await Promise.all([
+          listarQuestoes(token),
+          listarCursos(token),
+          listarUsuarios(token),
+          gravacaoService.listar(token),
+          buscarDadosUsuarioLogado(token),
+        ]);
+
+        // Tratamento seguro para extrair arrays do formato paginado ({ content: [] }) ou direto (compatibilidade legada)
+        const questoes = Array.isArray(questoesRes)
+          ? questoesRes
+          : questoesRes?.content || [];
+        const cursos = Array.isArray(cursosRes)
+          ? cursosRes
+          : cursosRes?.content || [];
+        const usuarios = Array.isArray(usuariosRes)
+          ? usuariosRes
+          : usuariosRes?.content || [];
+        const gravacoes = Array.isArray(gravacoesRes)
+          ? gravacoesRes
+          : gravacoesRes?.content || [];
 
         setTotalQuestoes(questoes.length);
         setTotalModulos(cursos.length);
