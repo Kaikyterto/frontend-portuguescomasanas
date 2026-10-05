@@ -11,12 +11,12 @@ export default function RegisterPage() {
     email: "",
     senha: "",
     confirmarSenha: "",
-    aceitouTermos: false,
+    termos: false, // Corrigido para "termos" para bater com o name do input do checkbox
   });
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState(""); // ESTADO ADICIONADO PARA SUCESSO
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Estados para controle do Modal e da validação real de leitura
   const [modalAberto, setModalAberto] = useState(false);
@@ -52,14 +52,24 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
-    setSuccessMessage(""); // Limpa mensagens anteriores
+    setSuccessMessage("");
 
+    // 1. Validação da Senha (Regra do Back-end)
+    const senhaRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+    if (!senhaRegex.test(form.senha)) {
+      setErrorMessage(
+        "A senha deve ter pelo menos 8 caracteres, uma letra maiúscula, um número e um caractere especial."
+      );
+      return;
+    }
+
+    // 2. Validação se as senhas coincidem
     if (form.senha !== form.confirmarSenha) {
       setErrorMessage("As senhas não coincidem.");
       return;
     }
 
-    // Bloqueio definitivo se não abriu o termo
+    // 3. Bloqueio definitivo se não abriu o termo
     if (!termoRealmenteLido || !form.termos) {
       setErrorMessage(
         "Para se cadastrar, você precisa abrir e aceitar o Termo de Consentimento."
@@ -78,10 +88,8 @@ export default function RegisterPage() {
         aceitouTermos: true,
       });
 
-      // Define a mensagem de sucesso na tela
       setSuccessMessage("Cadastro realizado com sucesso! Redirecionando...");
 
-      // Aguarda 2 segundos para o usuário ver o aviso e depois navega para o login
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -167,6 +175,10 @@ export default function RegisterPage() {
                   placeholder="Crie uma senha forte"
                   className="w-full rounded-2xl border-[3px] border-black px-5 py-3 outline-none transition-all duration-200 focus:border-[#57C2FF] focus:shadow-md"
                 />
+                <span className="text-xs text-gray-500 mt-1 block">
+                  Mínimo de 8 caracteres, 1 letra maiúscula, 1 número e 1
+                  caractere especial.
+                </span>
               </div>
 
               <div>
@@ -225,7 +237,7 @@ export default function RegisterPage() {
 
               <button
                 type="submit"
-                disabled={loading || successMessage} // Desabilita também se já deu certo
+                disabled={loading || successMessage}
                 className="mt-2 w-full rounded-full border-[3px] border-black bg-[#76D8F7] py-3 sm:py-4 text-lg sm:text-xl font-bold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#000] active:translate-y-0 active:shadow-[2px_2px_0px_#000] disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? "CADASTRANDO..." : "CADASTRAR"}
