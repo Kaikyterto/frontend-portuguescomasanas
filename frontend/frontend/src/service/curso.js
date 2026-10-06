@@ -164,7 +164,6 @@ export async function matricular(cursoId, usuarioId, token) {
 
 export async function removerMatricula(cursoId, usuarioId, token) {
   try {
-    // Ajustado para PATCH conforme o backend que atualiza o status da matrícula para CANCELADA
     const response = await fetch(
       `${API_URL}/api/cursos/${cursoId}/matricula/${usuarioId}`,
       {
@@ -173,7 +172,7 @@ export async function removerMatricula(cursoId, usuarioId, token) {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ status: "CANCELADA" }),
+        body: JSON.stringify({ status: "CANCELADA" }), // O DTO espera este objeto
       }
     );
 
@@ -194,15 +193,28 @@ export async function removerMatricula(cursoId, usuarioId, token) {
   }
 }
 
-export async function listarAlunosDoCurso(cursoId, token) {
+export async function listarAlunosDoCurso(cursoId, page = 0, size = 10, token) {
+  let actualPage = page;
+  let actualSize = size;
+  let actualToken = token;
+
+  if (typeof page === "string" && !token) {
+    actualToken = page;
+    actualPage = 0;
+    actualSize = 10;
+  }
+
   try {
-    const response = await fetch(`${API_URL}/api/cursos/${cursoId}/alunos`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
+    const response = await fetch(
+      `${API_URL}/api/cursos/${cursoId}/alunos?page=${actualPage}&size=${actualSize}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actualToken ? { Authorization: `Bearer ${actualToken}` } : {}),
+        },
+      }
+    );
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : [];

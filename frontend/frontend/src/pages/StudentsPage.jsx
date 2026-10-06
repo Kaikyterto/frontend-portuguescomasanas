@@ -56,6 +56,12 @@ export default function StudentsPage() {
   const [enrolledStudents, setEnrolledStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
+  // Estados de paginação dos alunos do curso
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -118,16 +124,44 @@ export default function StudentsPage() {
     verificarAutenticacao();
   }, [navigate, token]);
 
-  const handleOpenCourseDetails = async (course) => {
-    setSelectedCourse(course);
+  const carregarAlunosDoCurso = async (course, paginaDesejada = 0) => {
+    const courseId = course.id || course._id;
     setLoadingStudents(true);
     try {
-      const courseId = course.id || course._id;
-      const alunosMatriculas = await cursoService.listarAlunosDoCurso(
+      const resultadoPaginado = await cursoService.listarAlunosDoCurso(
         courseId,
+        paginaDesejada,
+        size,
         token
       );
-      setEnrolledStudents(alunosMatriculas || []);
+
+      // O Spring Data Page retorna um objeto contendo content, totalPages, number, etc.
+      if (resultadoPaginado && Array.isArray(resultadoPaginado.content)) {
+        // Filtragem para omitir matrículas canceladas da exibição visual
+        const alunosAtivos = resultadoPaginado.content.filter((matricula) => {
+          const status = matricula.status || matricula.situacao;
+          return !status || status !== "CANCELADA";
+        });
+
+        setEnrolledStudents(alunosAtivos);
+        setTotalPages(resultadoPaginado.totalPages || 0);
+        setPage(resultadoPaginado.number || 0);
+        // Ajusta a contagem total com base no número de alunos ativos retornados na página
+        setTotalElements(alunosAtivos.length);
+      } else {
+        const listaArray = Array.isArray(resultadoPaginado)
+          ? resultadoPaginado
+          : [];
+        const alunosAtivos = listaArray.filter((matricula) => {
+          const status = matricula.status || matricula.situacao;
+          return !status || status !== "CANCELADA";
+        });
+
+        setEnrolledStudents(alunosAtivos);
+        setTotalPages(1);
+        setPage(0);
+        setTotalElements(alunosAtivos.length);
+      }
     } catch (error) {
       console.error("Erro ao carregar alunos do curso:", error);
       setEnrolledStudents([]);
@@ -140,6 +174,12 @@ export default function StudentsPage() {
     } finally {
       setLoadingStudents(false);
     }
+  };
+
+  const handleOpenCourseDetails = async (course) => {
+    setSelectedCourse(course);
+    setPage(0);
+    await carregarAlunosDoCurso(course, 0);
   };
 
   const handleOpenStudentDetails = async (matriculaItem) => {
@@ -240,11 +280,7 @@ export default function StudentsPage() {
 
     try {
       await cursoService.matricular(courseId, selectedUserToEnroll, token);
-      const alunosAtualizados = await cursoService.listarAlunosDoCurso(
-        courseId,
-        token
-      );
-      setEnrolledStudents(alunosAtualizados || []);
+      await carregarAlunosDoCurso(selectedCourse, page);
 
       setSelectedUserToEnroll("");
       setIsEnrollModalOpen(false);
@@ -274,14 +310,7 @@ export default function StudentsPage() {
       onConfirm: async () => {
         try {
           await cursoService.removerMatricula(courseId, usuarioId, token);
-
-          setEnrolledStudents((prev) =>
-            prev.filter(
-              (s) =>
-                Number(s.usuarioId || s.id || s._id || s.usuario?.id) !==
-                Number(usuarioId)
-            )
-          );
+          await carregarAlunosDoCurso(selectedCourse, page);
 
           setModalConfig({
             isOpen: true,
@@ -402,7 +431,7 @@ export default function StudentsPage() {
 
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-black text-sm uppercase text-slate-700">
-                  📚 Alunos Matriculados ({enrolledStudents.length})
+                  📚 Alunos Matriculados ({totalElements})
                 </h3>
                 <button
                   onClick={() => setIsEnrollModalOpen(true)}
@@ -417,7 +446,7 @@ export default function StudentsPage() {
                   Carregando alunos...
                 </p>
               ) : (
-                <div className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
+                <div className="space-y-3 mb-4">
                   {enrolledStudents.length > 0 ? (
                     enrolledStudents.map((matricula) => {
                       const studentId =
@@ -475,9 +504,36 @@ export default function StudentsPage() {
                     })
                   ) : (
                     <p className="text-xs font-bold text-slate-500 text-center py-6 bg-white border-2 border-dashed border-black rounded-xl">
-                      Nenhum aluno matriculado.
+                      Nenhum aluno matriculado nesta página.
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Controles de Paginação */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t-2 border-black pt-3 mt-auto">
+                  <button
+                    onClick={() =>
+                      carregarAlunosDoCurso(selectedCourse, page - 1)
+                    }
+                    disabled={page === 0 || loadingStudents}
+                    className="bg-white border-2 border-black px-3 py-1.5 rounded-lg text-xs font-black shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    ← Anterior
+                  </button>
+                  <span className="text-xs font-black uppercase text-slate-700">
+                    Página {page + 1} de {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      carregarAlunosDoCurso(selectedCourse, page + 1)
+                    }
+                    disabled={page + 1 >= totalPages || loadingStudents}
+                    className="bg-white border-2 border-black px-3 py-1.5 rounded-lg text-xs font-black shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Próxima →
+                  </button>
                 </div>
               )}
             </Card>
