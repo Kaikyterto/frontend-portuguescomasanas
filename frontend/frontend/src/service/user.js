@@ -36,13 +36,6 @@ export async function listar(page = 0, size = 100, token) {
   let actualSize = size;
   let actualToken = token;
 
-  // Se o primeiro parâmetro (page) for uma string, significa que passaram o token no lugar do page
-  if (typeof page === "string" && !token) {
-    actualToken = page;
-    actualPage = 0;
-    actualSize = 100;
-  }
-
   try {
     const response = await fetch(
       `${API_URL}/api/usuario/listar?page=${actualPage}&size=${actualSize}`,

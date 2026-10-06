@@ -27,45 +27,86 @@ export default function AdminPage() {
       try {
         const token = localStorage.getItem("@PortuguessComAnas:token");
 
-        // Respeitando o limite permitido pela API (page 0, size 100)
+        // Função auxiliar para buscar todas as páginas de usuários se houver paginação
+        async function buscarTodosUsuarios(authToken) {
+          let paginaAtual = 0;
+          const tamanhoPagina = 100;
+          let todosUsuarios = [];
+          let totalElementosGeral = 0;
+          let continuarBuscando = true;
+
+          while (continuarBuscando) {
+            const res = await listarUsuarios(
+              paginaAtual,
+              tamanhoPagina,
+              authToken
+            );
+
+            let listaPagina = [];
+            if (Array.isArray(res)) {
+              listaPagina = res;
+              totalElementosGeral = listaPagina.length;
+              continuarBuscando = false; // Se for array simples, não tem paginação complexa
+            } else if (res && Array.isArray(res.content)) {
+              listaPagina = res.content;
+              totalElementosGeral =
+                Number(res.totalElements) || totalElementosGeral;
+
+              // Verifica se há próxima página baseada no número total de páginas ou tamanho do conteúdo
+              const totalPaginas = Number(res.totalPages) || 1;
+              paginaAtual++;
+              if (paginaAtual >= totalPaginas || listaPagina.length === 0) {
+                continuarBuscando = false;
+              }
+            } else {
+              continuarBuscando = false;
+            }
+
+            todosUsuarios = [...todosUsuarios, ...listaPagina];
+
+            // Segurança contra loops infinitos caso a API não retorne totalPages corretamente
+            if (paginaAtual > 50 || listaPagina.length === 0) {
+              break;
+            }
+          }
+
+          return {
+            usuarios: todosUsuarios,
+            totalElements:
+              totalElementosGeral > 0
+                ? totalElementosGeral
+                : todosUsuarios.length,
+          };
+        }
+
+        // Requisições paralelas para os demais dados e a função de busca completa de usuários
         const [
           questoesRes,
           cursosRes,
-          usuariosRes,
+          resultadoUsuarios,
           gravacoesRes,
           dadosUsuario,
         ] = await Promise.all([
           listarQuestoes(token, 0, 100),
           listarCursos(token),
-          listarUsuarios(0, 100, token),
+          buscarTodosUsuarios(token),
           gravacaoService.listar(token),
           buscarDadosUsuarioLogado(token),
         ]);
 
-        // Tratamento seguro para extrair arrays e propriedades de paginação
+        // Tratamento seguro para extrair arrays
         const questoes = Array.isArray(questoesRes)
           ? questoesRes
           : questoesRes?.content || [];
         const cursos = Array.isArray(cursosRes)
           ? cursosRes
           : cursosRes?.content || [];
-
-        let usuarios = [];
-        let totalUsuariosCount = 0;
-
-        if (Array.isArray(usuariosRes)) {
-          usuarios = usuariosRes;
-          totalUsuariosCount = usuarios.length;
-        } else if (usuariosRes && Array.isArray(usuariosRes.content)) {
-          usuarios = usuariosRes.content;
-          // Usa o totalElements do backend se disponível, garantindo o valor real total mesmo com paginação
-          totalUsuariosCount =
-            Number(usuariosRes.totalElements) || usuarios.length;
-        }
-
         const gravacoes = Array.isArray(gravacoesRes)
           ? gravacoesRes
           : gravacoesRes?.content || [];
+
+        const usuarios = resultadoUsuarios.usuarios;
+        const totalUsuariosCount = resultadoUsuarios.totalElements;
 
         setTotalQuestoes(questoes.length);
         setTotalModulos(cursos.length);
@@ -215,36 +256,32 @@ export default function AdminPage() {
               📊 Crescimento de alunos por mês
             </h2>
             <div className="h-60 flex items-end gap-2 border-l-2 border-b-2 border-black p-4">
-              {dadosCrescimento.ico
-                ? null
-                : dadosCrescimento.map((quantidade, i) => {
-                    const alturaCalculada = Math.max(
-                      (quantidade / maxMes) * alturaMaximaCss,
-                      quantidade > 0 ? 15 : 4
-                    );
+              {dadosCrescimento.map((quantidade, i) => {
+                const alturaCalculada = Math.max(
+                  (quantidade / maxMes) * alturaMaximaCss,
+                  quantidade > 0 ? 15 : 4
+                );
 
-                    return (
-                      <div
-                        className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
-                        key={i}
-                      >
-                        <span className="text-[11px] font-black text-slate-800 bg-white/80 border border-black/20 px-1 rounded shadow-sm">
-                          {quantidade}
-                        </span>
-                        <span className="absolute -top-7 opacity-0 group-hover:opacity-100 transition bg-black text-white text-[10px] font-black py-0.5 px-1.5 rounded pointer-events-none z-10 whitespace-nowrap">
-                          {quantidade} aluno(s)
-                        </span>
+                return (
+                  <div
+                    className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
+                    key={i}
+                  >
+                    <span className="text-[11px] font-black text-slate-800 bg-white/80 border border-black/20 px-1 rounded shadow-sm">
+                      {quantidade}
+                    </span>
+                    <span className="absolute -top-7 opacity-0 group-hover:opacity-100 transition bg-black text-white text-[10px] font-black py-0.5 px-1.5 rounded pointer-events-none z-10 whitespace-nowrap">
+                      {quantidade} aluno(s)
+                    </span>
 
-                        <div
-                          className="w-full bg-[#00D2DF] border-2 border-black rounded-t-xl transition-all duration-300"
-                          style={{ height: `${alturaCalculada}px` }}
-                        />
-                        <span className="text-[10px] font-black">
-                          {labels[i]}
-                        </span>
-                      </div>
-                    );
-                  })}
+                    <div
+                      className="w-full bg-[#00D2DF] border-2 border-black rounded-t-xl transition-all duration-300"
+                      style={{ height: `${alturaCalculada}px` }}
+                    />
+                    <span className="text-[10px] font-black">{labels[i]}</span>
+                  </div>
+                );
+              })}
             </div>
           </Card>
 
