@@ -17,6 +17,7 @@ export async function buscarDadosUsuarioLogado(token) {
       if (response.status === 401) {
         localStorage.removeItem("@PortuguessComAnas:token");
       }
+
       throw new Error(
         data.message ||
           `Sessão expirada ou não autorizada (Status: ${response.status})`
@@ -32,13 +33,16 @@ export async function buscarDadosUsuarioLogado(token) {
 
 export async function listar(token) {
   try {
-    const response = await fetch(`${API_URL}/api/usuario/listar?page=0&size=100`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
+    const response = await fetch(
+      `${API_URL}/api/usuario/listar?page=0&size=100`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      }
+    );
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : {};
@@ -50,7 +54,7 @@ export async function listar(token) {
     }
 
     // O backend retorna uma página.
-    // Retornamos somente a lista de usuários para a StudentsPage.
+    // Retornamos somente a lista de usuários.
     return Array.isArray(data) ? data : data.content || [];
   } catch (error) {
     console.error("Erro em listar usuários:", error);
@@ -58,7 +62,35 @@ export async function listar(token) {
   }
 }
 
-// Nova função para verificar se o usuário tem acesso a um curso específico (correspondente ao endpoint /api/cursos/{id}/tenho-acesso)
+// Busca os cursos do usuário logado
+export async function listarMeusCursos(token) {
+  try {
+    const response = await fetch(`${API_URL}/api/cursos/meus`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : [];
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          `Erro ao buscar seus cursos (Status: ${response.status})`
+      );
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Erro em listarMeusCursos:", error);
+    throw error;
+  }
+}
+
+// Verifica se o usuário tem acesso a um curso específico
 export async function verificarAcessoCurso(cursoId, token) {
   try {
     const response = await fetch(
