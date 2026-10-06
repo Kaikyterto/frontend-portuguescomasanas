@@ -159,6 +159,7 @@ export default function ContentsPage() {
   const [isSubmittingBanca, setIsSubmittingBanca] = useState(false);
   const [isSubmittingModulo, setIsSubmittingModulo] = useState(false);
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
+  const [isSubmittingDeleteCurso, setIsSubmittingDeleteCurso] = useState(false);
 
   // Alerta Modal
   const [alertConfig, setAlertConfig] = useState({
@@ -200,6 +201,12 @@ export default function ContentsPage() {
   const [moduloDescricao, setModuloDescricao] = useState("");
   const [moduloOrdem, setModuloOrdem] = useState(1);
   const [editingModuloId, setEditingModuloId] = useState(null);
+
+  // Modal de Exclusão de Curso
+  const [showDeleteCursoModal, setShowDeleteCursoModal] = useState(false);
+  const [cursoParaExcluir, setCursoParaExcluir] = useState(null);
+  const [nomeConfirmacaoInput, setNomeConfirmacaoInput] = useState("");
+  const [senhaAdminInput, setSenhaAdminInput] = useState("");
 
   // Modal de Questão
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -247,8 +254,6 @@ export default function ContentsPage() {
     if (!token) return;
     setLoadingQuestions(true);
     try {
-      // Ajuste para passar página se o seu service aceitar paginação (ex: questaoService.listar(token, page, pageSize))
-      // Caso o seu service atual receba apenas o token, ele retornará todos ou um objeto paginado.
       const dataQuestionsRes = await questaoService.listar(
         token,
         page,
@@ -256,12 +261,10 @@ export default function ContentsPage() {
       );
 
       if (Array.isArray(dataQuestionsRes)) {
-        // Se a API retornar um array simples sem paginação nativa no endpoint:
         setQuestions(dataQuestionsRes);
         setTotalPages(1);
         setTotalElements(dataQuestionsRes.length);
       } else {
-        // Se retornar objeto Spring Page (content, totalPages, number, etc.)
         setQuestions(dataQuestionsRes?.content || []);
         setTotalPages(dataQuestionsRes?.totalPages || 0);
         setCurrentPage(dataQuestionsRes?.number || page);
@@ -303,7 +306,6 @@ export default function ContentsPage() {
       setBancas(dataBancas);
       setCursos(dataCursos);
 
-      // Carrega a primeira página de questões
       await fetchQuestions(0);
     } catch (error) {
       console.error("Erro ao carregar dados do banco:", error);
@@ -507,16 +509,52 @@ export default function ContentsPage() {
     }
   };
 
-  const handleDeleteCurso = (id) => {
-    showAlert("Deseja realmente excluir este curso?", "confirm", async () => {
-      try {
-        await cursoService.deletar(id, token);
-        showAlert("Curso excluído com sucesso!");
-        fetchData();
-      } catch (error) {
-        showAlert("Erro ao excluir curso.", "error");
-      }
-    });
+  const handleDeleteCurso = (curso) => {
+    setCursoParaExcluir(curso);
+    setNomeConfirmacaoInput("");
+    setSenhaAdminInput("");
+    setShowDeleteCursoModal(true);
+  };
+
+  const handleConfirmDeleteCurso = async (e) => {
+    e.preventDefault();
+    if (!cursoParaExcluir) return;
+
+    const nomeEsperado = cursoParaExcluir.nome || cursoParaExcluir.titulo;
+    if (nomeConfirmacaoInput !== nomeEsperado) {
+      showAlert(
+        "O nome do curso digitado não confere. Tente novamente.",
+        "error"
+      );
+      return;
+    }
+
+    if (!senhaAdminInput) {
+      showAlert("Digite a sua senha de Administrador.", "error");
+      return;
+    }
+
+    setIsSubmittingDeleteCurso(true);
+    try {
+      await cursoService.deletar(
+        cursoParaExcluir.id,
+        {
+          nomeCurso: nomeConfirmacaoInput,
+          senha: senhaAdminInput,
+          cienteConsequencias: true,
+        },
+        token
+      );
+
+      showAlert("Curso excluído com sucesso!");
+      setShowDeleteCursoModal(false);
+      setCursoParaExcluir(null);
+      fetchData();
+    } catch (error) {
+      showAlert(`Erro ao excluir curso: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingDeleteCurso(false);
+    }
   };
 
   // Handlers para Módulos de um Curso
@@ -1097,6 +1135,80 @@ export default function ContentsPage() {
           </div>
         )}
 
+        {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO DE CURSO */}
+        {showDeleteCursoModal && cursoParaExcluir && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-md w-full shadow-[8px_8px_0_black]">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-black uppercase text-red-600">
+                  ⚠️ Excluir Curso
+                </h3>
+                <button
+                  onClick={() => setShowDeleteCursoModal(false)}
+                  disabled={isSubmittingDeleteCurso}
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="font-bold text-sm text-slate-700 mb-4">
+                Esta ação é irreversível e excluirá permanentemente o curso e
+                todos os seus dados associados.
+              </p>
+              <form onSubmit={handleConfirmDeleteCurso} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Digite o nome exato:{" "}
+                    <span className="text-red-600">
+                      "{cursoParaExcluir.nome || cursoParaExcluir.titulo}"
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Nome exato do curso"
+                    value={nomeConfirmacaoInput}
+                    disabled={isSubmittingDeleteCurso}
+                    onChange={(e) => setNomeConfirmacaoInput(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Senha de Administrador
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Sua senha de admin"
+                    value={senhaAdminInput}
+                    disabled={isSubmittingDeleteCurso}
+                    onChange={(e) => setSenhaAdminInput(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingDeleteCurso}
+                    className="flex-1 bg-red-500 text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingDeleteCurso
+                      ? "Excluindo..."
+                      : "Confirmar Exclusão"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSubmittingDeleteCurso}
+                    onClick={() => setShowDeleteCursoModal(false)}
+                    className="bg-slate-200 border-2 border-black rounded-xl px-4 py-3 font-black text-sm disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* MODAL DE QUESTÃO */}
         {showQuestionModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1341,7 +1453,7 @@ export default function ContentsPage() {
                         Gerenciar Módulos
                       </button>
                       <button
-                        onClick={() => handleDeleteCurso(curso.id)}
+                        onClick={() => handleDeleteCurso(curso)}
                         className="bg-red-400 text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
                       >
                         Excluir Curso

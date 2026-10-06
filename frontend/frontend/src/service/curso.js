@@ -106,29 +106,22 @@ export async function atualizar(id, cursoData, token) {
   }
 }
 
-export async function deletar(id, token) {
-  try {
-    const response = await fetch(`${API_URL}/api/cursos/${id}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
+export async function deletar(id, deleteRequestData, token) {
+  const response = await fetch(`${API_URL}/api/cursos/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(deleteRequestData), // Deve conter { nomeCurso, senha, cienteConsequencias }
+  });
 
-    if (!response.ok) {
-      const responseText = await response.text();
-      const data = responseText ? JSON.parse(responseText) : {};
-      throw new Error(
-        data.message || `Erro ao excluir curso (Status: ${response.status})`
-      );
-    }
-
-    return true;
-  } catch (error) {
-    console.error(`Erro em deletar Curso ${id}:`, error);
-    throw error;
+  if (!response.ok) {
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    throw new Error(data.message || "Erro ao excluir curso");
   }
+  return true;
 }
 
 export async function matricular(cursoId, usuarioId, token) {
