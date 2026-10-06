@@ -17,7 +17,7 @@ const getAuthHeaders = (token) => ({
 });
 
 /**
- * Busca o histórico de respostas de um aluno específico para o painel do Admin/Professor
+ * Busca o histórico de respostas de um aluno específico
  */
 async function listarRespostasPorAluno(alunoId, token) {
   try {
@@ -28,6 +28,7 @@ async function listarRespostasPorAluno(alunoId, token) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+
       throw new Error(
         errorData.message ||
           "Erro ao carregar o histórico de respostas do aluno."
@@ -56,9 +57,9 @@ export default function StudentsPage() {
   const [enrolledStudents, setEnrolledStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
-  // Estados de paginação dos alunos do curso
+  // Paginação
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
+  const [size] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
@@ -69,7 +70,6 @@ export default function StudentsPage() {
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [selectedUserToEnroll, setSelectedUserToEnroll] = useState("");
 
-  // Estado para bloquear cliques múltiplos no botão de matricular
   const [isEnrolling, setIsEnrolling] = useState(false);
 
   const [modalConfig, setModalConfig] = useState({
@@ -101,20 +101,30 @@ export default function StudentsPage() {
     async function verificarAutenticacao() {
       if (!token) {
         setErroAuth("Acesso negado. Redirecionando para a página de login...");
+
         setTimeout(() => navigate("/login"), 2000);
+
         return;
       }
 
       try {
         setLoading(true);
+
         const dadosUsuario = await buscarDadosUsuarioLogado(token);
+
         setUsuario(dadosUsuario);
 
-        await Promise.all([fetchCourses(token), fetchAllUsers(token)]);
+        await Promise.all([
+          fetchCourses(token),
+          fetchAllUsers(token),
+        ]);
       } catch (error) {
         console.error("Erro de autenticação:", error);
+
         localStorage.removeItem("@PortuguessComAnas:token");
+
         setErroAuth("Sessão expirada. Faça login novamente.");
+
         setTimeout(() => navigate("/login"), 2000);
       } finally {
         setLoading(false);
@@ -124,52 +134,123 @@ export default function StudentsPage() {
     verificarAutenticacao();
   }, [navigate, token]);
 
-  const carregarAlunosDoCurso = async (course, paginaDesejada = 0) => {
+  /**
+   * Carrega os alunos de uma determinada página.
+   *
+   * IMPORTANTE:
+   * paginaDesejada é baseada em índice começando em 0,
+   * como o Spring Data Page.
+   */
+  const carregarAlunosDoCurso = async (
+    course,
+    paginaDesejada = 0
+  ) => {
     const courseId = course.id || course._id;
-    setLoadingStudents(true);
-    try {
-      const resultadoPaginado = await cursoService.listarAlunosDoCurso(
-        courseId,
-        paginaDesejada,
-        size,
-        token
-      );
 
-      // O Spring Data Page retorna um objeto contendo content, totalPages, number, etc.
-      if (resultadoPaginado && Array.isArray(resultadoPaginado.content)) {
-        // Filtragem para omitir matrículas canceladas da exibição visual
-        const alunosAtivos = resultadoPaginado.content.filter((matricula) => {
-          const status = matricula.status || matricula.situacao;
-          return !status || status !== "CANCELADA";
-        });
+    // Nunca permite página negativa
+    const pagina = Math.max(0, paginaDesejada);
+
+    setLoadingStudents(true);
+
+    try {
+      const resultadoPaginado =
+        await cursoService.listarAlunosDoCurso(
+          courseId,
+          pagina,
+          size,
+          token
+        );
+
+      /*
+       * Caso o backend esteja retornando um objeto Page do Spring:
+       *
+       * {
+       *   content: [],
+       *   totalElements: 20,
+       *   totalPages: 2,
+       *   number: 0,
+       *   size: 10
+       * }
+       */
+      if (
+        resultadoPaginado &&
+        Array.isArray(resultadoPaginado.content)
+      ) {
+        const alunosAtivos =
+          resultadoPaginado.content.filter((matricula) => {
+            const status =
+              matricula.status || matricula.situacao;
+
+            return status !== "CANCELADA";
+          });
 
         setEnrolledStudents(alunosAtivos);
-        setTotalPages(resultadoPaginado.totalPages || 0);
-        setPage(resultadoPaginado.number || 0);
-        // Ajusta a contagem total com base no número de alunos ativos retornados na página
-        setTotalElements(alunosAtivos.length);
+
+        /*
+         * Usa a paginação REAL enviada pelo backend.
+         */
+        setTotalPages(
+          Number(resultadoPaginado.totalPages) || 0
+        );
+
+        setPage(
+          Number(resultadoPaginado.number) || 0
+        );
+
+        /*
+         * Antes estava usando:
+         *
+         * setTotalElements(alunosAtivos.length)
+         *
+         * Isso estava errado porque representava apenas
+         * os alunos daquela página.
+         */
+        setTotalElements(
+          Number(resultadoPaginado.totalElements) || 0
+        );
       } else {
+        /*
+         * Fallback caso a API retorne diretamente um array.
+         */
         const listaArray = Array.isArray(resultadoPaginado)
           ? resultadoPaginado
           : [];
-        const alunosAtivos = listaArray.filter((matricula) => {
-          const status = matricula.status || matricula.situacao;
-          return !status || status !== "CANCELADA";
-        });
+
+        const alunosAtivos =
+          listaArray.filter((matricula) => {
+            const status =
+              matricula.status || matricula.situacao;
+
+            return status !== "CANCELADA";
+          });
 
         setEnrolledStudents(alunosAtivos);
-        setTotalPages(1);
+
+        setTotalPages(
+          alunosAtivos.length > 0 ? 1 : 0
+        );
+
         setPage(0);
+
         setTotalElements(alunosAtivos.length);
       }
     } catch (error) {
-      console.error("Erro ao carregar alunos do curso:", error);
+      console.error(
+        "Erro ao carregar alunos do curso:",
+        error
+      );
+
       setEnrolledStudents([]);
+      setTotalPages(0);
+      setTotalElements(0);
+
       setModalConfig({
         isOpen: true,
         type: "error",
         message:
-          error.message || "Erro ao carregar alunos matriculados neste curso.",
+          error.message ||
+          "Erro ao carregar alunos matriculados neste curso.",
+        onConfirm: null,
       });
     } finally {
       setLoadingStudents(false);
@@ -178,7 +259,9 @@ export default function StudentsPage() {
 
   const handleOpenCourseDetails = async (course) => {
     setSelectedCourse(course);
+
     setPage(0);
+
     await carregarAlunosDoCurso(course, 0);
   };
 
@@ -191,7 +274,8 @@ export default function StudentsPage() {
       matriculaItem.aluno?.id;
 
     const fullUser = allUsers.find(
-      (u) => String(u.id || u._id) === String(studentId)
+      (u) =>
+        String(u.id || u._id) === String(studentId)
     );
 
     const studentName =
@@ -219,7 +303,9 @@ export default function StudentsPage() {
       nome: studentName,
       email: studentEmail,
       courses: [
-        selectedCourse?.titulo || selectedCourse?.nome || "Curso atual",
+        selectedCourse?.titulo ||
+          selectedCourse?.nome ||
+          "Curso atual",
       ],
       questionsAnswered: 0,
       correctRate: "0%",
@@ -232,14 +318,28 @@ export default function StudentsPage() {
     setLoadingStudentDetails(true);
 
     try {
-      const respostasAluno = await listarRespostasPorAluno(studentId, token);
+      const respostasAluno =
+        await listarRespostasPorAluno(
+          studentId,
+          token
+        );
 
-      const totalRespondidas = respostasAluno.length;
-      const acertos = respostasAluno.filter((r) => r.acertou === true).length;
-      const erros = totalRespondidas - acertos;
+      const totalRespondidas =
+        respostasAluno.length;
+
+      const acertos =
+        respostasAluno.filter(
+          (r) => r.acertou === true
+        ).length;
+
+      const erros =
+        totalRespondidas - acertos;
+
       const taxaAcertoNum =
         totalRespondidas > 0
-          ? Math.round((acertos / totalRespondidas) * 100)
+          ? Math.round(
+              (acertos / totalRespondidas) * 100
+            )
           : 0;
 
       setSelectedStudent((prev) => ({
@@ -252,11 +352,18 @@ export default function StudentsPage() {
         respostasDetalhadas: respostasAluno,
       }));
     } catch (error) {
-      console.error("Erro ao carregar respostas específicas do aluno:", error);
+      console.error(
+        "Erro ao carregar respostas específicas do aluno:",
+        error
+      );
+
       setModalConfig({
         isOpen: true,
         type: "error",
-        message: error.message || "Erro ao buscar estatísticas do aluno.",
+        message:
+          error.message ||
+          "Erro ao buscar estatísticas do aluno.",
+        onConfirm: null,
       });
     } finally {
       setLoadingStudentDetails(false);
@@ -266,42 +373,72 @@ export default function StudentsPage() {
   const filteredCourses = courses.filter(
     (course) =>
       (course.titulo &&
-        course.titulo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        course.titulo
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
       (course.nome &&
-        course.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+        course.nome
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()))
   );
 
   const handleEnrollStudent = async (e) => {
     e.preventDefault();
-    if (!selectedUserToEnroll || !selectedCourse || isEnrolling) return;
 
-    const courseId = selectedCourse.id || selectedCourse._id;
+    if (
+      !selectedUserToEnroll ||
+      !selectedCourse ||
+      isEnrolling
+    ) {
+      return;
+    }
+
+    const courseId =
+      selectedCourse.id || selectedCourse._id;
+
     setIsEnrolling(true);
 
     try {
-      await cursoService.matricular(courseId, selectedUserToEnroll, token);
-      await carregarAlunosDoCurso(selectedCourse, page);
+      await cursoService.matricular(
+        courseId,
+        selectedUserToEnroll,
+        token
+      );
+
+      await carregarAlunosDoCurso(
+        selectedCourse,
+        page
+      );
 
       setSelectedUserToEnroll("");
       setIsEnrollModalOpen(false);
+
       setModalConfig({
         isOpen: true,
         type: "success",
         message: "Aluno matriculado com sucesso!",
+        onConfirm: null,
       });
     } catch (error) {
       setModalConfig({
         isOpen: true,
         type: "error",
-        message: error.message || "Erro ao matricular aluno.",
+        message:
+          error.message ||
+          "Erro ao matricular aluno.",
+        onConfirm: null,
       });
     } finally {
       setIsEnrolling(false);
     }
   };
 
-  const handleRemoveEnrollment = (usuarioId, studentName) => {
-    const courseId = selectedCourse.id || selectedCourse._id;
+  const handleRemoveEnrollment = (
+    usuarioId,
+    studentName
+  ) => {
+    const courseId =
+      selectedCourse.id || selectedCourse._id;
 
     setModalConfig({
       isOpen: true,
@@ -309,19 +446,273 @@ export default function StudentsPage() {
       message: `Deseja realmente remover o acesso do aluno "${studentName}" deste curso?`,
       onConfirm: async () => {
         try {
-          await cursoService.removerMatricula(courseId, usuarioId, token);
-          await carregarAlunosDoCurso(selectedCourse, page);
+          await cursoService.removerMatricula(
+            courseId,
+            usuarioId,
+            token
+          );
+
+          /*
+           * Depois de remover, recarrega a mesma página.
+           *
+           * Se a página atual ficar vazia e não for a primeira,
+           * volta automaticamente uma página.
+           */
+          let paginaParaRecarregar = page;
+
+          if (
+            enrolledStudents.length === 1 &&
+            page > 0
+          ) {
+            paginaParaRecarregar = page - 1;
+          }
+
+          await carregarAlunosDoCurso(
+            selectedCourse,
+            paginaParaRecarregar
+          );
 
           setModalConfig({
             isOpen: true,
             type: "success",
             message: "Acesso removido com sucesso!",
+            onConfirm: null,
           });
         } catch (error) {
           setModalConfig({
             isOpen: true,
             type: "error",
-            message: error.message || "Erro ao remover matrícula.",
+            message:
+              error.message ||
+              "Erro ao remover matrícula.",
+            onConfirm: null,
+          });
+        }
+      },
+    });
+  };
+
+  /*
+   * Página anterior
+   */
+  const handlePreviousPage = () => {
+    if (
+      loadingStudents ||
+      page <= 0 ||
+      !selectedCourse
+    ) {
+      return;
+    }
+
+    carregarAlunosDoCurso(
+      selectedCourse,
+      page - 1
+    );
+  };
+
+  /*
+   * Próxima página
+   */
+  const handleNextPage = () => {
+    if (
+      loadingStudents ||
+      !selectedCourse ||
+      page >= totalPages - 1
+    ) {
+      return;
+    }
+
+    carregarAlunosDoCurso(
+      selectedCourse,
+      page + 1
+    );
+  };
+
+  if (loading && !erroAuth) {
+    return (
+      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center">
+        <h1 className="text-2xl font-black text-slate-900 animate-pulse uppercase tracking-wider">
+          Carregando painel...
+        </h1>
+      </div>
+    );
+  }
+
+  if (erroAuth) {
+    return (
+      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center p-4">
+        <div className="rounded-2xl border-[3px] border-black bg-[#FF6B6B] p-6 text-center font-bold text-black shadow-[6px_6px_0px_#000] max-w-sm w-full">
+          {erroAuth}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F4EFE6] flex flex-col relative font-sans">
+      <Navbar
+        usuario={usuario}
+        links={links}
+      />
+
+      <main className="flex-1 p-5 md:p-8 bg-gradient-to-br from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE]">
+        <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 shadow-[6px_6px_0_black] mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-black uppercase">
+              Gerenciar Cursos e Alunos
+            </h1>
+
+            <p className="font-bold text-slate-600">
+              Selecione um curso para ver os matriculados
+              e acessar os insights individuais.
+            </p>
+          </div>
+
+          <div className="w-full md:w-80">
+            <input
+              type="text"
+              placeholder="Buscar curso por título..."
+              value={searchTerm}
+              onChange={(e) =>
+                setSearchTerm(e.target.value)
+              }
+              className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
+          <h2 className="font-black uppercase mb-5">
+            Cursos Disponíveis ({filteredCourses.length})
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredCourses.map((course) => (
+              <div
+                key={course.id || course._id}
+                className="bg-white border-2 border-black rounded-xl p-5 flex flex-col justify-between gap-4 transition shadow-[3px_3px_0_black]"
+              >
+                <div>
+                  <h3 className="font-black text-lg text-slate-900 mb-1">
+                    📘 {course.titulo || course.nome}
+                  </h3>
+
+                  <p className="text-sm font-bold text-slate-500 line-clamp-2">
+                    {course.descricao ||
+                      "Sem descrição informada."}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() =>
+                    handleOpenCourseDetails(course)
+                  }
+                  className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl px-4 py-2.5 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer text-center"
+                >
+                  Ver Alunos Matriculados 👥
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </main>
+
+      {/* Modal de Alunos do Curso */}
+      {selectedCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="w-full max-w-2xl my-auto">
+            <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[8px_8px_0_black] p-6 max-h-[90vh] overflow-y-auto flex flex-col">
+              <div className="flex justify-between items-start mb-4 border-b-2 border-black pb-3">
+                <div>
+                  <span className="text-xs font-black bg-[#00D2DF] border border-black px-2 py-0.5 rounded uppercase">
+                    Curso Selecionado
+                  </span>
+
+                  <h2 className="font-black uppercase text-xl mt-1">
+                    {selectedCourse.titulo ||
+                      selectedCourse.nome}
+                  </h2>
+                </div>
+
+                <button
+                  onClick={() =>
+                    setSelectedCourse(null)
+                  }
+                  className="bg-white border-2 border-black rounded-lg px-3 py-1 font-black hover:bg-rose-400 shadow-[2px_2px_0_black] transition cursor-pointer"
+                >
+                  Fechar X
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-black text-sm uppercase text-slate-700">
+                  📚 Alunos Matriculados (
+                  {totalElements})
+                </h3>
+
+                <button
+                  onClick={() =>
+                    setIsEnrollModalOpen(true)
+                  }
+                  className="bg-[#00D2DF] text-black border-2 border-black rounded-lg px-3 py-1.5 text-xs font-black shadow-[2px_2px_0_black] transition cursor-pointer"
+                >
+                  + Matricular Aluno
+                </button>
+              </div>
+
+              {loadingStudents ? (
+                <p className="text-center font-bold py-8 animate-pulse text-slate-600">
+                  Carregando alunos...
+                </p>
+              ) : (
+                <div className="space-y-3 mb-4">
+                  {enrolledStudents.length > 0 ? (
+                    enrolledStudents.map(
+                      (matricula, index) => {
+                        const studentId =
+                          matricula.usuarioId ||
+                          matricula.usuario?.id ||
+                          matricula.aluno?.id;
+
+                        const fullUser =
+                          allUsers.find(
+                            (u) =>
+                              String(
+                                u.id || u._id
+                              ) ===
+                              String(studentId)
+                          );
+
+                        const studentName =
+                          matricula.nomeUsuario ||
+                          matricula.nome ||
+                          matricula.usuario?.nome ||
+                          fullUser?.nome ||
+                          "Aluno";
+
+                        const studentEmail =
+                          matricula.emailUsuario ||
+                          matricula.email ||
+                          matricula.usuario?.email ||
+                          fullUser?.email ||
+                          "E-mail";
+
+                        return (
+                          <div
+                            key={
+                              matricula.id ||
+                              matricula._id ||
+                              studentId ||
+                              `student-${index}`
+                            }
+                            className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border-2 border-black rounded-xl p-3 shadow-[3px_3px_0_black] gap-3"
+                          >
+                            <div>
+                              <p className="font-black text-sm text-slate-800">
+                                {studentName}
+                              </p>
+
+          ge: error.message || "Erro ao remover matrícula.",
           });
         }
       },
