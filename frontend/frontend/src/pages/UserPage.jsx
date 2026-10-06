@@ -216,7 +216,6 @@ export default function UserPage() {
 
       const dadosRetorno = await listar(token, paginaDesejada, tamanhoPagina);
 
-      // Tratamento se o retorno for o objeto paginado padrão ou array legado
       if (dadosRetorno && Array.isArray(dadosRetorno.content)) {
         setQuestoes(dadosRetorno.content);
         setPaginaAtual(dadosRetorno.page);
@@ -225,7 +224,6 @@ export default function UserPage() {
         setIsFirst(dadosRetorno.first);
         setIsLast(dadosRetorno.last);
       } else if (Array.isArray(dadosRetorno)) {
-        // Compatibilidade legada caso o backend retorne apenas um array
         setQuestoes(dadosRetorno);
         setPaginaAtual(0);
         setTotalPages(1);
@@ -446,7 +444,7 @@ export default function UserPage() {
                       questaoSelecionada.alternativas.length > 0 ? (
                         questaoSelecionada.alternativas.map((alt) => {
                           const isCorreta = alt.correta;
-                          const identificadorAlt = alt.id;
+                          const identificadorAlt = String(alt.id); // Padronizado com String
                           const letra = alt.letra || alt.id;
                           const textoAlt = alt.texto || alt.descricao;
                           const isSelecionada =
@@ -477,10 +475,7 @@ export default function UserPage() {
                                 checked={isSelecionada}
                                 onChange={() => {
                                   if (respostaEnviada) return;
-                                  const idNumerico = Number(alt.id);
-                                  setAlternativaSelecionada(
-                                    isNaN(idNumerico) ? alt.id : idNumerico
-                                  );
+                                  setAlternativaSelecionada(String(alt.id));
                                 }}
                                 disabled={respostaEnviada}
                                 className="mt-1 shrink-0"
@@ -516,7 +511,8 @@ export default function UserPage() {
                           className={`p-3 rounded-xl border-2 border-black text-center font-black text-sm ${
                             alternativaSelecionada &&
                             questaoSelecionada.alternativas?.find(
-                              (a) => a.id === alternativaSelecionada
+                              (a) =>
+                                String(a.id) === String(alternativaSelecionada)
                             )?.correta
                               ? "bg-emerald-300 text-emerald-950"
                               : "bg-red-300 text-red-950"
@@ -524,7 +520,8 @@ export default function UserPage() {
                         >
                           {alternativaSelecionada &&
                           questaoSelecionada.alternativas?.find(
-                            (a) => a.id === alternativaSelecionada
+                            (a) =>
+                              String(a.id) === String(alternativaSelecionada)
                           )?.correta
                             ? "🎉 Resposta Correta!"
                             : "❌ Resposta Incorreta!"}
