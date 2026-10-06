@@ -34,7 +34,7 @@ export default function AdminPage() {
           gravacoesRes,
           dadosUsuario,
         ] = await Promise.all([
-          listarQuestoes(token),
+          listarQuestoes(token, 0, 1000),
           listarCursos(token),
           listarUsuarios(token),
           gravacaoService.listar(token),
