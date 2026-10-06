@@ -181,7 +181,7 @@ export default function ContentsPage() {
   const [cursos, setCursos] = useState([]);
   const [loadingCursos, setLoadingCursos] = useState(false);
 
-  // Formulário de Aula (Com link direto do vídeo/gravação)
+  // Formulário de Aula
   const [selectedCursoForAula, setSelectedCursoForAula] = useState("");
   const [modulosDisponiveisParaAula, setModulosDisponiveisParaAula] = useState(
     []
@@ -221,8 +221,13 @@ export default function ContentsPage() {
     { letra: "E", texto: "", correta: false },
   ]);
 
+  // Estados de Questões e Paginação
   const [questions, setQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10;
 
   const [assuntos, setAssuntos] = useState([]);
   const [bancas, setBancas] = useState([]);
@@ -237,33 +242,55 @@ export default function ContentsPage() {
   const [bancaNome, setBancaNome] = useState("");
   const [editingBancaId, setEditingBancaId] = useState(null);
 
-  // Carregar dados iniciais com suporte ao formato paginado ou array direto
+  // Buscar Questões de forma paginada
+  const fetchQuestions = async (page = 0) => {
+    if (!token) return;
+    setLoadingQuestions(true);
+    try {
+      // Ajuste para passar página se o seu service aceitar paginação (ex: questaoService.listar(token, page, pageSize))
+      // Caso o seu service atual receba apenas o token, ele retornará todos ou um objeto paginado.
+      const dataQuestionsRes = await questaoService.listar(
+        token,
+        page,
+        pageSize
+      );
+
+      if (Array.isArray(dataQuestionsRes)) {
+        // Se a API retornar um array simples sem paginação nativa no endpoint:
+        setQuestions(dataQuestionsRes);
+        setTotalPages(1);
+        setTotalElements(dataQuestionsRes.length);
+      } else {
+        // Se retornar objeto Spring Page (content, totalPages, number, etc.)
+        setQuestions(dataQuestionsRes?.content || []);
+        setTotalPages(dataQuestionsRes?.totalPages || 0);
+        setCurrentPage(dataQuestionsRes?.number || page);
+        setTotalElements(dataQuestionsRes?.totalElements || 0);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar questões:", error);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  // Carregar dados iniciais gerais
   const fetchData = async () => {
     if (!token) {
       console.warn("Token não encontrado no localStorage.");
       return;
     }
 
-    setLoadingQuestions(true);
     setLoadingCursos(true);
     try {
-      const [
-        dadosUsuario,
-        dataQuestionsRes,
-        dataAssuntos,
-        dataBancasRes,
-        dataCursosRes,
-      ] = await Promise.all([
-        buscarDadosUsuarioLogado(token),
-        questaoService.listar(token),
-        assuntoService.listarAssuntos(token),
-        bancaService.listar(token),
-        cursoService.listar(token),
-      ]);
+      const [dadosUsuario, dataAssuntos, dataBancasRes, dataCursosRes] =
+        await Promise.all([
+          buscarDadosUsuarioLogado(token),
+          assuntoService.listarAssuntos(token),
+          bancaService.listar(token),
+          cursoService.listar(token),
+        ]);
 
-      const dataQuestions = Array.isArray(dataQuestionsRes)
-        ? dataQuestionsRes
-        : dataQuestionsRes?.content || [];
       const dataCursos = Array.isArray(dataCursosRes)
         ? dataCursosRes
         : dataCursosRes?.content || [];
@@ -272,14 +299,15 @@ export default function ContentsPage() {
         : dataBancasRes?.content || [];
 
       setUsuario(dadosUsuario);
-      setQuestions(dataQuestions);
       setAssuntos(dataAssuntos || []);
       setBancas(dataBancas);
       setCursos(dataCursos);
+
+      // Carrega a primeira página de questões
+      await fetchQuestions(0);
     } catch (error) {
       console.error("Erro ao carregar dados do banco:", error);
     } finally {
-      setLoadingQuestions(false);
       setLoadingCursos(false);
     }
   };
@@ -318,7 +346,6 @@ export default function ContentsPage() {
     try {
       const payload = {
         titulo: aulaTitulo.trim(),
-
         ordem: parseInt(aulaOrdem) || 1,
         linkVideo: aulaLinkVideo.trim() || null,
       };
@@ -332,7 +359,6 @@ export default function ContentsPage() {
       showAlert("Aula cadastrada com sucesso!");
 
       setAulaTitulo("");
-
       setAulaOrdem(1);
       setAulaLinkVideo("");
       setSelectedCursoForAula("");
@@ -653,7 +679,7 @@ export default function ContentsPage() {
         showAlert("Questão criada com sucesso!");
       }
       handleResetQuestionForm();
-      fetchData();
+      fetchQuestions(currentPage);
     } catch (error) {
       showAlert(`Erro ao salvar questão: ${error.message || error}`, "error");
     } finally {
@@ -698,7 +724,7 @@ export default function ContentsPage() {
       try {
         await questaoService.deletar(id, token);
         showAlert("Questão excluída com sucesso!");
-        fetchData();
+        fetchQuestions(currentPage);
       } catch (error) {
         showAlert("Erro ao excluir questão.", "error");
       }
@@ -1490,11 +1516,11 @@ export default function ContentsPage() {
           </div>
         </div>
 
-        {/* LISTAGEM DE QUESTÕES */}
+        {/* LISTAGEM DE QUESTÕES COM PAGINAÇÃO */}
         <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
-          <div className="flex justify-between items-center mb-5">
+          <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
             <h2 className="font-black uppercase text-xl">
-              Questões Cadastradas ({questions.length})
+              Questões Cadastradas ({totalElements})
             </h2>
             <div className="flex flex-wrap gap-2">
               <button
@@ -1517,6 +1543,7 @@ export default function ContentsPage() {
               </button>
             </div>
           </div>
+
           <div className="space-y-4">
             {loadingQuestions ? (
               <p className="font-bold text-slate-500">Carregando questões...</p>
@@ -1564,6 +1591,31 @@ export default function ContentsPage() {
               ))
             )}
           </div>
+
+          {/* CONTROLES DE PAGINAÇÃO */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6 pt-4 border-t-2 border-black flex-wrap gap-4">
+              <button
+                onClick={() => fetchQuestions(currentPage - 1)}
+                disabled={currentPage === 0 || loadingQuestions}
+                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Página Anterior
+              </button>
+
+              <span className="font-black text-sm">
+                Página {currentPage + 1} de {totalPages}
+              </span>
+
+              <button
+                onClick={() => fetchQuestions(currentPage + 1)}
+                disabled={currentPage + 1 >= totalPages || loadingQuestions}
+                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Próxima Página →
+              </button>
+            </div>
+          )}
         </Card>
       </main>
 
