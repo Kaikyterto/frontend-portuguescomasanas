@@ -16,9 +16,6 @@ const getAuthHeaders = (token) => ({
   ...(token ? { Authorization: `Bearer ${token}` } : {}),
 });
 
-/**
- * Busca o histórico de respostas de um aluno específico
- */
 async function listarRespostasPorAluno(alunoId, token) {
   try {
     const response = await fetch(`${API_URL}/api/respostas/aluno/${alunoId}`, {
@@ -28,7 +25,6 @@ async function listarRespostasPorAluno(alunoId, token) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-
       throw new Error(
         errorData.message ||
           "Erro ao carregar o histórico de respostas do aluno."
@@ -51,10 +47,18 @@ export default function StudentsPage() {
   const [erroAuth, setErroAuth] = useState("");
 
   const [courses, setCourses] = useState([]);
+
+  // Estados para gerenciar os usuários da API com paginação real
   const [allUsers, setAllUsers] = useState([]);
+  const [apiUserPage, setApiUserPage] = useState(0);
+  const [apiUserTotalPages, setApiUserTotalPages] = useState(0);
+  const [apiUserTotalElements, setApiUserTotalElements] = useState(0);
+  const [loadingModalUsers, setLoadingModalUsers] = useState(false);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [enrolledStudents, setEnrolledStudents] = useState([]);
+
+  // Cache independente por curso e página para os alunos matriculados
+  const [studentsCache, setStudentsCache] = useState({});
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   // Paginação
@@ -69,6 +73,7 @@ export default function StudentsPage() {
 
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [selectedUserToEnroll, setSelectedUserToEnroll] = useState("");
+  const [userSearchFilter, setUserSearchFilter] = useState("");
 
   const [isEnrolling, setIsEnrolling] = useState(false);
 
@@ -88,12 +93,28 @@ export default function StudentsPage() {
     }
   };
 
-  const fetchAllUsers = async (authToken) => {
+  // Função para buscar usuários paginados da API
+  const carregarUsuariosApi = async (paginaDesejada = 0, authToken = token) => {
+    setLoadingModalUsers(true);
     try {
-      const data = await listarUsuarios(authToken);
-      setAllUsers(data || []);
+      const data = await listarUsuarios(paginaDesejada, 100, authToken);
+
+      if (data && Array.isArray(data.content)) {
+        setAllUsers(data.content);
+        setApiUserPage(Number(data.number) || paginaDesejada);
+        setApiUserTotalPages(Number(data.totalPages) || 0);
+        setApiUserTotalElements(Number(data.totalElements) || 0);
+      } else {
+        const listaArray = Array.isArray(data) ? data : [];
+        setAllUsers(listaArray);
+        setApiUserPage(0);
+        setApiUserTotalPages(1);
+        setApiUserTotalElements(listaArray.length);
+      }
     } catch (error) {
       console.error("Erro ao carregar usuários:", error);
+    } finally {
+      setLoadingModalUsers(false);
     }
   };
 
@@ -101,30 +122,19 @@ export default function StudentsPage() {
     async function verificarAutenticacao() {
       if (!token) {
         setErroAuth("Acesso negado. Redirecionando para a página de login...");
-
         setTimeout(() => navigate("/login"), 2000);
-
         return;
       }
 
       try {
         setLoading(true);
-
         const dadosUsuario = await buscarDadosUsuarioLogado(token);
-
         setUsuario(dadosUsuario);
-
-        await Promise.all([
-          fetchCourses(token),
-          fetchAllUsers(token),
-        ]);
+        await Promise.all([fetchCourses(token), carregarUsuariosApi(0, token)]);
       } catch (error) {
         console.error("Erro de autenticação:", error);
-
         localStorage.removeItem("@PortuguessComAnas:token");
-
         setErroAuth("Sessão expirada. Faça login novamente.");
-
         setTimeout(() => navigate("/login"), 2000);
       } finally {
         setLoading(false);
@@ -134,113 +144,67 @@ export default function StudentsPage() {
     verificarAutenticacao();
   }, [navigate, token]);
 
-  /**
-   * Carrega os alunos de uma determinada página.
-   *
-   * IMPORTANTE:
-   * paginaDesejada é baseada em índice começando em 0,
-   * como o Spring Data Page.
-   */
   const carregarAlunosDoCurso = async (
     course,
-    paginaDesejada = 0
+    paginaDesejada = 0,
+    forceRefresh = false
   ) => {
     const courseId = course.id || course._id;
-
-    // Nunca permite página negativa
     const pagina = Math.max(0, paginaDesejada);
+    const cacheKey = `${courseId}_${pagina}`;
+
+    // Se já temos os dados no cache independente e não estamos forçando a atualização, reaproveitamos
+    if (!forceRefresh && studentsCache[cacheKey]) {
+      setPage(pagina);
+      setTotalPages(studentsCache[cacheKey].totalPages);
+      setTotalElements(studentsCache[cacheKey].totalElements);
+      return;
+    }
 
     setLoadingStudents(true);
 
     try {
-      const resultadoPaginado =
-        await cursoService.listarAlunosDoCurso(
-          courseId,
-          pagina,
-          size,
-          token
-        );
-
-      /*
-       * Caso o backend esteja retornando um objeto Page do Spring:
-       *
-       * {
-       *   content: [],
-       *   totalElements: 20,
-       *   totalPages: 2,
-       *   number: 0,
-       *   size: 10
-       * }
-       */
-      if (
-        resultadoPaginado &&
-        Array.isArray(resultadoPaginado.content)
-      ) {
-        const alunosAtivos =
-          resultadoPaginado.content.filter((matricula) => {
-            const status =
-              matricula.status || matricula.situacao;
-
-            return status !== "CANCELADA";
-          });
-
-        setEnrolledStudents(alunosAtivos);
-
-        /*
-         * Usa a paginação REAL enviada pelo backend.
-         */
-        setTotalPages(
-          Number(resultadoPaginado.totalPages) || 0
-        );
-
-        setPage(
-          Number(resultadoPaginado.number) || 0
-        );
-
-        /*
-         * Antes estava usando:
-         *
-         * setTotalElements(alunosAtivos.length)
-         *
-         * Isso estava errado porque representava apenas
-         * os alunos daquela página.
-         */
-        setTotalElements(
-          Number(resultadoPaginado.totalElements) || 0
-        );
-      } else {
-        /*
-         * Fallback caso a API retorne diretamente um array.
-         */
-        const listaArray = Array.isArray(resultadoPaginado)
-          ? resultadoPaginado
-          : [];
-
-        const alunosAtivos =
-          listaArray.filter((matricula) => {
-            const status =
-              matricula.status || matricula.situacao;
-
-            return status !== "CANCELADA";
-          });
-
-        setEnrolledStudents(alunosAtivos);
-
-        setTotalPages(
-          alunosAtivos.length > 0 ? 1 : 0
-        );
-
-        setPage(0);
-
-        setTotalElements(alunosAtivos.length);
-      }
-    } catch (error) {
-      console.error(
-        "Erro ao carregar alunos do curso:",
-        error
+      const resultadoPaginado = await cursoService.listarAlunosDoCurso(
+        courseId,
+        pagina,
+        size,
+        token
       );
 
-      setEnrolledStudents([]);
+      let listaMatriculas = [];
+      let totalPgs = 0;
+      let totalElems = 0;
+
+      if (resultadoPaginado && Array.isArray(resultadoPaginado.content)) {
+        listaMatriculas = resultadoPaginado.content;
+        totalPgs = Number(resultadoPaginado.totalPages) || 0;
+        totalElems = Number(resultadoPaginado.totalElements) || 0;
+      } else if (Array.isArray(resultadoPaginado)) {
+        listaMatriculas = resultadoPaginado;
+        totalPgs = 1;
+        totalElems = listaMatriculas.length;
+      }
+
+      const alunosAtivos = listaMatriculas.filter((matricula) => {
+        const status = matricula.status || matricula.situacao;
+        return status !== "CANCELADA";
+      });
+
+      // Atualiza o cache independente para esta página específica
+      setStudentsCache((prev) => ({
+        ...prev,
+        [cacheKey]: {
+          students: alunosAtivos,
+          totalPages: totalPgs,
+          totalElements: totalElems,
+        },
+      }));
+
+      setTotalPages(totalPgs);
+      setPage(pagina);
+      setTotalElements(totalElems);
+    } catch (error) {
+      console.error("Erro ao carregar alunos do curso:", error);
       setTotalPages(0);
       setTotalElements(0);
 
@@ -248,8 +212,7 @@ export default function StudentsPage() {
         isOpen: true,
         type: "error",
         message:
-          error.message ||
-          "Erro ao carregar alunos matriculados neste curso.",
+          error.message || "Erro ao carregar alunos matriculados neste curso.",
         onConfirm: null,
       });
     } finally {
@@ -259,36 +222,38 @@ export default function StudentsPage() {
 
   const handleOpenCourseDetails = async (course) => {
     setSelectedCourse(course);
-
     setPage(0);
-
     await carregarAlunosDoCurso(course, 0);
   };
 
   const handleOpenStudentDetails = async (matriculaItem) => {
     const studentId =
       matriculaItem.usuarioId ||
+      matriculaItem.idUsuario ||
       matriculaItem.id ||
       matriculaItem._id ||
       matriculaItem.usuario?.id ||
       matriculaItem.aluno?.id;
 
     const fullUser = allUsers.find(
-      (u) =>
-        String(u.id || u._id) === String(studentId)
+      (u) => String(u.id || u._id) === String(studentId)
     );
 
     const studentName =
       matriculaItem.nomeUsuario ||
+      matriculaItem.nomeAluno ||
       matriculaItem.nome ||
       matriculaItem.usuario?.nome ||
+      matriculaItem.aluno?.nome ||
       fullUser?.nome ||
       "Aluno sem nome";
 
     const studentEmail =
       matriculaItem.emailUsuario ||
+      matriculaItem.emailAluno ||
       matriculaItem.email ||
       matriculaItem.usuario?.email ||
+      matriculaItem.aluno?.email ||
       fullUser?.email ||
       "E-mail não informado";
 
@@ -303,9 +268,7 @@ export default function StudentsPage() {
       nome: studentName,
       email: studentEmail,
       courses: [
-        selectedCourse?.titulo ||
-          selectedCourse?.nome ||
-          "Curso atual",
+        selectedCourse?.titulo || selectedCourse?.nome || "Curso atual",
       ],
       questionsAnswered: 0,
       correctRate: "0%",
@@ -318,28 +281,13 @@ export default function StudentsPage() {
     setLoadingStudentDetails(true);
 
     try {
-      const respostasAluno =
-        await listarRespostasPorAluno(
-          studentId,
-          token
-        );
-
-      const totalRespondidas =
-        respostasAluno.length;
-
-      const acertos =
-        respostasAluno.filter(
-          (r) => r.acertou === true
-        ).length;
-
-      const erros =
-        totalRespondidas - acertos;
-
+      const respostasAluno = await listarRespostasPorAluno(studentId, token);
+      const totalRespondidas = respostasAluno.length;
+      const acertos = respostasAluno.filter((r) => r.acertou === true).length;
+      const erros = totalRespondidas - acertos;
       const taxaAcertoNum =
         totalRespondidas > 0
-          ? Math.round(
-              (acertos / totalRespondidas) * 100
-            )
+          ? Math.round((acertos / totalRespondidas) * 100)
           : 0;
 
       setSelectedStudent((prev) => ({
@@ -352,17 +300,11 @@ export default function StudentsPage() {
         respostasDetalhadas: respostasAluno,
       }));
     } catch (error) {
-      console.error(
-        "Erro ao carregar respostas específicas do aluno:",
-        error
-      );
-
+      console.error("Erro ao carregar respostas específicas do aluno:", error);
       setModalConfig({
         isOpen: true,
         type: "error",
-        message:
-          error.message ||
-          "Erro ao buscar estatísticas do aluno.",
+        message: error.message || "Erro ao buscar estatísticas do aluno.",
         onConfirm: null,
       });
     } finally {
@@ -373,45 +315,40 @@ export default function StudentsPage() {
   const filteredCourses = courses.filter(
     (course) =>
       (course.titulo &&
-        course.titulo
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())) ||
+        course.titulo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (course.nome &&
-        course.nome
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()))
+        course.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredUsersToEnroll = allUsers.filter(
+    (user) =>
+      (user.nome &&
+        user.nome.toLowerCase().includes(userSearchFilter.toLowerCase())) ||
+      (user.email &&
+        user.email.toLowerCase().includes(userSearchFilter.toLowerCase()))
   );
 
   const handleEnrollStudent = async (e) => {
     e.preventDefault();
 
-    if (
-      !selectedUserToEnroll ||
-      !selectedCourse ||
-      isEnrolling
-    ) {
+    if (!selectedUserToEnroll || !selectedCourse || isEnrolling) {
       return;
     }
 
-    const courseId =
-      selectedCourse.id || selectedCourse._id;
-
+    const courseId = selectedCourse.id || selectedCourse._id;
     setIsEnrolling(true);
 
     try {
-      await cursoService.matricular(
-        courseId,
-        selectedUserToEnroll,
-        token
-      );
+      await cursoService.matricular(courseId, selectedUserToEnroll, token);
 
-      await carregarAlunosDoCurso(
-        selectedCourse,
-        page
-      );
+      // Limpa o cache para forçar a recarga limpa da página atual com o novo aluno
+      setStudentsCache({});
+      await carregarAlunosDoCurso(selectedCourse, page, true);
 
       setSelectedUserToEnroll("");
+      setUserSearchFilter("");
       setIsEnrollModalOpen(false);
+      carregarUsuariosApi(0); // Volta para a página 1 da listagem geral de usuários
 
       setModalConfig({
         isOpen: true,
@@ -423,9 +360,7 @@ export default function StudentsPage() {
       setModalConfig({
         isOpen: true,
         type: "error",
-        message:
-          error.message ||
-          "Erro ao matricular aluno.",
+        message: error.message || "Erro ao matricular aluno.",
         onConfirm: null,
       });
     } finally {
@@ -433,12 +368,8 @@ export default function StudentsPage() {
     }
   };
 
-  const handleRemoveEnrollment = (
-    usuarioId,
-    studentName
-  ) => {
-    const courseId =
-      selectedCourse.id || selectedCourse._id;
+  const handleRemoveEnrollment = (usuarioId, studentName) => {
+    const courseId = selectedCourse.id || selectedCourse._id;
 
     setModalConfig({
       isOpen: true,
@@ -446,30 +377,22 @@ export default function StudentsPage() {
       message: `Deseja realmente remover o acesso do aluno "${studentName}" deste curso?`,
       onConfirm: async () => {
         try {
-          await cursoService.removerMatricula(
-            courseId,
-            usuarioId,
-            token
-          );
+          await cursoService.removerMatricula(courseId, usuarioId, token);
 
-          /*
-           * Depois de remover, recarrega a mesma página.
-           *
-           * Se a página atual ficar vazia e não for a primeira,
-           * volta automaticamente uma página.
-           */
           let paginaParaRecarregar = page;
+          const currentCacheKey = `${courseId}_${page}`;
+          const currentList = studentsCache[currentCacheKey]?.students || [];
 
-          if (
-            enrolledStudents.length === 1 &&
-            page > 0
-          ) {
+          if (currentList.length === 1 && page > 0) {
             paginaParaRecarregar = page - 1;
           }
 
+          // Limpa o cache e recarrega os dados atualizados
+          setStudentsCache({});
           await carregarAlunosDoCurso(
             selectedCourse,
-            paginaParaRecarregar
+            paginaParaRecarregar,
+            true
           );
 
           setModalConfig({
@@ -482,9 +405,7 @@ export default function StudentsPage() {
           setModalConfig({
             isOpen: true,
             type: "error",
-            message:
-              error.message ||
-              "Erro ao remover matrícula.",
+            message: error.message || "Erro ao remover matrícula.",
             onConfirm: null,
           });
         }
@@ -492,232 +413,15 @@ export default function StudentsPage() {
     });
   };
 
-  /*
-   * Página anterior
-   */
-  const handlePreviousPage = () => {
-    if (
-      loadingStudents ||
-      page <= 0 ||
-      !selectedCourse
-    ) {
-      return;
-    }
-
-    carregarAlunosDoCurso(
-      selectedCourse,
-      page - 1
-    );
-  };
-
-  /*
-   * Próxima página
-   */
-  const handleNextPage = () => {
-    if (
-      loadingStudents ||
-      !selectedCourse ||
-      page >= totalPages - 1
-    ) {
-      return;
-    }
-
-    carregarAlunosDoCurso(
-      selectedCourse,
-      page + 1
-    );
-  };
-
-  if (loading && !erroAuth) {
-    return (
-      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center">
-        <h1 className="text-2xl font-black text-slate-900 animate-pulse uppercase tracking-wider">
-          Carregando painel...
-        </h1>
-      </div>
-    );
-  }
-
-  if (erroAuth) {
-    return (
-      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center p-4">
-        <div className="rounded-2xl border-[3px] border-black bg-[#FF6B6B] p-6 text-center font-bold text-black shadow-[6px_6px_0px_#000] max-w-sm w-full">
-          {erroAuth}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#F4EFE6] flex flex-col relative font-sans">
-      <Navbar
-        usuario={usuario}
-        links={links}
-      />
-
-      <main className="flex-1 p-5 md:p-8 bg-gradient-to-br from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE]">
-        <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 shadow-[6px_6px_0_black] mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-black uppercase">
-              Gerenciar Cursos e Alunos
-            </h1>
-
-            <p className="font-bold text-slate-600">
-              Selecione um curso para ver os matriculados
-              e acessar os insights individuais.
-            </p>
-          </div>
-
-          <div className="w-full md:w-80">
-            <input
-              type="text"
-              placeholder="Buscar curso por título..."
-              value={searchTerm}
-              onChange={(e) =>
-                setSearchTerm(e.target.value)
-              }
-              className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
-          <h2 className="font-black uppercase mb-5">
-            Cursos Disponíveis ({filteredCourses.length})
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredCourses.map((course) => (
-              <div
-                key={course.id || course._id}
-                className="bg-white border-2 border-black rounded-xl p-5 flex flex-col justify-between gap-4 transition shadow-[3px_3px_0_black]"
-              >
-                <div>
-                  <h3 className="font-black text-lg text-slate-900 mb-1">
-                    📘 {course.titulo || course.nome}
-                  </h3>
-
-                  <p className="text-sm font-bold text-slate-500 line-clamp-2">
-                    {course.descricao ||
-                      "Sem descrição informada."}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() =>
-                    handleOpenCourseDetails(course)
-                  }
-                  className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl px-4 py-2.5 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer text-center"
-                >
-                  Ver Alunos Matriculados 👥
-                </button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </main>
-
-      {/* Modal de Alunos do Curso */}
-      {selectedCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-          <div className="w-full max-w-2xl my-auto">
-            <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[8px_8px_0_black] p-6 max-h-[90vh] overflow-y-auto flex flex-col">
-              <div className="flex justify-between items-start mb-4 border-b-2 border-black pb-3">
-                <div>
-                  <span className="text-xs font-black bg-[#00D2DF] border border-black px-2 py-0.5 rounded uppercase">
-                    Curso Selecionado
-                  </span>
-
-                  <h2 className="font-black uppercase text-xl mt-1">
-                    {selectedCourse.titulo ||
-                      selectedCourse.nome}
-                  </h2>
-                </div>
-
-                <button
-                  onClick={() =>
-                    setSelectedCourse(null)
-                  }
-                  className="bg-white border-2 border-black rounded-lg px-3 py-1 font-black hover:bg-rose-400 shadow-[2px_2px_0_black] transition cursor-pointer"
-                >
-                  Fechar X
-                </button>
-              </div>
-
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-black text-sm uppercase text-slate-700">
-                  📚 Alunos Matriculados (
-                  {totalElements})
-                </h3>
-
-                <button
-                  onClick={() =>
-                    setIsEnrollModalOpen(true)
-                  }
-                  className="bg-[#00D2DF] text-black border-2 border-black rounded-lg px-3 py-1.5 text-xs font-black shadow-[2px_2px_0_black] transition cursor-pointer"
-                >
-                  + Matricular Aluno
-                </button>
-              </div>
-
-              {loadingStudents ? (
-                <p className="text-center font-bold py-8 animate-pulse text-slate-600">
-                  Carregando alunos...
-                </p>
-              ) : (
-                <div className="space-y-3 mb-4">
-                  {enrolledStudents.length > 0 ? (
-                    enrolledStudents.map(
-                      (matricula, index) => {
-                        const studentId =
-                          matricula.usuarioId ||
-                          matricula.usuario?.id ||
-                          matricula.aluno?.id;
-
-                        const fullUser =
-                          allUsers.find(
-                            (u) =>
-                              String(
-                                u.id || u._id
-                              ) ===
-                              String(studentId)
-                          );
-
-                        const studentName =
-                          matricula.nomeUsuario ||
-                          matricula.nome ||
-                          matricula.usuario?.nome ||
-                          fullUser?.nome ||
-                          "Aluno";
-
-                        const studentEmail =
-                          matricula.emailUsuario ||
-                          matricula.email ||
-                          matricula.usuario?.email ||
-                          fullUser?.email ||
-                          "E-mail";
-
-                        return (
-                          <div
-                            key={
-                              matricula.id ||
-                              matricula._id ||
-                              studentId ||
-                              `student-${index}`
-                            }
-                            className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border-2 border-black rounded-xl p-3 shadow-[3px_3px_0_black] gap-3"
-                          >
-                            <div>
-                              <p className="font-black text-sm text-slate-800">
-                                {studentName}
-                              </p>
-
-          ge: error.message || "Erro ao remover matrícula.",
-          });
-        }
-      },
-    });
-  };
+  // Obtém os alunos da página atual através do cache independente
+  const currentCourseId = selectedCourse
+    ? selectedCourse.id || selectedCourse._id
+    : null;
+  const currentCacheKey = currentCourseId ? `${currentCourseId}_${page}` : null;
+  const enrolledStudents =
+    currentCacheKey && studentsCache[currentCacheKey]
+      ? studentsCache[currentCacheKey].students
+      : [];
 
   if (loading && !erroAuth) {
     return (
@@ -825,7 +529,12 @@ export default function StudentsPage() {
                   📚 Alunos Matriculados ({totalElements})
                 </h3>
                 <button
-                  onClick={() => setIsEnrollModalOpen(true)}
+                  onClick={() => {
+                    setUserSearchFilter("");
+                    setSelectedUserToEnroll("");
+                    carregarUsuariosApi(0);
+                    setIsEnrollModalOpen(true);
+                  }}
                   className="bg-[#00D2DF] text-black border-2 border-black rounded-lg px-3 py-1.5 text-xs font-black shadow-[2px_2px_0_black] transition cursor-pointer"
                 >
                   + Matricular Aluno
@@ -839,29 +548,45 @@ export default function StudentsPage() {
               ) : (
                 <div className="space-y-3 mb-4">
                   {enrolledStudents.length > 0 ? (
-                    enrolledStudents.map((matricula) => {
+                    enrolledStudents.map((matricula, index) => {
                       const studentId =
                         matricula.usuarioId ||
+                        matricula.idUsuario ||
+                        matricula.id ||
+                        matricula._id ||
                         matricula.usuario?.id ||
                         matricula.aluno?.id;
 
                       const fullUser = allUsers.find(
                         (u) => String(u.id || u._id) === String(studentId)
                       );
+
                       const studentName =
                         matricula.nomeUsuario ||
+                        matricula.nomeAluno ||
                         matricula.nome ||
+                        matricula.usuario?.nome ||
+                        matricula.aluno?.nome ||
                         fullUser?.nome ||
-                        "Aluno";
+                        `Aluno ID: ${studentId || "N/A"}`;
+
                       const studentEmail =
                         matricula.emailUsuario ||
+                        matricula.emailAluno ||
                         matricula.email ||
+                        matricula.usuario?.email ||
+                        matricula.aluno?.email ||
                         fullUser?.email ||
-                        "E-mail";
+                        "E-mail não informado";
 
                       return (
                         <div
-                          key={matricula.id || studentId || Math.random()}
+                          key={
+                            matricula.id ||
+                            matricula._id ||
+                            studentId ||
+                            `student-${index}`
+                          }
                           className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border-2 border-black rounded-xl p-3 shadow-[3px_3px_0_black] gap-3"
                         >
                           <div>
@@ -875,7 +600,12 @@ export default function StudentsPage() {
                           <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                             <button
                               onClick={() =>
-                                handleOpenStudentDetails(matricula)
+                                handleOpenStudentDetails({
+                                  ...matricula,
+                                  nome: studentName,
+                                  email: studentEmail,
+                                  usuarioId: studentId,
+                                })
                               }
                               className="bg-[#7B5CFA] text-white border-2 border-black px-2.5 py-1 rounded-lg text-xs font-black shadow-[2px_2px_0_black] hover:shadow-none transition cursor-pointer"
                             >
@@ -908,7 +638,7 @@ export default function StudentsPage() {
                     onClick={() =>
                       carregarAlunosDoCurso(selectedCourse, page - 1)
                     }
-                    disabled={page === 0 || loadingStudents}
+                    disabled={page <= 0 || loadingStudents}
                     className="bg-white border-2 border-black px-3 py-1.5 rounded-lg text-xs font-black shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     ← Anterior
@@ -920,7 +650,7 @@ export default function StudentsPage() {
                     onClick={() =>
                       carregarAlunosDoCurso(selectedCourse, page + 1)
                     }
-                    disabled={page + 1 >= totalPages || loadingStudents}
+                    disabled={page >= totalPages - 1 || loadingStudents}
                     className="bg-white border-2 border-black px-3 py-1.5 rounded-lg text-xs font-black shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Próxima →
@@ -954,7 +684,6 @@ export default function StudentsPage() {
                 </button>
               </div>
 
-              {/* Informações básicas */}
               <div className="bg-white border-2 border-black rounded-xl p-4 mb-4 shadow-[3px_3px_0_black] space-y-1">
                 <p className="text-xs font-black text-slate-400 uppercase">
                   E-mail
@@ -970,7 +699,6 @@ export default function StudentsPage() {
                 </div>
               ) : (
                 <>
-                  {/* Estatísticas e Desempenho (Insights) */}
                   <h3 className="font-black text-xs uppercase text-slate-700 mb-2">
                     Desempenho em Questões
                   </h3>
@@ -1014,7 +742,6 @@ export default function StudentsPage() {
                     </div>
                   </div>
 
-                  {/* Histórico de Respostas Detalhado do Aluno */}
                   <div className="bg-white border-2 border-black rounded-xl p-4 mb-5 shadow-[3px_3px_0_black]">
                     <h3 className="font-black text-xs uppercase text-slate-700 mb-2">
                       📝 Histórico de Respostas do Aluno (
@@ -1069,19 +796,22 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Modal de Matrícula */}
+      {/* Modal de Matrícula com Paginação Real da API */}
       {isEnrollModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
           <div className="w-full max-w-sm">
             <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[8px_8px_0_black] p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-black uppercase text-sm">
-                  📘 Matricular Aluno
+                  📘 Matricular Aluno ({apiUserTotalElements} total)
                 </h3>
                 <button
-                  onClick={() => setIsEnrollModalOpen(false)}
+                  onClick={() => {
+                    setIsEnrollModalOpen(false);
+                    carregarUsuariosApi(0);
+                  }}
                   disabled={isEnrolling}
-                  className="bg-white border-2 border-black rounded-lg px-2 py-0.5 text-xs font-black disabled:opacity-50"
+                  className="bg-white border-2 border-black rounded-lg px-2 py-0.5 text-xs font-black disabled:opacity-50 cursor-pointer"
                 >
                   X
                 </button>
@@ -1090,42 +820,97 @@ export default function StudentsPage() {
               <form onSubmit={handleEnrollStudent} className="space-y-4">
                 <div>
                   <label className="block text-xs font-black uppercase text-slate-600 mb-1">
+                    Filtrar na página atual:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Digite nome ou e-mail..."
+                    value={userSearchFilter}
+                    onChange={(e) => setUserSearchFilter(e.target.value)}
+                    disabled={isEnrolling || loadingModalUsers}
+                    className="w-full border-2 border-black rounded-xl p-2.5 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none text-xs mb-2"
+                  />
+
+                  <label className="block text-xs font-black uppercase text-slate-600 mb-1">
                     Selecione o Aluno:
                   </label>
-                  <select
-                    value={selectedUserToEnroll}
-                    onChange={(e) => setSelectedUserToEnroll(e.target.value)}
-                    required
-                    disabled={isEnrolling}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none text-sm cursor-pointer disabled:opacity-50"
-                  >
-                    <option value="" disabled>
-                      Escolha um usuário...
-                    </option>
-                    {allUsers.map((user) => (
-                      <option
-                        key={user.id || user._id}
-                        value={user.id || user._id}
-                      >
-                        {user.nome} ({user.email})
+
+                  {loadingModalUsers ? (
+                    <p className="text-center text-xs font-bold py-6 animate-pulse text-slate-600">
+                      Carregando usuários da página...
+                    </p>
+                  ) : (
+                    <select
+                      value={selectedUserToEnroll}
+                      onChange={(e) => setSelectedUserToEnroll(e.target.value)}
+                      required
+                      disabled={isEnrolling}
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none text-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <option value="" disabled>
+                        {filteredUsersToEnroll.length === 0
+                          ? "Nenhum usuário nesta página..."
+                          : "Escolha um usuário..."}
                       </option>
-                    ))}
-                  </select>
+                      {filteredUsersToEnroll.map((user) => (
+                        <option
+                          key={user.id || user._id}
+                          value={user.id || user._id}
+                        >
+                          {user.nome} ({user.email})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* Controles de Paginação Real da API para os Usuários */}
+                  {apiUserTotalPages > 1 && (
+                    <div className="flex items-center justify-between border-2 border-black rounded-xl p-2 mt-3 bg-white shadow-[2px_2px_0_black]">
+                      <button
+                        type="button"
+                        onClick={() => carregarUsuariosApi(apiUserPage - 1)}
+                        disabled={
+                          apiUserPage <= 0 || loadingModalUsers || isEnrolling
+                        }
+                        className="bg-[#F4EFE6] border border-black px-2.5 py-1 rounded-md text-xs font-black disabled:opacity-40 cursor-pointer"
+                      >
+                        ← Ant
+                      </button>
+                      <span className="text-xs font-black uppercase text-slate-700">
+                        Pág {apiUserPage + 1} de {apiUserTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => carregarUsuariosApi(apiUserPage + 1)}
+                        disabled={
+                          apiUserPage >= apiUserTotalPages - 1 ||
+                          loadingModalUsers ||
+                          isEnrolling
+                        }
+                        className="bg-[#F4EFE6] border border-black px-2.5 py-1 rounded-md text-xs font-black disabled:opacity-40 cursor-pointer"
+                      >
+                        Próx →
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 p-2">
                   <button
                     type="submit"
-                    disabled={isEnrolling}
+                    disabled={isEnrolling || !selectedUserToEnroll}
                     className="flex-1 bg-[#00D2DF] text-black border-2 border-black rounded-xl py-2.5 text-xs font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed transition"
                   >
                     {isEnrolling ? "Matriculando..." : "Confirmar"}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsEnrollModalOpen(false)}
+                    onClick={() => {
+                      setIsEnrollModalOpen(false);
+                      carregarUsuariosApi(0);
+                    }}
                     disabled={isEnrolling}
-                    className="bg-white text-black border-2 border-black rounded-xl px-3 py-2.5 text-xs font-black shadow-[3px_3px_0_black] disabled:opacity-50"
+                    className="bg-white text-black border-2 border-black rounded-xl px-3 py-2.5 text-xs font-black shadow-[3px_3px_0_black] disabled:opacity-50 cursor-pointer"
                   >
                     Cancelar
                   </button>

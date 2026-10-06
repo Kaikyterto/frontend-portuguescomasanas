@@ -31,21 +31,32 @@ export async function buscarDadosUsuarioLogado(token) {
   }
 }
 
-export async function listar(token) {
+export async function listar(page = 0, size = 100, token) {
+  let actualPage = page;
+  let actualSize = size;
+  let actualToken = token;
+
+  // Se o primeiro parâmetro (page) for uma string, significa que passaram o token no lugar do page
+  if (typeof page === "string" && !token) {
+    actualToken = page;
+    actualPage = 0;
+    actualSize = 100;
+  }
+
   try {
     const response = await fetch(
-      `${API_URL}/api/usuario/listar?page=0&size=100`,
+      `${API_URL}/api/usuario/listar?page=${actualPage}&size=${actualSize}`,
       {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(actualToken ? { Authorization: `Bearer ${actualToken}` } : {}),
         },
       }
     );
 
     const responseText = await response.text();
-    const data = responseText ? JSON.parse(responseText) : {};
+    const data = responseText ? JSON.parse(responseText) : [];
 
     if (!response.ok) {
       throw new Error(
@@ -53,11 +64,9 @@ export async function listar(token) {
       );
     }
 
-    // O backend retorna uma página.
-    // Retornamos somente a lista de usuários.
-    return Array.isArray(data) ? data : data.content || [];
+    return data;
   } catch (error) {
-    console.error("Erro em listar usuários:", error);
+    console.error("Erro em listar:", error);
     throw error;
   }
 }
