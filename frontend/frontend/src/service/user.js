@@ -32,7 +32,7 @@ export async function buscarDadosUsuarioLogado(token) {
 
 export async function listar(token) {
   try {
-    const response = await fetch(`${API_URL}/api/usuario/listar`, {
+    const response = await fetch(`${API_URL}/api/usuario/listar?page=0&size=100`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -41,7 +41,7 @@ export async function listar(token) {
     });
 
     const responseText = await response.text();
-    const data = responseText ? JSON.parse(responseText) : [];
+    const data = responseText ? JSON.parse(responseText) : {};
 
     if (!response.ok) {
       throw new Error(
@@ -49,37 +49,11 @@ export async function listar(token) {
       );
     }
 
-    return data;
+    // O backend retorna uma página.
+    // Retornamos somente a lista de usuários para a StudentsPage.
+    return Array.isArray(data) ? data : data.content || [];
   } catch (error) {
     console.error("Erro em listar usuários:", error);
-    throw error;
-  }
-}
-
-// Nova função para buscar os cursos do usuário logado (correspondente ao endpoint /api/cursos/meus)
-export async function listarMeusCursos(token) {
-  try {
-    const response = await fetch(`${API_URL}/api/cursos/meus`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-
-    const responseText = await response.text();
-    const data = responseText ? JSON.parse(responseText) : [];
-
-    if (!response.ok) {
-      throw new Error(
-        data.message ||
-          `Erro ao buscar seus cursos (Status: ${response.status})`
-      );
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Erro em listarMeusCursos:", error);
     throw error;
   }
 }
