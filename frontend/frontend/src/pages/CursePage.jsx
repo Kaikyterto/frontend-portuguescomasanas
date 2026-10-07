@@ -5,7 +5,6 @@ import Card from "../components/Card";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
-// Supondo que você tenha ou crie um serviço de aulas equivalente a este:
 import { aulaService } from "../service/aula";
 
 export default function CursePage() {
@@ -15,19 +14,15 @@ export default function CursePage() {
   const [cursoData, setCursoData] = useState(null);
   const [modulos, setModulos] = useState([]);
 
-  // Estado para armazenar as aulas mapeadas por ID do módulo: { [moduloId]: [aulas...] }
   const [aulasPorModulo, setAulasPorModulo] = useState({});
-
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
-
-  // Estado para controlar qual módulo está expandido
   const [moduloAtivo, setModuloAtivo] = useState(null);
-
-  // Estado para gerenciar a aula/vídeo selecionada para reprodução
   const [videoSelecionado, setVideoSelecionado] = useState(null);
 
-  // Estado para armazenar os IDs das aulas assistidas (usando localStorage para persistência local)
+  // Link fixo do Google Meet para o curso 8
+  const LINK_MEET_FIXO = "https://meet.google.com/ddq-bsqk-gaw";
+
   const [aulasAssistidas, setAulasAssistidas] = useState(() => {
     const salvo = localStorage.getItem(
       `@PortuguessComAnas:curso_${cursoId}_assistidas`
@@ -45,7 +40,6 @@ export default function CursePage() {
 
       try {
         setLoading(true);
-        // 1. Busca dados básicos do usuário, do curso e os módulos
         const [dadosUsuario, dadosCurso, dadosModulos] = await Promise.all([
           buscarDadosUsuarioLogado(token),
           cursoService.buscarPorId(cursoId, token),
@@ -56,7 +50,6 @@ export default function CursePage() {
         setCursoData(dadosCurso);
         setModulos(dadosModulos || []);
 
-        // Se houver módulos, busca as aulas de cada módulo separadamente conforme o backend exige
         if (dadosModulos && dadosModulos.length > 0) {
           setModuloAtivo(dadosModulos[0].id);
 
@@ -64,7 +57,6 @@ export default function CursePage() {
           await Promise.all(
             dadosModulos.map(async (modulo) => {
               try {
-                // Aqui o backend usa a rota equivalente a: GET /cursos/{cursoId}/modulos/{moduloId}/aulas
                 const aulasDoMod = await aulaService.listar(
                   cursoId,
                   modulo.id,
@@ -93,7 +85,6 @@ export default function CursePage() {
     carregarDadosPagina();
   }, [cursoId, navigate]);
 
-  // Salva no localStorage sempre que o array de aulas assistidas for alterado
   useEffect(() => {
     localStorage.setItem(
       `@PortuguessComAnas:curso_${cursoId}_assistidas`,
@@ -106,7 +97,7 @@ export default function CursePage() {
   };
 
   const toggleAssistida = (e, aulaId) => {
-    e.stopPropagation(); // Evita abrir o modal ao clicar no botão de marcar
+    e.stopPropagation();
     setAulasAssistidas((prev) =>
       prev.includes(aulaId)
         ? prev.filter((id) => id !== aulaId)
@@ -145,7 +136,6 @@ export default function CursePage() {
       <Navbar usuario={usuario} />
 
       <main className="flex-1 flex flex-col gap-4 sm:gap-6 p-3 sm:p-6 md:p-8 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black">
-        {/* Barra superior de navegação */}
         <div className="max-w-4xl w-full mx-auto flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
@@ -155,9 +145,37 @@ export default function CursePage() {
           </button>
         </div>
 
-        {/* Cabeçalho e Conteúdo do Curso */}
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 sm:gap-6">
           <Card className="bg-[#F4EFE6] !p-4 sm:!p-6 md:!p-8 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl sm:rounded-2xl flex flex-col gap-4 sm:gap-6">
+            {/* Bloco visível apenas se o ID do curso for 8 */}
+            {Number(cursoId) === 9 && (
+              <div className="bg-red-100 border-2 border-black p-4 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="relative flex h-3 w-3 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black uppercase tracking-wider text-red-700 bg-red-200 px-2 py-0.5 rounded border border-red-400 w-fit mb-1">
+                      🔴 AO VIVO
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 break-all">
+                      Aulas ao vivo na Quarta 19h:30 e Sábado 15:00
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href={LINK_MEET_FIXO}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-emerald-400 text-black text-center text-xs font-black px-4 py-2.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-emerald-300 transition shrink-0"
+                >
+                  Entrar na Aula Ao Vivo
+                </a>
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <span className="text-[10px] sm:text-xs font-black uppercase text-[#7B5CFA] bg-[#7B5CFA]/10 px-2.5 py-1 rounded-md border border-[#7B5CFA]/30 w-fit">
                 Grade Curricular
@@ -180,7 +198,6 @@ export default function CursePage() {
                 {modulos && modulos.length > 0 ? (
                   modulos.map((modulo, index) => {
                     const isOpen = moduloAtivo === modulo.id;
-                    // Recupera as aulas específicas deste módulo utilizando o state organizado
                     const aulasDoModulo = aulasPorModulo[modulo.id] || [];
 
                     return (
@@ -188,7 +205,6 @@ export default function CursePage() {
                         key={modulo.id}
                         className="bg-white rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden transition"
                       >
-                        {/* Cabeçalho do Módulo */}
                         <div
                           onClick={() => toggleModulo(modulo.id)}
                           className="p-3.5 sm:p-4 bg-white hover:bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 cursor-pointer select-none"
@@ -215,7 +231,6 @@ export default function CursePage() {
                           </div>
                         </div>
 
-                        {/* Detalhes e Aulas do Módulo (Expandido) */}
                         {isOpen && (
                           <div className="bg-slate-50 p-3 sm:p-4 border-t-2 border-black flex flex-col gap-3">
                             <div className="bg-white p-3 rounded-lg border-2 border-black flex flex-col gap-2">
@@ -228,7 +243,6 @@ export default function CursePage() {
                               </p>
                             </div>
 
-                            {/* LISTA DE AULAS DESTE MÓDULO */}
                             <div className="flex flex-col gap-2 mt-1">
                               <h4 className="text-xs font-black uppercase text-slate-800">
                                 🎥 Aulas do Módulo ({aulasDoModulo.length})
@@ -313,7 +327,7 @@ export default function CursePage() {
         </div>
       </main>
 
-      {/* MODAL PARA REPRODUÇÃO DO VÍDEO DA AULA */}
+      {/* Modal de Vídeo */}
       {videoSelecionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
           <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-5 max-w-2xl w-full shadow-[8px_8px_0_black]">
