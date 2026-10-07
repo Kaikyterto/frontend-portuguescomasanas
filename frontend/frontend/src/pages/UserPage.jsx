@@ -240,7 +240,9 @@ export default function UserPage() {
       setAlternativaSelecionada("");
       setRespostaEnviada(false);
     } catch (error) {
-      setErroQuestoes("Erro ao carregar as questões do banco.");
+      setErroQuestoes(
+        "Você não tem acesso ao banco de questões. Adquira algum curso para desbloquear!"
+      );
     } finally {
       setCarregandoQuestoes(false);
     }
