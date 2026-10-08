@@ -6,7 +6,7 @@ import { questaoService } from "../service/questao";
 import { bancaService } from "../service/banca";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
-
+import { gravacaoService } from "../service/gravacao";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 import { API_URL } from "../config/api";
@@ -337,29 +337,99 @@ export default function ContentsPage() {
     e.preventDefault();
     if (isSubmittingVideo) return;
 
-    if (!selectedCursoForAula || !selectedModuloForAula || !aulaTitulo.trim()) {
+    if (
+      !selectedCursoForAula ||
+      !selectedModuloForAula ||
+      !aulaTitulo.trim() ||
+      !aulaLinkVideo.trim()
+    ) {
       showAlert(
-        "Por favor, selecione o curso, o módulo e informe o título da aula.",
+        "Por favor, preencha todos os campos obrigatórios, incluindo o link do vídeo.",
         "error"
       );
       return;
     }
+
     setIsSubmittingVideo(true);
     try {
-      const payload = {
+      let gravacaoId;
+      const gravacaoPayload = {
+        youtubeUrlOuId: aulaLinkVideo.trim(),
+      };
+
+      try {
+        const novaGravacao = await gravacaoService.criar(
+          gravacaoPayload,
+          token
+        );
+        gravacaoId = novaGravacao.id;
+      } catch (err) {
+        if (
+          err.message &&
+          (err.message.includes("já foi cadastrada") ||
+            err.message.includes("409"))
+        ) {
+          const todasGravacoes = await gravacaoService.listar(token);
+          const lista = Array.isArray(todasGravacoes)
+            ? todasGravacoes
+            : todasGravacoes?.content || [];
+
+          // Extrai o ID do vídeo do YouTube digitado para comparar de forma segura (ex: "QVOOnN-YWYU")
+          const extrairYoutubeId = (url) => {
+            const regExp =
+              /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            return match && match[2].length === 11 ? match[2] : null;
+          };
+
+          const videoIdDigitado = extrairYoutubeId(aulaLinkVideo.trim());
+
+          // Procura na lista a gravação que tenha o mesmo ID do YouTube ou embed correspondente
+          const gravacaoExistente = lista.find((g) => {
+            if (
+              videoIdDigitado &&
+              g.embedUrl &&
+              g.embedUrl.includes(videoIdDigitado)
+            )
+              return true;
+            if (
+              g.youtubeUrlOuId &&
+              g.youtubeUrlOuId.includes(aulaLinkVideo.trim())
+            )
+              return true;
+            return false;
+          });
+
+          if (gravacaoExistente) {
+            gravacaoId = gravacaoExistente.id;
+          } else {
+            throw new Error(
+              "A gravação já existe no banco, mas não foi possível cruzar o ID do YouTube automaticamente."
+            );
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      // Agora com o gravacaoId garantido, criamos a aula no curso/módulo correto
+      const aulaPayload = {
         titulo: aulaTitulo.trim(),
         ordem: parseInt(aulaOrdem) || 1,
-        linkVideo: aulaLinkVideo.trim() || null,
+        conteudo: aulaTitulo.trim(),
+        gravacaoId: gravacaoId,
       };
 
       await aulaService.criar(
         selectedCursoForAula,
         selectedModuloForAula,
-        payload,
+        aulaPayload,
         token
       );
+
       showAlert("Aula cadastrada com sucesso!");
 
+      // Limpa o formulário
       setAulaTitulo("");
       setAulaOrdem(1);
       setAulaLinkVideo("");
@@ -367,6 +437,7 @@ export default function ContentsPage() {
       setSelectedModuloForAula("");
       setModulosDisponiveisParaAula([]);
     } catch (error) {
+      console.error("Erro detalhado ao cadastrar aula:", error);
       showAlert(`Erro ao cadastrar aula: ${error.message || error}`, "error");
     } finally {
       setIsSubmittingVideo(false);

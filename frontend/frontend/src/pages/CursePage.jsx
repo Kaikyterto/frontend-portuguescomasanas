@@ -5,7 +5,7 @@ import Card from "../components/Card";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
-import { aulaService } from "../service/aula";
+import { aulaService } from "../service/aula"; // Certifique-se de que este serviço aponta para o endpoint correto de aulas
 
 export default function CursePage() {
   const navigate = useNavigate();
@@ -20,7 +20,6 @@ export default function CursePage() {
   const [moduloAtivo, setModuloAtivo] = useState(null);
   const [videoSelecionado, setVideoSelecionado] = useState(null);
 
-  // Link fixo do Google Meet para o curso 8
   const LINK_MEET_FIXO = "https://meet.google.com/ddq-bsqk-gaw";
 
   const [aulasAssistidas, setAulasAssistidas] = useState(() => {
@@ -147,7 +146,6 @@ export default function CursePage() {
 
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 sm:gap-6">
           <Card className="bg-[#F4EFE6] !p-4 sm:!p-6 md:!p-8 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl sm:rounded-2xl flex flex-col gap-4 sm:gap-6">
-            {/* Bloco visível apenas se o ID do curso for 8 */}
             {Number(cursoId) === 9 && (
               <div className="bg-red-100 border-2 border-black p-4 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -233,19 +231,10 @@ export default function CursePage() {
 
                         {isOpen && (
                           <div className="bg-slate-50 p-3 sm:p-4 border-t-2 border-black flex flex-col gap-3">
-                            <div className="bg-white p-3 rounded-lg border-2 border-black flex flex-col gap-2">
-                              <span className="text-[10px] sm:text-xs font-black uppercase text-[#7B5CFA]">
-                                Sobre este módulo:
-                              </span>
-                              <p className="text-xs sm:text-sm font-bold text-slate-800 leading-relaxed">
-                                {modulo.descricao ||
-                                  "Nenhuma descrição detalhada informada."}
-                              </p>
-                            </div>
-
                             <div className="flex flex-col gap-2 mt-1">
                               <h4 className="text-xs font-black uppercase text-slate-800">
-                                🎥 Aulas do Módulo ({aulasDoModulo.length})
+                                🎥 Aulas e Gravações do Módulo (
+                                {aulasDoModulo.length})
                               </h4>
 
                               {aulasDoModulo.length > 0 ? (
@@ -274,15 +263,22 @@ export default function CursePage() {
                                           >
                                             {assistida ? "✓" : "▶"}
                                           </span>
-                                          <span
-                                            className={`font-black text-xs sm:text-sm text-slate-900 ${
-                                              assistida
-                                                ? "line-through opacity-75"
-                                                : ""
-                                            }`}
-                                          >
-                                            {aula.titulo}
-                                          </span>
+                                          <div className="flex flex-col">
+                                            <span
+                                              className={`font-black text-xs sm:text-sm text-slate-900 ${
+                                                assistida
+                                                  ? "line-through opacity-75"
+                                                  : ""
+                                              }`}
+                                            >
+                                              {aula.titulo}
+                                            </span>
+                                            {aula.gravacaoTitulo && (
+                                              <span className="text-[10px] text-slate-500 font-bold">
+                                                Gravação: {aula.gravacaoTitulo}
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
 
                                         <div className="flex items-center gap-2">
