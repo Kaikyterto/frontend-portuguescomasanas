@@ -700,11 +700,14 @@ export default function ContentsPage() {
       nivel: questionNivel,
       explicacao: questionExplicacao,
       fonte: questionFonte,
-      alternativas: alternativas.map((alt) => ({
-        letra: alt.letra,
-        texto: alt.texto,
-        correta: alt.letra === correctAnswer,
-      })),
+      // FILTRE AQUI para enviar apenas as alternativas preenchidas:
+      alternativas: alternativas
+        .filter((alt) => alt.texto && alt.texto.trim() !== "")
+        .map((alt) => ({
+          letra: alt.letra,
+          texto: alt.texto,
+          correta: alt.letra === correctAnswer,
+        })),
     };
 
     setIsSubmittingQuestion(true);
