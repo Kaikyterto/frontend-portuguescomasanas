@@ -446,11 +446,13 @@ export default function UserPage() {
                       questaoSelecionada.alternativas.length > 0 ? (
                         questaoSelecionada.alternativas.map((alt) => {
                           const isCorreta = alt.correta;
-                          const identificadorAlt = String(alt.id); // Padronizado com String
+                          const identificadorAlt = String(alt.id); // Força string para evitar bugs do operador ===
                           const letra = alt.letra || alt.id;
                           const textoAlt = alt.texto || alt.descricao;
+
+                          // Comparação blindada com String() em ambos os lados
                           const isSelecionada =
-                            alternativaSelecionada === identificadorAlt;
+                            String(alternativaSelecionada) === identificadorAlt;
 
                           let corFundo = "bg-white hover:bg-slate-50";
                           if (respostaEnviada) {
@@ -466,23 +468,23 @@ export default function UserPage() {
                           }
 
                           return (
-                            <label
+                            <div
                               key={identificadorAlt}
+                              onClick={() => {
+                                if (respostaEnviada) return;
+                                setAlternativaSelecionada(identificadorAlt);
+                              }}
                               className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition ${corFundo}`}
                             >
                               <input
                                 type="radio"
                                 name="alternativa"
-                                value={identificadorAlt}
                                 checked={isSelecionada}
-                                onChange={() => {
-                                  if (respostaEnviada) return;
-                                  setAlternativaSelecionada(String(alt.id));
-                                }}
+                                readOnly
                                 disabled={respostaEnviada}
-                                className="mt-1 shrink-0"
+                                className="mt-1 shrink-0 pointer-events-none"
                               />
-                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words">
+                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words pointer-events-none">
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
@@ -490,7 +492,7 @@ export default function UserPage() {
                                   {textoAlt}
                                 </ReactMarkdown>
                               </div>
-                            </label>
+                            </div>
                           );
                         })
                       ) : (
@@ -511,7 +513,6 @@ export default function UserPage() {
                       <div className="mt-4 flex flex-col gap-3">
                         <div
                           className={`p-3 rounded-xl border-2 border-black text-center font-black text-sm ${
-                            alternativaSelecionada &&
                             questaoSelecionada.alternativas?.find(
                               (a) =>
                                 String(a.id) === String(alternativaSelecionada)
@@ -520,8 +521,7 @@ export default function UserPage() {
                               : "bg-red-300 text-red-950"
                           }`}
                         >
-                          {alternativaSelecionada &&
-                          questaoSelecionada.alternativas?.find(
+                          {questaoSelecionada.alternativas?.find(
                             (a) =>
                               String(a.id) === String(alternativaSelecionada)
                           )?.correta
