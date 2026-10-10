@@ -35,7 +35,7 @@ export default function UserPage() {
   const [isFirst, setIsFirst] = useState(true);
   const [isLast, setIsLast] = useState(false);
 
-  // Estados de Filtros de Questões
+  // Estados de Filtros de Questões (Ano removido)
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [listaAssuntos, setListaAssuntos] = useState([]);
   const [listaBancas, setListaBancas] = useState([]);
@@ -107,6 +107,7 @@ export default function UserPage() {
         throw new Error("Erro ao criar preferência de pagamento.");
 
       const data = await response.json();
+      console.log("Resposta do pagamento recebida:", data);
 
       const checkoutUrl =
         data.initPoint ||
@@ -237,7 +238,7 @@ export default function UserPage() {
     verificarAutenticacao();
   }, [navigate]);
 
-  // Função CORRIGIDA para carregar o banco de questões contemplando os filtros atuais
+  // Função para carregar o banco de questões com suporte a paginação e limpeza de filtros vazios para filtros cruzados
   const handleCarregarBancoQuestoes = async (
     paginaDesejada = 0,
     filtrosAplicados = filtros
@@ -247,6 +248,7 @@ export default function UserPage() {
       setErroQuestoes("");
       const token = localStorage.getItem("@PortuguessComAnas:token");
 
+      // Remove propriedades vazias/nulas para permitir a combinação correta de múltiplos filtros (filtros cruzados)
       const filtrosLimpos = Object.fromEntries(
         Object.entries(filtrosAplicados).filter(
           ([_, v]) => v !== "" && v !== null && v !== undefined
@@ -410,7 +412,7 @@ export default function UserPage() {
       <Navbar usuario={usuario} />
 
       <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black lg:overflow-hidden">
-        {/* CONTAINER 1 */}
+        {/* CONTAINER 1 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 order-1 lg:order-3">
           <div className="min-h-[200px] lg:flex-1 flex order-1 lg:order-1">
             <DailyQuestions className="w-full h-full" />
@@ -424,7 +426,7 @@ export default function UserPage() {
           </div>
         </div>
 
-        {/* CONTAINER 2 */}
+        {/* CONTAINER 2 (Ordem Original) */}
         <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
           <Card className="flex-1 flex flex-col bg-[#F4EFE6] h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl">
             <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black bg-white flex items-center justify-between gap-2 flex-wrap">
@@ -483,7 +485,7 @@ export default function UserPage() {
               </div>
             </div>
 
-            {/* PAINEL DE FILTROS */}
+            {/* PAINEL DE FILTROS (Atualizado sem o campo de ano) */}
             {exibirBanco && !questaoSelecionada && mostrarFiltros && (
               <form
                 onSubmit={handleAplicarFiltros}
@@ -881,7 +883,7 @@ export default function UserPage() {
           </Card>
         </div>
 
-        {/* CONTAINER 3 */}
+        {/* CONTAINER 3 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 order-3 lg:order-1 flex flex-col gap-3">
           <button
             onClick={() => handleCarregarBancoQuestoes(0)}
