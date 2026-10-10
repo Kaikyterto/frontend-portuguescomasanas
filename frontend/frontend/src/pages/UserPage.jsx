@@ -444,10 +444,12 @@ export default function UserPage() {
                       </span>
                       {questaoSelecionada.alternativas &&
                       questaoSelecionada.alternativas.length > 0 ? (
-                        questaoSelecionada.alternativas.map((alt) => {
+                        questaoSelecionada.alternativas.map((alt, index) => {
                           const isCorreta = alt.correta;
-                          const identificadorAlt = String(alt.id); // Força string para evitar bugs do operador ===
-                          const letra = alt.letra || alt.id;
+                          const identificadorAlt = String(
+                            alt.id ?? alt.letra ?? index
+                          );
+                          const letra = alt.letra || alt.id || index + 1;
                           const textoAlt = alt.texto || alt.descricao;
 
                           // Comparação blindada com String() em ambos os lados
@@ -468,23 +470,23 @@ export default function UserPage() {
                           }
 
                           return (
-                            <div
+                            <label
                               key={identificadorAlt}
-                              onClick={() => {
-                                if (respostaEnviada) return;
-                                setAlternativaSelecionada(identificadorAlt);
-                              }}
-                              className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition ${corFundo}`}
+                              className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition select-none ${corFundo}`}
                             >
                               <input
                                 type="radio"
                                 name="alternativa"
+                                value={identificadorAlt}
                                 checked={isSelecionada}
-                                readOnly
                                 disabled={respostaEnviada}
-                                className="mt-1 shrink-0 pointer-events-none"
+                                onChange={() => {
+                                  if (respostaEnviada) return;
+                                  setAlternativaSelecionada(identificadorAlt);
+                                }}
+                                className="mt-1 shrink-0 accent-[#7B5CFA]"
                               />
-                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words pointer-events-none">
+                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1">
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
@@ -492,7 +494,7 @@ export default function UserPage() {
                                   {textoAlt}
                                 </ReactMarkdown>
                               </div>
-                            </div>
+                            </label>
                           );
                         })
                       ) : (
