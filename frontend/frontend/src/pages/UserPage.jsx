@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { buscarDadosUsuarioLogado, listarMeusCursos } from "../service/user";
 import { criarResposta, listarMinhasRespostas } from "../service/answer";
 import { cursoService } from "../service/curso";
-import { assuntoService } from "../service/questao"; // Ajustado se necessário, ou importe do seu service correspondente
+import { assuntoService } from "../service/questao"; // Se necessário ajuste o caminho
 import { bancaService } from "../service/banca";
 import ReactMarkdown from "react-markdown";
 import Navbar from "../components/Navbar";
@@ -13,7 +13,7 @@ import EvolutionChart from "../components/EvolutionChart";
 import DailyQuestions from "../components/DailyQuestions";
 import Card from "../components/Card";
 import AlertModal from "../components/AlertModal";
-import { listar } from "../service/questao";
+import { questaoService } from "../service/questao";
 
 export default function UserPage() {
   const navigate = useNavigate();
@@ -192,7 +192,7 @@ export default function UserPage() {
 
         setUsuario(dadosUsuario);
 
-        // Carrega as opções de Assuntos e Bancas para os filtros
+        // Carrega opções de Assuntos e Bancas para o Filtro
         try {
           const [assuntosRes, bancasRes] = await Promise.all([
             assuntoService.listarAssuntos(token).catch(() => []),
@@ -239,7 +239,7 @@ export default function UserPage() {
     verificarAutenticacao();
   }, [navigate]);
 
-  // Função para carregar o banco de questões com suporte a paginação e filtros (aceita com ou sem filtro)
+  // Função para carregar o banco de questões com suporte a paginação e filtros (usando questaoService.listar)
   const handleCarregarBancoQuestoes = async (
     paginaDesejada = 0,
     filtrosAplicados = filtros
@@ -249,7 +249,7 @@ export default function UserPage() {
       setErroQuestoes("");
       const token = localStorage.getItem("@PortuguessComAnas:token");
 
-      const dadosRetorno = await listar(
+      const dadosRetorno = await questaoService.listar(
         token,
         paginaDesejada,
         tamanhoPagina,
