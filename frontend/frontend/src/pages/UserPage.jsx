@@ -35,11 +35,21 @@ export default function UserPage() {
   const [isFirst, setIsFirst] = useState(true);
   const [isLast, setIsLast] = useState(false);
 
-  // Estados de Filtros de Questões (Ano removido)
+  // Estados de Filtros de Questões
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [listaAssuntos, setListaAssuntos] = useState([]);
   const [listaBancas, setListaBancas] = useState([]);
+
+  // Filtros digitados nos campos do formulário
   const [filtros, setFiltros] = useState({
+    assuntoId: "",
+    bancaId: "",
+    nivel: "",
+    texto: "",
+  });
+
+  // Filtros que foram efetivamente aplicados na última busca
+  const [filtrosAtivos, setFiltrosAtivos] = useState({
     assuntoId: "",
     bancaId: "",
     nivel: "",
@@ -107,7 +117,6 @@ export default function UserPage() {
         throw new Error("Erro ao criar preferência de pagamento.");
 
       const data = await response.json();
-      console.log("Resposta do pagamento recebida:", data);
 
       const checkoutUrl =
         data.initPoint ||
@@ -138,7 +147,6 @@ export default function UserPage() {
     }
   };
 
-  // Função otimizada para rolar até o botão de próxima questão
   useEffect(() => {
     if (respostaEnviada && fimRespostaRef.current) {
       setTimeout(() => {
@@ -191,7 +199,6 @@ export default function UserPage() {
 
         setUsuario(dadosUsuario);
 
-        // Carrega opções de Assuntos e Bancas para o Filtro
         try {
           const [assuntosRes, bancasRes] = await Promise.all([
             assuntoService.listarAssuntos(token).catch(() => []),
@@ -238,19 +245,23 @@ export default function UserPage() {
     verificarAutenticacao();
   }, [navigate]);
 
-  // Função para carregar o banco de questões com suporte a paginação e limpeza de filtros vazios para filtros cruzados
+  // Função central para carregar questões garantindo que o objeto de filtro ativo seja passado
   const handleCarregarBancoQuestoes = async (
     paginaDesejada = 0,
-    filtrosAplicados = filtros
+    filtrosParaAplicar = null
   ) => {
     try {
       setCarregandoQuestoes(true);
       setErroQuestoes("");
       const token = localStorage.getItem("@PortuguessComAnas:token");
 
-      // Remove propriedades vazias/nulas para permitir a combinação correta de múltiplos filtros (filtros cruzados)
+      // Usar os filtros passados explicitamente ou o estado dos filtros ativos
+      const objetoFiltros =
+        filtrosParaAplicar !== null ? filtrosParaAplicar : filtrosAtivos;
+
+      // Limpar campos vazios
       const filtrosLimpos = Object.fromEntries(
-        Object.entries(filtrosAplicados).filter(
+        Object.entries(objetoFiltros || {}).filter(
           ([_, v]) => v !== "" && v !== null && v !== undefined
         )
       );
@@ -302,12 +313,13 @@ export default function UserPage() {
 
   const handleMudarPagina = (novaPagina) => {
     if (novaPagina >= 0 && novaPagina < totalPages) {
-      handleCarregarBancoQuestoes(novaPagina, filtros);
+      handleCarregarBancoQuestoes(novaPagina, filtrosAtivos);
     }
   };
 
   const handleAplicarFiltros = (e) => {
     e.preventDefault();
+    setFiltrosAtivos(filtros);
     handleCarregarBancoQuestoes(0, filtros);
   };
 
@@ -319,6 +331,7 @@ export default function UserPage() {
       texto: "",
     };
     setFiltros(filtrosLimpos);
+    setFiltrosAtivos(filtrosLimpos);
     handleCarregarBancoQuestoes(0, filtrosLimpos);
   };
 
@@ -412,7 +425,7 @@ export default function UserPage() {
       <Navbar usuario={usuario} />
 
       <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black lg:overflow-hidden">
-        {/* CONTAINER 1 (Ordem Original) */}
+        {/* CONTAINER 1 */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 order-1 lg:order-3">
           <div className="min-h-[200px] lg:flex-1 flex order-1 lg:order-1">
             <DailyQuestions className="w-full h-full" />
@@ -426,7 +439,7 @@ export default function UserPage() {
           </div>
         </div>
 
-        {/* CONTAINER 2 (Ordem Original) */}
+        {/* CONTAINER 2 */}
         <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
           <Card className="flex-1 flex flex-col bg-[#F4EFE6] h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl">
             <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black bg-white flex items-center justify-between gap-2 flex-wrap">
@@ -485,7 +498,7 @@ export default function UserPage() {
               </div>
             </div>
 
-            {/* PAINEL DE FILTROS (Atualizado sem o campo de ano) */}
+            {/* PAINEL DE FILTROS */}
             {exibirBanco && !questaoSelecionada && mostrarFiltros && (
               <form
                 onSubmit={handleAplicarFiltros}
@@ -883,10 +896,10 @@ export default function UserPage() {
           </Card>
         </div>
 
-        {/* CONTAINER 3 (Ordem Original) */}
+        {/* CONTAINER 3 */}
         <div className="w-full lg:w-80 shrink-0 order-3 lg:order-1 flex flex-col gap-3">
           <button
-            onClick={() => handleCarregarBancoQuestoes(0)}
+            onClick={() => handleCarregarBancoQuestoes(0, filtrosAtivos)}
             disabled={carregandoQuestoes}
             className="bg-cyan-300 border-2 border-black rounded-full py-2.5 px-4 text-center font-extrabold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer active:translate-x-1 active:translate-y-1"
           >
