@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { buscarDadosUsuarioLogado, listarMeusCursos } from "../service/user";
 import { criarResposta, listarMinhasRespostas } from "../service/answer";
 import { cursoService } from "../service/curso";
+import { bancaService } from "../service/banca";
+import { assuntoService } from "../service/assunto";
 import ReactMarkdown from "react-markdown";
 import Navbar from "../components/Navbar";
 import SidebarStats from "../components/SidebarStats";
@@ -11,7 +13,7 @@ import EvolutionChart from "../components/EvolutionChart";
 import DailyQuestions from "../components/DailyQuestions";
 import Card from "../components/Card";
 import AlertModal from "../components/AlertModal";
-import { listar } from "../service/questao";
+import { questaoService } from "../service/questao";
 
 export default function UserPage() {
   const navigate = useNavigate();
@@ -25,12 +27,6 @@ export default function UserPage() {
   const [erroQuestoes, setErroQuestoes] = useState("");
   const [exibirBanco, setExibirBanco] = useState(false);
 
-  // Estados de Filtros (Assuntos, Bancas, etc.)
-  const [assuntos, setAssuntos] = useState([]);
-  const [bancas, setBancas] = useState([]);
-  const [filtroAssunto, setFiltroAssunto] = useState("");
-  const [filtroBanca, setFiltroBanca] = useState("");
-
   // Estados de paginação (Zero-based)
   const [paginaAtual, setPaginaAtual] = useState(0);
   const [tamanhoPagina] = useState(20);
@@ -38,6 +34,17 @@ export default function UserPage() {
   const [totalElements, setTotalElements] = useState(0);
   const [isFirst, setIsFirst] = useState(true);
   const [isLast, setIsLast] = useState(false);
+
+  // Estados de Filtros de Questões (Ano removido)
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [listaAssuntos, setListaAssuntos] = useState([]);
+  const [listaBancas, setListaBancas] = useState([]);
+  const [filtros, setFiltros] = useState({
+    assuntoId: "",
+    bancaId: "",
+    nivel: "",
+    texto: "",
+  });
 
   // Estados para responder a questão selecionada e medir o tempo
   const [questaoSelecionada, setQuestaoSelecionada] = useState(null);
@@ -184,6 +191,24 @@ export default function UserPage() {
 
         setUsuario(dadosUsuario);
 
+        // Carrega opções de Assuntos e Bancas para o Filtro
+        try {
+          const [assuntosRes, bancasRes] = await Promise.all([
+            assuntoService.listarAssuntos(token).catch(() => []),
+            bancaService.listar(token).catch(() => []),
+          ]);
+          setListaAssuntos(
+            Array.isArray(assuntosRes)
+              ? assuntosRes
+              : assuntosRes?.content || []
+          );
+          setListaBancas(
+            Array.isArray(bancasRes) ? bancasRes : bancasRes?.content || []
+          );
+        } catch (fErr) {
+          console.error("Erro ao carregar filtros auxiliares:", fErr);
+        }
+
         const idsCursosComAcesso = new Set(
           (meusCursosRes || []).map((m) => m.cursoId || m.curso?.id || m.id)
         );
@@ -198,21 +223,6 @@ export default function UserPage() {
 
         setCursos(cursosComStatus);
         await carregarEstatisticasUsuario();
-
-        // Buscar lista de assuntos e bancas para os filtros (opcional / tolerante a falhas)
-        fetch("https://backend-portugues-anas-9ffe.onrender.com/api/assuntos", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => (res.ok ? res.json() : []))
-          .then((data) => setAssuntos(Array.isArray(data) ? data : []))
-          .catch(() => setAssuntos([]));
-
-        fetch("https://backend-portugues-anas-9ffe.onrender.com/api/bancas", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => (res.ok ? res.json() : []))
-          .then((data) => setBancas(Array.isArray(data) ? data : []))
-          .catch(() => setBancas([]));
       } catch (error) {
         console.error("Erro ao carregar dados da página:", error);
         localStorage.removeItem("@PortuguessComAnas:token");
@@ -228,29 +238,41 @@ export default function UserPage() {
     verificarAutenticacao();
   }, [navigate]);
 
-  // Função para carregar o banco de questões com suporte a paginação e filtros
-  const handleCarregarBancoQuestoes = async (paginaDesejada = 0) => {
+  // Função para carregar o banco de questões com suporte a paginação e limpeza de filtros vazios para filtros cruzados
+  const handleCarregarBancoQuestoes = async (
+    paginaDesejada = 0,
+    filtrosAplicados = filtros
+  ) => {
     try {
       setCarregandoQuestoes(true);
       setErroQuestoes("");
       const token = localStorage.getItem("@PortuguessComAnas:token");
 
-      // Passando parâmetros de filtro caso existam
-      const dadosRetorno = await listar(
+      // Remove propriedades vazias/nulas para permitir a combinação correta de múltiplos filtros (filtros cruzados)
+      const filtrosLimpos = Object.fromEntries(
+        Object.entries(filtrosAplicados).filter(
+          ([_, v]) => v !== "" && v !== null && v !== undefined
+        )
+      );
+
+      const dadosRetorno = await questaoService.listar(
         token,
         paginaDesejada,
         tamanhoPagina,
-        filtroAssunto,
-        filtroBanca
+        filtrosLimpos
       );
 
       if (dadosRetorno && Array.isArray(dadosRetorno.content)) {
         setQuestoes(dadosRetorno.content);
-        setPaginaAtual(dadosRetorno.page);
-        setTotalPages(dadosRetorno.totalPages);
-        setTotalElements(dadosRetorno.totalElements);
-        setIsFirst(dadosRetorno.first);
-        setIsLast(dadosRetorno.last);
+        setPaginaAtual(
+          dadosRetorno.page !== undefined ? dadosRetorno.page : paginaDesejada
+        );
+        setTotalPages(dadosRetorno.totalPages || 1);
+        setTotalElements(
+          dadosRetorno.totalElements || dadosRetorno.content.length
+        );
+        setIsFirst(dadosRetorno.first ?? true);
+        setIsLast(dadosRetorno.last ?? true);
       } else if (Array.isArray(dadosRetorno)) {
         setQuestoes(dadosRetorno);
         setPaginaAtual(0);
@@ -260,6 +282,8 @@ export default function UserPage() {
         setIsLast(true);
       } else {
         setQuestoes([]);
+        setTotalPages(0);
+        setTotalElements(0);
       }
 
       setExibirBanco(true);
@@ -278,8 +302,24 @@ export default function UserPage() {
 
   const handleMudarPagina = (novaPagina) => {
     if (novaPagina >= 0 && novaPagina < totalPages) {
-      handleCarregarBancoQuestoes(novaPagina);
+      handleCarregarBancoQuestoes(novaPagina, filtros);
     }
+  };
+
+  const handleAplicarFiltros = (e) => {
+    e.preventDefault();
+    handleCarregarBancoQuestoes(0, filtros);
+  };
+
+  const handleLimparFiltros = () => {
+    const filtrosLimpos = {
+      assuntoId: "",
+      bancaId: "",
+      nivel: "",
+      texto: "",
+    };
+    setFiltros(filtrosLimpos);
+    handleCarregarBancoQuestoes(0, filtrosLimpos);
   };
 
   const handleResponderQuestao = async (e) => {
@@ -407,6 +447,15 @@ export default function UserPage() {
                 </h2>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {exibirBanco && !questaoSelecionada && (
+                  <button
+                    onClick={() => setMostrarFiltros(!mostrarFiltros)}
+                    className="bg-[#FFD700] text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-400 cursor-pointer"
+                  >
+                    🔍 {mostrarFiltros ? "Ocultar Filtros" : "Filtrar"}
+                  </button>
+                )}
+
                 {questaoSelecionada ? (
                   <button
                     onClick={() => {
@@ -435,6 +484,103 @@ export default function UserPage() {
                 </span>
               </div>
             </div>
+
+            {/* PAINEL DE FILTROS (Atualizado sem o campo de ano) */}
+            {exibirBanco && !questaoSelecionada && mostrarFiltros && (
+              <form
+                onSubmit={handleAplicarFiltros}
+                className="p-3 bg-slate-100 border-b-2 border-black grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs"
+              >
+                <div>
+                  <label className="block font-black mb-0.5 text-slate-800">
+                    Texto / Enunciado
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: acentuação..."
+                    value={filtros.texto}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, texto: e.target.value })
+                    }
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-black mb-0.5 text-slate-800">
+                    Assunto
+                  </label>
+                  <select
+                    value={filtros.assuntoId}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, assuntoId: e.target.value })
+                    }
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                  >
+                    <option value="">Todos os Assuntos</option>
+                    {listaAssuntos.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.nome || a.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-black mb-0.5 text-slate-800">
+                    Banca
+                  </label>
+                  <select
+                    value={filtros.bancaId}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, bancaId: e.target.value })
+                    }
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                  >
+                    <option value="">Todas as Bancas</option>
+                    {listaBancas.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.nome || b.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-black mb-0.5 text-slate-800">
+                    Nível
+                  </label>
+                  <select
+                    value={filtros.nivel}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, nivel: e.target.value })
+                    }
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                  >
+                    <option value="">Todos os Níveis</option>
+                    <option value="FACIL">Fácil</option>
+                    <option value="MEDIO">Médio</option>
+                    <option value="DIFICIL">Difícil</option>
+                  </select>
+                </div>
+
+                <div className="lg:col-span-4 flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleLimparFiltros}
+                    className="bg-slate-200 border border-black rounded-lg px-3 py-1 font-bold text-xs hover:bg-slate-300"
+                  >
+                    Limpar Filtros
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-[#00D2DF] border border-black rounded-lg px-4 py-1 font-black text-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                  >
+                    Buscar Questões
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="flex-1 relative p-3 md:p-5 overflow-hidden flex flex-col">
               <div
@@ -480,7 +626,6 @@ export default function UserPage() {
                           const letra = alt.letra || alt.id || index + 1;
                           const textoAlt = alt.texto || alt.descricao;
 
-                          // Comparação blindada com String() em ambos os lados
                           const isSelecionada =
                             String(alternativaSelecionada) === identificadorAlt;
 
@@ -631,7 +776,7 @@ export default function UserPage() {
                     ))
                   ) : (
                     <div className="text-center font-bold text-slate-600 py-10 ">
-                      Nenhuma questão encontrada com esses filtros.
+                      Nenhuma questão encontrada no banco com esses filtros.
                     </div>
                   )
                 ) : (
@@ -717,7 +862,6 @@ export default function UserPage() {
                   >
                     ← Anterior
                   </button>
-
                   <span className="text-xs font-black text-slate-800">
                     Página {paginaAtual + 1}/{totalPages}
                   </span>
@@ -739,54 +883,8 @@ export default function UserPage() {
           </Card>
         </div>
 
-        {/* CONTAINER 3 (Filtros e Botão de Abertura) */}
+        {/* CONTAINER 3 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 order-3 lg:order-1 flex flex-col gap-3">
-          {/* Card de Filtros */}
-          <div className="bg-white p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-3">
-            <span className="text-xs font-black uppercase text-slate-900">
-              🔍 Filtrar Questões
-            </span>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase text-slate-600">
-                Assunto:
-              </label>
-              <select
-                value={filtroAssunto}
-                onChange={(e) => setFiltroAssunto(e.target.value)}
-                className="w-full text-xs font-bold p-2 rounded-lg border-2 border-black bg-[#F4EFE6] outline-none cursor-pointer"
-              >
-                <option value="">Todos os Assuntos</option>
-                {assuntos.map((assunto) => (
-                  <option
-                    key={assunto.id || assunto}
-                    value={assunto.id || assunto}
-                  >
-                    {assunto.nome || assunto.descricao || assunto}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase text-slate-600">
-                Banca:
-              </label>
-              <select
-                value={filtroBanca}
-                onChange={(e) => setFiltroBanca(e.target.value)}
-                className="w-full text-xs font-bold p-2 rounded-lg border-2 border-black bg-[#F4EFE6] outline-none cursor-pointer"
-              >
-                <option value="">Todas as Bancas</option>
-                {bancas.map((banca) => (
-                  <option key={banca.id || banca} value={banca.id || banca}>
-                    {banca.nome || banca}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <button
             onClick={() => handleCarregarBancoQuestoes(0)}
             disabled={carregandoQuestoes}
