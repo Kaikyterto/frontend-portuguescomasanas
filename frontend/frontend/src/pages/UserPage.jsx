@@ -46,6 +46,14 @@ export default function UserPage() {
     texto: "",
   });
 
+  // Estado para guardar os filtros efetivamente aplicados na busca atual
+  const [filtrosAtivos, setFiltrosAtivos] = useState({
+    assuntoId: "",
+    bancaId: "",
+    nivel: "",
+    texto: "",
+  });
+
   // Estados para responder a questão selecionada e medir o tempo
   const [questaoSelecionada, setQuestaoSelecionada] = useState(null);
   const [indiceQuestaoAtual, setIndiceQuestaoAtual] = useState(0);
@@ -241,7 +249,7 @@ export default function UserPage() {
   // Função para carregar o banco de questões com suporte a paginação e limpeza de filtros vazios para filtros cruzados
   const handleCarregarBancoQuestoes = async (
     paginaDesejada = 0,
-    filtrosAplicados = filtros
+    filtrosAplicados = filtrosAtivos
   ) => {
     try {
       setCarregandoQuestoes(true);
@@ -302,12 +310,13 @@ export default function UserPage() {
 
   const handleMudarPagina = (novaPagina) => {
     if (novaPagina >= 0 && novaPagina < totalPages) {
-      handleCarregarBancoQuestoes(novaPagina, filtros);
+      handleCarregarBancoQuestoes(novaPagina, filtrosAtivos);
     }
   };
 
   const handleAplicarFiltros = (e) => {
     e.preventDefault();
+    setFiltrosAtivos(filtros);
     handleCarregarBancoQuestoes(0, filtros);
   };
 
@@ -319,6 +328,7 @@ export default function UserPage() {
       texto: "",
     };
     setFiltros(filtrosLimpos);
+    setFiltrosAtivos(filtrosLimpos);
     handleCarregarBancoQuestoes(0, filtrosLimpos);
   };
 
@@ -886,7 +896,7 @@ export default function UserPage() {
         {/* CONTAINER 3 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 order-3 lg:order-1 flex flex-col gap-3">
           <button
-            onClick={() => handleCarregarBancoQuestoes(0)}
+            onClick={() => handleCarregarBancoQuestoes(0, filtrosAtivos)}
             disabled={carregandoQuestoes}
             className="bg-cyan-300 border-2 border-black rounded-full py-2.5 px-4 text-center font-extrabold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer active:translate-x-1 active:translate-y-1"
           >
