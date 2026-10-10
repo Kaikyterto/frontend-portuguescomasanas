@@ -15,9 +15,11 @@ export async function criarQuestao(questaoData, token) {
     const data = responseText ? JSON.parse(responseText) : {};
 
     if (!response.ok) {
-      throw new Error(
+      const error = new Error(
         data.message || `Erro ao cadastrar questão (Status: ${response.status})`
       );
+      error.status = response.status;
+      throw error;
     }
 
     return data;
@@ -44,9 +46,11 @@ export async function listar(token, page = 0, size = 20) {
     const data = responseText ? JSON.parse(responseText) : [];
 
     if (!response.ok) {
-      throw new Error(
+      const error = new Error(
         data.message || `Erro ao listar questões (Status: ${response.status})`
       );
+      error.status = response.status;
+      throw error;
     }
 
     return data;
@@ -71,9 +75,11 @@ export async function atualizar(id, questaoData, token) {
     const data = responseText ? JSON.parse(responseText) : {};
 
     if (!response.ok) {
-      throw new Error(
+      const error = new Error(
         data.message || `Erro ao atualizar questão (Status: ${response.status})`
       );
+      error.status = response.status;
+      throw error;
     }
 
     return data;
@@ -94,15 +100,24 @@ export async function deletar(id, deleteRequestData, token) {
       body: JSON.stringify(deleteRequestData), // Envia a senha e os dados de confirmação no corpo
     });
 
+    // Se retornar 204 No Content, a resposta pode vir vazia
+    if (response.status === 204) {
+      return true;
+    }
+
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : {};
 
     if (!response.ok) {
-      throw new Error(
+      const error = new Error(
         data.message ||
           data.error ||
           `Erro ao deletar questão (Status: ${response.status})`
       );
+      // Anexa o status HTTP no objeto de erro para facilitar o tratamento na Page
+      error.status = response.status;
+      error.data = data;
+      throw error;
     }
 
     return true;

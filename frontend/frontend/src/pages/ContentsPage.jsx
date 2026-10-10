@@ -863,7 +863,21 @@ export default function ContentsPage() {
       setQuestaoParaExcluir(null);
       fetchQuestions(currentPage);
     } catch (error) {
-      showAlert(`Erro ao excluir questão: ${error.message || error}`, "error");
+      // Tratamento específico para o erro 409 (Questão já respondida)
+      if (
+        error.status === 409 ||
+        (error.message && error.message.includes("409"))
+      ) {
+        showAlert(
+          "Não é possível excluir esta questão pois ela já possui respostas registradas. Desative-a para preservar o histórico.",
+          "error"
+        );
+      } else {
+        showAlert(
+          `Erro ao excluir questão: ${error.message || error}`,
+          "error"
+        );
+      }
     } finally {
       setIsSubmittingDeleteQuestao(false);
     }
