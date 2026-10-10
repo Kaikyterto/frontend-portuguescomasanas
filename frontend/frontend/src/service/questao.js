@@ -29,10 +29,27 @@ export async function criarQuestao(questaoData, token) {
   }
 }
 
-export async function listar(token, page = 0, size = 20) {
+export async function listar(token, page = 0, size = 20, filtros = {}) {
   try {
+    const params = new URLSearchParams({
+      page: page,
+      size: size,
+    });
+
+    // Adiciona os filtros opcionais apenas se estiverem preenchidos
+    if (filtros.assuntoId) params.append("assuntoId", filtros.assuntoId);
+    if (filtros.bancaId) params.append("bancaId", filtros.bancaId);
+    if (filtros.disciplinaId)
+      params.append("disciplinaId", filtros.disciplinaId);
+    if (filtros.ano) params.append("ano", filtros.ano);
+    if (filtros.nivel) params.append("nivel", filtros.nivel);
+    if (filtros.texto) params.append("texto", filtros.texto.trim());
+    if (filtros.ativa !== undefined && filtros.ativa !== "") {
+      params.append("ativa", filtros.ativa);
+    }
+
     const response = await fetch(
-      `${API_URL}/api/questoes?page=${page}&size=${size}`,
+      `${API_URL}/api/questoes?${params.toString()}`,
       {
         method: "GET",
         headers: {
