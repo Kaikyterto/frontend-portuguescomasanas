@@ -5,8 +5,7 @@ import Card from "../components/Card";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
-import { aulaService } from "../service/aula"; // Certifique-se de que este serviço aponta para o endpoint correto de aulas
-
+import { aulaService } from "../service/aula";
 export default function CursePage() {
   const navigate = useNavigate();
   const { id: cursoId } = useParams();
@@ -20,7 +19,12 @@ export default function CursePage() {
   const [moduloAtivo, setModuloAtivo] = useState(null);
   const [videoSelecionado, setVideoSelecionado] = useState(null);
 
-  const LINK_MEET_FIXO = "https://meet.google.com/ddq-bsqk-gaw";
+  let LINK_MEET_FIXO = "";
+  if (Number(cursoId) === 8) {
+    LINK_MEET_FIXO = "https://meet.google.com/yfm-ektc-svr";
+  } else if (Number(cursoId) === 9) {
+    LINK_MEET_FIXO = "https://meet.google.com/ddq-bsqk-gaw";
+  }
 
   const [aulasAssistidas, setAulasAssistidas] = useState(() => {
     const salvo = localStorage.getItem(
