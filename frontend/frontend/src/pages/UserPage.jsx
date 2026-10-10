@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { buscarDadosUsuarioLogado, listarMeusCursos } from "../service/user";
 import { criarResposta, listarMinhasRespostas } from "../service/answer";
 import { cursoService } from "../service/curso";
-import { assuntoService } from "../service/questao"; // Se necessário ajuste o caminho
+import { questaoService } from "../service/questao"; // Se necessário ajuste o caminho
 import { bancaService } from "../service/banca";
 import ReactMarkdown from "react-markdown";
 import Navbar from "../components/Navbar";
