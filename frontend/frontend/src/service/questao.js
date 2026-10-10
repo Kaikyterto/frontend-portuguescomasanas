@@ -83,20 +83,25 @@ export async function atualizar(id, questaoData, token) {
   }
 }
 
-export async function deletar(id, token) {
+export async function deletar(id, deleteRequestData, token) {
   try {
     const response = await fetch(`${API_URL}/api/questoes/${id}`, {
       method: "DELETE",
       headers: {
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
+      body: JSON.stringify(deleteRequestData), // Envia a senha e os dados de confirmação no corpo
     });
 
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
     if (!response.ok) {
-      const responseText = await response.text();
-      const data = responseText ? JSON.parse(responseText) : {};
       throw new Error(
-        data.message || `Erro ao deletar questão (Status: ${response.status})`
+        data.message ||
+          data.error ||
+          `Erro ao deletar questão (Status: ${response.status})`
       );
     }
 

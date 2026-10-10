@@ -160,6 +160,8 @@ export default function ContentsPage() {
   const [isSubmittingModulo, setIsSubmittingModulo] = useState(false);
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
   const [isSubmittingDeleteCurso, setIsSubmittingDeleteCurso] = useState(false);
+  const [isSubmittingDeleteQuestao, setIsSubmittingDeleteQuestao] =
+    useState(false);
 
   // Alerta Modal
   const [alertConfig, setAlertConfig] = useState({
@@ -207,6 +209,11 @@ export default function ContentsPage() {
   const [cursoParaExcluir, setCursoParaExcluir] = useState(null);
   const [nomeConfirmacaoInput, setNomeConfirmacaoInput] = useState("");
   const [senhaAdminInput, setSenhaAdminInput] = useState("");
+
+  // Modal de Exclusão de Questão
+  const [showDeleteQuestaoModal, setShowDeleteQuestaoModal] = useState(false);
+  const [questaoParaExcluir, setQuestaoParaExcluir] = useState(null);
+  const [senhaAdminQuestaoInput, setSenhaAdminQuestaoInput] = useState("");
 
   // Modal de Questão
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -826,21 +833,40 @@ export default function ContentsPage() {
     setShowQuestionModal(true);
   };
 
-  const handleDeleteQuestion = (id) => {
-    if (!token) {
-      showAlert("Sessão não encontrada ou token ausente.", "error");
+  const handleDeleteQuestion = (questao) => {
+    setQuestaoParaExcluir(questao);
+    setSenhaAdminQuestaoInput("");
+    setShowDeleteQuestaoModal(true);
+  };
+
+  const handleConfirmDeleteQuestao = async (e) => {
+    e.preventDefault();
+    if (!questaoParaExcluir) return;
+
+    if (!senhaAdminQuestaoInput) {
+      showAlert("Digite a sua senha de Administrador.", "error");
       return;
     }
 
-    showAlert("Deseja realmente excluir esta questão?", "confirm", async () => {
-      try {
-        await questaoService.deletar(id, token);
-        showAlert("Questão excluída com sucesso!");
-        fetchQuestions(currentPage);
-      } catch (error) {
-        showAlert("Erro ao excluir questão.", "error");
-      }
-    });
+    setIsSubmittingDeleteQuestao(true);
+    try {
+      await questaoService.deletar(
+        questaoParaExcluir.id,
+        {
+          senha: senhaAdminQuestaoInput,
+        },
+        token
+      );
+
+      showAlert("Questão excluída com sucesso!");
+      setShowDeleteQuestaoModal(false);
+      setQuestaoParaExcluir(null);
+      fetchQuestions(currentPage);
+    } catch (error) {
+      showAlert(`Erro ao excluir questão: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingDeleteQuestao(false);
+    }
   };
 
   return (
@@ -1273,6 +1299,64 @@ export default function ContentsPage() {
                     type="button"
                     disabled={isSubmittingDeleteCurso}
                     onClick={() => setShowDeleteCursoModal(false)}
+                    className="bg-slate-200 border-2 border-black rounded-xl px-4 py-3 font-black text-sm disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO DE QUESTÃO */}
+        {showDeleteQuestaoModal && questaoParaExcluir && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-md w-full shadow-[8px_8px_0_black]">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-black uppercase text-red-600">
+                  ⚠️ Excluir Questão
+                </h3>
+                <button
+                  onClick={() => setShowDeleteQuestaoModal(false)}
+                  disabled={isSubmittingDeleteQuestao}
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="font-bold text-sm text-slate-700 mb-4">
+                Deseja realmente excluir esta questão (ID:{" "}
+                {questaoParaExcluir.id})? Esta ação é irreversível.
+              </p>
+              <form onSubmit={handleConfirmDeleteQuestao} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Senha de Administrador
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Sua senha de admin"
+                    value={senhaAdminQuestaoInput}
+                    disabled={isSubmittingDeleteQuestao}
+                    onChange={(e) => setSenhaAdminQuestaoInput(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingDeleteQuestao}
+                    className="flex-1 bg-red-500 text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingDeleteQuestao
+                      ? "Excluindo..."
+                      : "Confirmar Exclusão"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSubmittingDeleteQuestao}
+                    onClick={() => setShowDeleteQuestaoModal(false)}
                     className="bg-slate-200 border-2 border-black rounded-xl px-4 py-3 font-black text-sm disabled:opacity-50"
                   >
                     Cancelar
@@ -1767,7 +1851,7 @@ export default function ContentsPage() {
                       Editar
                     </button>
                     <button
-                      onClick={() => handleDeleteQuestion(q.id)}
+                      onClick={() => handleDeleteQuestion(q)}
                       className="bg-red-400 text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
                     >
                       Excluir
