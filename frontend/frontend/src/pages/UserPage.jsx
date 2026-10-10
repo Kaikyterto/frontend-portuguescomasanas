@@ -470,23 +470,23 @@ export default function UserPage() {
                           }
 
                           return (
-                            <label
+                            <div
                               key={identificadorAlt}
+                              onClick={() => {
+                                if (respostaEnviada) return;
+                                setAlternativaSelecionada(identificadorAlt);
+                              }}
                               className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition select-none ${corFundo}`}
                             >
                               <input
                                 type="radio"
                                 name="alternativa"
-                                value={identificadorAlt}
                                 checked={isSelecionada}
+                                readOnly
                                 disabled={respostaEnviada}
-                                onChange={() => {
-                                  if (respostaEnviada) return;
-                                  setAlternativaSelecionada(identificadorAlt);
-                                }}
-                                className="mt-1 shrink-0 accent-[#7B5CFA]"
+                                className="mt-1 shrink-0 pointer-events-none accent-[#7B5CFA]"
                               />
-                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1">
+                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1 pointer-events-none">
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
@@ -494,7 +494,7 @@ export default function UserPage() {
                                   {textoAlt}
                                 </ReactMarkdown>
                               </div>
-                            </label>
+                            </div>
                           );
                         })
                       ) : (
@@ -689,7 +689,6 @@ export default function UserPage() {
                   >
                     ← Anterior
                   </button>
-
                   <span className="text-xs font-black text-slate-800">
                     Página {paginaAtual + 1}/{totalPages}
                   </span>
