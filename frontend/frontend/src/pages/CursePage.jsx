@@ -6,6 +6,7 @@ import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
 import { aulaService } from "../service/aula";
+
 export default function CursePage() {
   const navigate = useNavigate();
   const { id: cursoId } = useParams();
@@ -162,7 +163,9 @@ export default function CursePage() {
                       🔴 AO VIVO
                     </span>
                     <span className="text-xs font-bold text-slate-800 break-all">
-                      Aulas ao vivo na Quarta 19h:30min e Sábado 15h
+                      {Number(cursoId) === 8
+                        ? "Aulas ao vivo na Quarta 20:40min e Sábado 16:40min"
+                        : "Aulas ao vivo na Quarta 19h:30min e Sábado 15h"}
                     </span>
                   </div>
                 </div>
