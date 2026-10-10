@@ -150,7 +150,7 @@ export default function CursePage() {
 
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 sm:gap-6">
           <Card className="bg-[#F4EFE6] !p-4 sm:!p-6 md:!p-8 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl sm:rounded-2xl flex flex-col gap-4 sm:gap-6">
-            {Number(cursoId) === 9 && (
+            {(Number(cursoId) === 8 || Number(cursoId) === 9) && (
               <div className="bg-red-100 border-2 border-black p-4 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <span className="relative flex h-3 w-3 shrink-0">
@@ -189,7 +189,6 @@ export default function CursePage() {
                 {cursoData.descricaoCurso || cursoData.descricao}
               </p>
             </div>
-
             {/* LISTA DE MÓDULOS */}
             <div className="flex flex-col gap-3 sm:gap-4 mt-1">
               <h2 className="text-xs sm:text-sm font-black uppercase text-slate-900 tracking-wider">
