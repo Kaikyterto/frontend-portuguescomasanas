@@ -682,29 +682,25 @@ export default function UserPage() {
                             corFundo = "bg-cyan-50 border-cyan-500";
                           }
 
-                          const inputId = `alt-${
-                            questaoSelecionada.id || "q"
-                          }-${altId}`;
-
                           return (
-                            <label
+                            <div
                               key={altId}
-                              htmlFor={inputId}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (respostaEnviada) return;
+                                setAlternativaSelecionada(altId);
+                              }}
                               className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition select-none touch-manipulation active:scale-[0.99] ${corFundo}`}
                             >
                               <input
                                 type="radio"
-                                id={inputId}
                                 name="alternativa"
                                 checked={isSelecionada}
-                                onChange={() => {
-                                  if (respostaEnviada) return;
-                                  setAlternativaSelecionada(altId);
-                                }}
+                                onChange={() => {}}
                                 disabled={respostaEnviada}
                                 className="mt-1 shrink-0 accent-[#7B5CFA] cursor-pointer"
                               />
-                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1 pointer-events-none">
+                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1">
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
@@ -712,7 +708,7 @@ export default function UserPage() {
                                   {textoAlt}
                                 </ReactMarkdown>
                               </div>
-                            </label>
+                            </div>
                           );
                         })
                       ) : (
