@@ -162,8 +162,10 @@ export default function UserPage() {
   const carregarEstatisticasUsuario = async () => {
     try {
       const minhasRespostas = await listarMinhasRespostas();
-      const total = minhasRespostas.length;
-      const correct = minhasRespostas.filter((r) => r.acertou).length;
+      const total = minhasRespostas ? minhasRespostas.length : 0;
+      const correct = minhasRespostas
+        ? minhasRespostas.filter((r) => r.acertou).length
+        : 0;
       const wrong = total - correct;
       const evolutionPercentage =
         total > 0 ? Math.round((correct / total) * 100) : 0;
@@ -335,6 +337,19 @@ export default function UserPage() {
     handleCarregarBancoQuestoes(0, filtrosLimpos);
   };
 
+  // Helper universal para obter identificador único de alternativa
+  const getAltIdentifier = (alt, index) => {
+    if (
+      alt &&
+      alt.id !== undefined &&
+      alt.id !== null &&
+      String(alt.id).trim() !== ""
+    ) {
+      return String(alt.id);
+    }
+    return String(index);
+  };
+
   const handleResponderQuestao = async (e) => {
     e.preventDefault();
     if (!alternativaSelecionada) {
@@ -346,6 +361,18 @@ export default function UserPage() {
       return;
     }
 
+    // Busca de forma resiliente o objeto da alternativa selecionada
+    const altObj = questaoSelecionada?.alternativas?.find((alt, index) => {
+      const altId = getAltIdentifier(alt, index);
+      return String(altId) === String(alternativaSelecionada);
+    });
+
+    // Garante o ID correto que o backend espera
+    const altIdParaEnviar =
+      altObj?.id !== undefined && altObj?.id !== null
+        ? Number(altObj.id)
+        : Number(alternativaSelecionada);
+
     const tempoFinal = Date.now();
     const tempoGastoSegundos = tempoInicio
       ? Math.floor((tempoFinal - tempoInicio) / 1000)
@@ -353,7 +380,7 @@ export default function UserPage() {
 
     const payload = {
       questaoId: Number(questaoSelecionada?.id),
-      alternativaId: Number(alternativaSelecionada),
+      alternativaId: altIdParaEnviar,
       tempoGasto: Number(tempoGastoSegundos),
     };
 
@@ -463,7 +490,7 @@ export default function UserPage() {
                 {exibirBanco && !questaoSelecionada && (
                   <button
                     onClick={() => setMostrarFiltros(!mostrarFiltros)}
-                    className="bg-[#FFD700] text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-400 cursor-pointer"
+                    className="bg-[#FFD700] text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-400 cursor-pointer touch-manipulation active:scale-95 transition"
                   >
                     🔍 {mostrarFiltros ? "Ocultar Filtros" : "Filtrar"}
                   </button>
@@ -476,14 +503,14 @@ export default function UserPage() {
                       setAlternativaSelecionada("");
                       setRespostaEnviada(false);
                     }}
-                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer"
+                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer touch-manipulation active:scale-95 transition"
                   >
                     Voltar à Lista
                   </button>
                 ) : exibirBanco ? (
                   <button
                     onClick={handleVoltarBanco}
-                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer"
+                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer touch-manipulation active:scale-95 transition"
                   >
                     Voltar
                   </button>
@@ -515,7 +542,7 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, texto: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   />
                 </div>
 
@@ -528,7 +555,7 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, assuntoId: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   >
                     <option value="">Todos os Assuntos</option>
                     {listaAssuntos.map((a) => (
@@ -548,7 +575,7 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, bancaId: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   >
                     <option value="">Todas as Bancas</option>
                     {listaBancas.map((b) => (
@@ -568,7 +595,7 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, nivel: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   >
                     <option value="">Todos os Níveis</option>
                     <option value="FACIL">Fácil</option>
@@ -581,13 +608,13 @@ export default function UserPage() {
                   <button
                     type="button"
                     onClick={handleLimparFiltros}
-                    className="bg-slate-200 border border-black rounded-lg px-3 py-1 font-bold text-xs hover:bg-slate-300"
+                    className="bg-slate-200 border border-black rounded-lg px-3 py-1 font-bold text-xs hover:bg-slate-300 touch-manipulation cursor-pointer"
                   >
                     Limpar Filtros
                   </button>
                   <button
                     type="submit"
-                    className="bg-[#00D2DF] border border-black rounded-lg px-4 py-1 font-black text-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                    className="bg-[#00D2DF] border border-black rounded-lg px-4 py-1 font-black text-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] touch-manipulation cursor-pointer"
                   >
                     Buscar Questões
                   </button>
@@ -618,9 +645,10 @@ export default function UserPage() {
                       <span className="text-xs font-black uppercase text-[#7B5CFA] bg-[#7B5CFA]/10 px-2 py-1 rounded border border-[#7B5CFA]/30">
                         {questaoSelecionada.tema || "Questão de Português"}
                       </span>
-                      <div className=" text-slate-900 text-sm md:text-base mt-3 leading-relaxed markdown-content">
+                      <div className="text-slate-900 text-sm md:text-base mt-3 leading-relaxed markdown-content">
                         <ReactMarkdown>
-                          {questaoSelecionada.enunciado}
+                          {questaoSelecionada.enunciado ||
+                            "Sem enunciado informado."}
                         </ReactMarkdown>
                       </div>
                     </div>
@@ -632,15 +660,14 @@ export default function UserPage() {
                       {questaoSelecionada.alternativas &&
                       questaoSelecionada.alternativas.length > 0 ? (
                         questaoSelecionada.alternativas.map((alt, index) => {
-                          const isCorreta = alt.correta;
-                          const identificadorAlt = String(
-                            alt.id ?? alt.letra ?? index
-                          );
-                          const letra = alt.letra || alt.id || index + 1;
-                          const textoAlt = alt.texto || alt.descricao;
+                          const altId = getAltIdentifier(alt, index);
+                          const isCorreta = Boolean(alt.correta);
+                          const letra =
+                            alt.letra || String.fromCharCode(65 + index);
+                          const textoAlt = alt.texto || alt.descricao || "";
 
                           const isSelecionada =
-                            String(alternativaSelecionada) === identificadorAlt;
+                            String(alternativaSelecionada) === String(altId);
 
                           let corFundo = "bg-white hover:bg-slate-50";
                           if (respostaEnviada) {
@@ -655,22 +682,27 @@ export default function UserPage() {
                             corFundo = "bg-cyan-50 border-cyan-500";
                           }
 
+                          const inputId = `alt-${
+                            questaoSelecionada.id || "q"
+                          }-${altId}`;
+
                           return (
-                            <div
-                              key={identificadorAlt}
-                              onClick={() => {
-                                if (respostaEnviada) return;
-                                setAlternativaSelecionada(identificadorAlt);
-                              }}
-                              className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition select-none ${corFundo}`}
+                            <label
+                              key={altId}
+                              htmlFor={inputId}
+                              className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition select-none touch-manipulation active:scale-[0.99] ${corFundo}`}
                             >
                               <input
                                 type="radio"
+                                id={inputId}
                                 name="alternativa"
                                 checked={isSelecionada}
-                                readOnly
+                                onChange={() => {
+                                  if (respostaEnviada) return;
+                                  setAlternativaSelecionada(altId);
+                                }}
                                 disabled={respostaEnviada}
-                                className="mt-1 shrink-0 pointer-events-none accent-[#7B5CFA]"
+                                className="mt-1 shrink-0 accent-[#7B5CFA] cursor-pointer"
                               />
                               <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1 pointer-events-none">
                                 <span className="font-black mr-2">
@@ -680,7 +712,7 @@ export default function UserPage() {
                                   {textoAlt}
                                 </ReactMarkdown>
                               </div>
-                            </div>
+                            </label>
                           );
                         })
                       ) : (
@@ -693,7 +725,7 @@ export default function UserPage() {
                     {!respostaEnviada ? (
                       <button
                         type="submit"
-                        className="mt-4 bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer"
+                        className="mt-4 bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation"
                       >
                         RESPONDER
                       </button>
@@ -702,16 +734,25 @@ export default function UserPage() {
                         <div
                           className={`p-3 rounded-xl border-2 border-black text-center font-black text-sm ${
                             questaoSelecionada.alternativas?.find(
-                              (a) =>
-                                String(a.id) === String(alternativaSelecionada)
+                              (alt, index) => {
+                                const altId = getAltIdentifier(alt, index);
+                                return (
+                                  String(altId) ===
+                                  String(alternativaSelecionada)
+                                );
+                              }
                             )?.correta
                               ? "bg-emerald-300 text-emerald-950"
                               : "bg-red-300 text-red-950"
                           }`}
                         >
                           {questaoSelecionada.alternativas?.find(
-                            (a) =>
-                              String(a.id) === String(alternativaSelecionada)
+                            (alt, index) => {
+                              const altId = getAltIdentifier(alt, index);
+                              return (
+                                String(altId) === String(alternativaSelecionada)
+                              );
+                            }
                           )?.correta
                             ? "🎉 Resposta Correta!"
                             : "❌ Resposta Incorreta!"}
@@ -740,7 +781,7 @@ export default function UserPage() {
                               setAlternativaSelecionada("");
                               setRespostaEnviada(false);
                             }}
-                            className="flex-1 bg-slate-200 text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer text-xs"
+                            className="flex-1 bg-slate-200 text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
                           >
                             VOLTAR À LISTA
                           </button>
@@ -748,7 +789,7 @@ export default function UserPage() {
                           <button
                             type="button"
                             onClick={handleProximaQuestao}
-                            className="flex-1 bg-[#00D2DF] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer text-xs"
+                            className="flex-1 bg-[#00D2DF] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
                           >
                             {indiceQuestaoAtual + 1 < questoes.length
                               ? "PRÓXIMA QUESTÃO ➔"
@@ -762,7 +803,7 @@ export default function UserPage() {
                   questoes.length > 0 ? (
                     questoes.map((q, index) => (
                       <div
-                        key={q.id || Math.random()}
+                        key={q.id || index}
                         onClick={() => {
                           setQuestaoSelecionada(q);
                           setIndiceQuestaoAtual(index);
@@ -770,7 +811,7 @@ export default function UserPage() {
                           setRespostaEnviada(false);
                           setTempoInicio(Date.now());
                         }}
-                        className="bg-white p-3 md:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-2 cursor-pointer hover:bg-slate-50 transition"
+                        className="bg-white p-3 md:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-2 cursor-pointer hover:bg-slate-50 touch-manipulation active:scale-[0.99] transition"
                       >
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-[10px] md:text-xs font-black uppercase text-[#7B5CFA] truncate">
@@ -782,13 +823,13 @@ export default function UserPage() {
                         </div>
                         <div className="font-bold text-slate-800 text-xs md:text-sm line-clamp-2">
                           <ReactMarkdown components={{ p: "span" }}>
-                            {q.enunciado}
+                            {q.enunciado || "Sem enunciado."}
                           </ReactMarkdown>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center font-bold text-slate-600 py-10 ">
+                    <div className="text-center font-bold text-slate-600 py-10">
                       Nenhuma questão encontrada no banco com esses filtros.
                     </div>
                   )
@@ -867,10 +908,10 @@ export default function UserPage() {
                   <button
                     onClick={() => handleMudarPagina(paginaAtual - 1)}
                     disabled={isFirst || carregandoQuestoes}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] touch-manipulation transition ${
                       isFirst || carregandoQuestoes
                         ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                        : "bg-[#00D2DF] text-black hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none cursor-pointer"
+                        : "bg-[#00D2DF] text-black hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 cursor-pointer"
                     }`}
                   >
                     ← Anterior
@@ -882,10 +923,10 @@ export default function UserPage() {
                   <button
                     onClick={() => handleMudarPagina(paginaAtual + 1)}
                     disabled={isLast || carregandoQuestoes}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] touch-manipulation transition ${
                       isLast || carregandoQuestoes
                         ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                        : "bg-[#7B5CFA] text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none cursor-pointer"
+                        : "bg-[#7B5CFA] text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 cursor-pointer"
                     }`}
                   >
                     Próxima →
@@ -901,7 +942,7 @@ export default function UserPage() {
           <button
             onClick={() => handleCarregarBancoQuestoes(0, filtrosAtivos)}
             disabled={carregandoQuestoes}
-            className="bg-cyan-300 border-2 border-black rounded-full py-2.5 px-4 text-center font-extrabold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition cursor-pointer active:translate-x-1 active:translate-y-1"
+            className="bg-cyan-300 border-2 border-black rounded-full py-2.5 px-4 text-center font-extrabold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation"
           >
             {carregandoQuestoes ? "CARREGANDO..." : "ABRIR BANCO DE QUESTÕES"}
           </button>
