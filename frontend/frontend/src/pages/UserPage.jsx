@@ -367,10 +367,14 @@ export default function UserPage() {
       return String(altId) === String(alternativaSelecionada);
     });
 
+    const altFinal =
+      altObj ||
+      questaoSelecionada?.alternativas[Number(alternativaSelecionada)];
+
     // Garante o ID correto que o backend espera
     const altIdParaEnviar =
-      altObj?.id !== undefined && altObj?.id !== null
-        ? Number(altObj.id)
+      altFinal?.id !== undefined && altFinal?.id !== null
+        ? Number(altFinal.id)
         : Number(alternativaSelecionada);
 
     const tempoFinal = Date.now();
@@ -683,10 +687,9 @@ export default function UserPage() {
                           }
 
                           return (
-                            <div
+                            <label
                               key={altId}
                               onClick={(e) => {
-                                e.preventDefault();
                                 if (respostaEnviada) return;
                                 setAlternativaSelecionada(altId);
                               }}
@@ -696,11 +699,14 @@ export default function UserPage() {
                                 type="radio"
                                 name="alternativa"
                                 checked={isSelecionada}
-                                onChange={() => {}}
+                                onChange={() => {
+                                  if (respostaEnviada) return;
+                                  setAlternativaSelecionada(altId);
+                                }}
                                 disabled={respostaEnviada}
                                 className="mt-1 shrink-0 accent-[#7B5CFA] cursor-pointer"
                               />
-                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1">
+                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1 pointer-events-none">
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
@@ -708,7 +714,7 @@ export default function UserPage() {
                                   {textoAlt}
                                 </ReactMarkdown>
                               </div>
-                            </div>
+                            </label>
                           );
                         })
                       ) : (
@@ -727,8 +733,8 @@ export default function UserPage() {
                       </button>
                     ) : (
                       <div className="mt-4 flex flex-col gap-3">
-                        <div
-                          className={`p-3 rounded-xl border-2 border-black text-center font-black text-sm ${
+                        {(() => {
+                          const altSelecionadaObj =
                             questaoSelecionada.alternativas?.find(
                               (alt, index) => {
                                 const altId = getAltIdentifier(alt, index);
@@ -737,34 +743,39 @@ export default function UserPage() {
                                   String(alternativaSelecionada)
                                 );
                               }
-                            )?.correta
-                              ? "bg-emerald-300 text-emerald-950"
-                              : "bg-red-300 text-red-950"
-                          }`}
-                        >
-                          {questaoSelecionada.alternativas?.find(
-                            (alt, index) => {
-                              const altId = getAltIdentifier(alt, index);
-                              return (
-                                String(altId) === String(alternativaSelecionada)
-                              );
-                            }
-                          )?.correta
-                            ? "🎉 Resposta Correta!"
-                            : "❌ Resposta Incorreta!"}
-                        </div>
-                        {questaoSelecionada.explicacao && (
-                          <div className="bg-slate-100 p-4 rounded-xl border-2 border-black">
-                            <span className="block text-xs font-black uppercase text-slate-700 mb-1">
-                              Explicação:
-                            </span>
-                            <div className="text-xs md:text-sm font-bold text-slate-800 markdown-content">
-                              <ReactMarkdown>
-                                {questaoSelecionada.explicacao}
-                              </ReactMarkdown>
-                            </div>
-                          </div>
-                        )}
+                            );
+                          const isCorretaReal = Boolean(
+                            altSelecionadaObj?.correta
+                          );
+
+                          return (
+                            <>
+                              <div
+                                className={`p-3 rounded-xl border-2 border-black text-center font-black text-sm ${
+                                  isCorretaReal
+                                    ? "bg-emerald-300 text-emerald-950"
+                                    : "bg-red-300 text-red-950"
+                                }`}
+                              >
+                                {isCorretaReal
+                                  ? "🎉 Resposta Correta!"
+                                  : "❌ Resposta Incorreta!"}
+                              </div>
+                              {questaoSelecionada.explicacao && (
+                                <div className="bg-slate-100 p-4 rounded-xl border-2 border-black">
+                                  <span className="block text-xs font-black uppercase text-slate-700 mb-1">
+                                    Explicação:
+                                  </span>
+                                  <div className="text-xs md:text-sm font-bold text-slate-800 markdown-content">
+                                    <ReactMarkdown>
+                                      {questaoSelecionada.explicacao}
+                                    </ReactMarkdown>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                         <div
                           ref={fimRespostaRef}
                           className="flex flex-col sm:flex-row gap-3 pt-2"
