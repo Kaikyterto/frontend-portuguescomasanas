@@ -455,6 +455,271 @@ export default function UserPage() {
     <div className="min-h-screen bg-[#F4EFE6] font-sans flex flex-col">
       <Navbar usuario={usuario} />
 
+      <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black">
+        {/* CONTAINER 1 */}
+        <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 order-1 lg:order-3">
+          <div className="min-h-[200px] lg:flex-1 flex order-1 lg:order-1">
+            <DailyQuestions className="w-full h-full" />
+          </div>
+
+          <div className="min-h-[220px] lg:flex-1 flex order-2 lg:order-2">
+            <EvolutionChart
+              percentage={userStats.evolutionPercentage}
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+
+        {/* CONTAINER 2 */}
+        <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
+          <Card className="flex-1 flex flex-col bg-[#F4EFE6] h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl">
+            <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black bg-white flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 ">
+                <span className="text-lg md:text-xl">
+                  {questaoSelecionada ? "✍️" : exibirBanco ? "📂" : "📚"}
+                </span>
+                <h2 className="text-slate-900 text-sm md:text-lg font-black tracking-wide uppercase truncate">
+                  {questaoSelecionada
+                    ? `Responder Questão (${indiceQuestaoAtual + 1}/${
+                        questoes.length
+                      })`
+                    : exibirBanco
+                    ? `Banco de Questões (Pág. ${paginaAtual + 1} de ${
+                        totalPages || 1
+                      })`
+                    : "Cursos disponíveis"}
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {exibirBanco && !questaoSelecionada && (
+                  <button
+                    onClick={() => setMostrarFiltros(!mostrarFiltros)}
+                    className="bg-[#FFD700] text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-400 cursor-pointer touch-manipulation active:scale-95 transition"
+                  >
+                    🔍 {mostrarFiltros ? "Ocultar Filtros" : "Filtrar"}
+                  </button>
+                )}
+
+                {questaoSelecionada ? (
+                  <button
+                    onClick={() => {
+                      setQuestaoSelecionada(null);
+                      setAlternativaSelecionada("");
+                      setRespostaEnviada(false);
+                    }}
+                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer touch-manipulation active:scale-95 transition"
+                  >
+                    Voltar à Lista
+                  </button>
+                ) : exibirBanco ? (
+                  <button
+                    onClick={handleVoltarBanco}
+                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer touch-manipulation active:scale-95 transition"
+                  >
+                    Voltar
+                  </button>
+                ) : null}
+                <span className="bg-[#7B5CFA] text-white text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  {questaoSelecionada
+                    ? `Questão #${questaoSelecionada.id || "Detalhe"}`
+                    : exibirBanco
+                    ? `${totalElements} Total`
+                    : `${cursos.length} Cursos`}
+                </span>
+              </div>
+            </div>
+
+            {/* PAINEL DE FILTROS */}
+            {exibirBanco && !questaoSelecionada && mostrarFiltros && (
+              <form
+                onSubmit={handleAplicarFiltros}
+                className="p-3 bg-slate-100 border-b-2 border-black grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs"
+              >
+                <div>
+                  <label className="block font-black mb-0.5 text-slate-800">
+                    Texto / Enunciado
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: acentuação..."
+                    value={filtros.texto}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, texto: e.target.value })
+                    }
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-black mb-0.5 text-slate-800">
+                    Assunto
+                  </label>
+                  <select
+                    value={filtros.assuntoId}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, assuntoId: e.target.value })
+                    }
+                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
+                  >
+                    <option value="">Todos os Assuntos</option>
+                    {listaAssuntos.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.nome || a.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block fonr!"
+      );
+    } finally {
+      setCarregandoQuestoes(false);
+    }
+  };
+
+  const handleMudarPagina = (novaPagina) => {
+    if (novaPagina >= 0 && novaPagina < totalPages) {
+      handleCarregarBancoQuestoes(novaPagina, filtrosAtivos);
+    }
+  };
+
+  const handleAplicarFiltros = (e) => {
+    e.preventDefault();
+    setFiltrosAtivos(filtros);
+    handleCarregarBancoQuestoes(0, filtros);
+  };
+
+  const handleLimparFiltros = () => {
+    const filtrosLimpos = {
+      assuntoId: "",
+      bancaId: "",
+      nivel: "",
+      texto: "",
+    };
+    setFiltros(filtrosLimpos);
+    setFiltrosAtivos(filtrosLimpos);
+    handleCarregarBancoQuestoes(0, filtrosLimpos);
+  };
+
+  // Helper universal para obter identificador único de alternativa
+  const getAltIdentifier = (alt, index) => {
+    if (
+      alt &&
+      alt.id !== undefined &&
+      alt.id !== null &&
+      String(alt.id).trim() !== ""
+    ) {
+      return String(alt.id);
+    }
+    return String(index);
+  };
+
+  const handleResponderQuestao = async (e) => {
+    e.preventDefault();
+    if (!alternativaSelecionada) {
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        message: "Selecione uma alternativa antes de responder!",
+      });
+      return;
+    }
+
+    // Busca de forma resiliente o objeto da alternativa selecionada
+    const altObj = questaoSelecionada?.alternativas?.find((alt, index) => {
+      const altId = getAltIdentifier(alt, index);
+      return String(altId) === String(alternativaSelecionada);
+    });
+
+    const altFinal =
+      altObj ||
+      questaoSelecionada?.alternativas[Number(alternativaSelecionada)];
+
+    // Garante o ID correto que o backend espera
+    const altIdParaEnviar =
+      altFinal?.id !== undefined && altFinal?.id !== null
+        ? Number(altFinal.id)
+        : Number(alternativaSelecionada);
+
+    const tempoFinal = Date.now();
+    const tempoGastoSegundos = tempoInicio
+      ? Math.floor((tempoFinal - tempoInicio) / 1000)
+      : 0;
+
+    const payload = {
+      questaoId: Number(questaoSelecionada?.id),
+      alternativaId: altIdParaEnviar,
+      tempoGasto: Number(tempoGastoSegundos),
+    };
+
+    try {
+      await criarResposta(payload);
+      setRespostaEnviada(true);
+      await carregarEstatisticasUsuario();
+    } catch (error) {
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        message: "Erro ao salvar sua resposta: " + (error.message || error),
+      });
+    }
+  };
+
+  const handleProximaQuestao = () => {
+    const proximoIndice = indiceQuestaoAtual + 1;
+    if (proximoIndice < questoes.length) {
+      setIndiceQuestaoAtual(proximoIndice);
+      setQuestaoSelecionada(questoes[proximoIndice]);
+      setAlternativaSelecionada("");
+      setRespostaEnviada(false);
+      setTempoInicio(Date.now());
+      const containerScroll = document.querySelector(".custom-scrollbar");
+      if (containerScroll) containerScroll.scrollTop = 0;
+    } else {
+      setModalConfig({
+        isOpen: true,
+        type: "success",
+        message: "Você concluiu todas as questões desta página!",
+      });
+      setQuestaoSelecionada(null);
+      setAlternativaSelecionada("");
+      setRespostaEnviada(false);
+    }
+  };
+
+  const handleVoltarBanco = () => {
+    setQuestaoSelecionada(null);
+    setIndiceQuestaoAtual(0);
+    setAlternativaSelecionada("");
+    setRespostaEnviada(false);
+    setExibirBanco(false);
+  };
+
+  if (loading && !erroAuth) {
+    return (
+      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center">
+        <h1 className="text-2xl font-black text-slate-900 animate-pulse uppercase tracking-wider">
+          Carregando plataforma...
+        </h1>
+      </div>
+    );
+  }
+
+  if (erroAuth) {
+    return (
+      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center p-4">
+        <div className="rounded-2xl border-[3px] border-black bg-[#FF6B6B] p-6 text-center font-bold text-black shadow-[6px_6px_0px_#000] max-w-sm w-full">
+          {erroAuth}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F4EFE6] font-sans flex flex-col">
+      <Navbar usuario={usuario} />
+
       <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black lg:overflow-hidden">
         {/* CONTAINER 1 */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 order-1 lg:order-3">
