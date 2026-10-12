@@ -762,11 +762,11 @@ export default function UserPage() {
                                   : "❌ Resposta Incorreta!"}
                               </div>
                               {questaoSelecionada.explicacao && (
-                                <div className="bg-slate-100 p-4 rounded-xl border-2 border-black">
+                                <div className="bg-slate-100 p-4 rounded-xl border-2 border-black overflow-hidden">
                                   <span className="block text-xs font-black uppercase text-slate-700 mb-1">
                                     Explicação:
                                   </span>
-                                  <div className="text-xs md:text-sm font-bold text-slate-800 markdown-content">
+                                  <div className="text-xs md:text-sm font-bold text-slate-800 markdown-content break-words overflow-x-auto">
                                     <ReactMarkdown>
                                       {questaoSelecionada.explicacao}
                                     </ReactMarkdown>
