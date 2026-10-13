@@ -62,6 +62,7 @@ export default function UserPage() {
   const [alternativaSelecionada, setAlternativaSelecionada] = useState("");
   const [respostaEnviada, setRespostaEnviada] = useState(false);
   const [tempoInicio, setTempoInicio] = useState(null);
+  const [resultadoUltimaResposta, setResultadoUltimaResposta] = useState(null);
 
   // Referência para rolar até o botão/bloco de feedback
   const fimRespostaRef = useRef(null);
@@ -304,6 +305,7 @@ export default function UserPage() {
       setIndiceQuestaoAtual(0);
       setAlternativaSelecionada("");
       setRespostaEnviada(false);
+      setResultadoUltimaResposta(null);
     } catch (error) {
       setErroQuestoes(
         "Você não tem acesso ao banco de questões. Adquira algum curso para desbloquear!"
@@ -389,7 +391,8 @@ export default function UserPage() {
     };
 
     try {
-      await criarResposta(payload);
+      const respostaServidor = await criarResposta(payload);
+      setResultadoUltimaResposta(respostaServidor);
       setRespostaEnviada(true);
       await carregarEstatisticasUsuario();
     } catch (error) {
@@ -408,6 +411,7 @@ export default function UserPage() {
       setQuestaoSelecionada(questoes[proximoIndice]);
       setAlternativaSelecionada("");
       setRespostaEnviada(false);
+      setResultadoUltimaResposta(null);
       setTempoInicio(Date.now());
       const containerScroll = document.querySelector(".custom-scrollbar");
       if (containerScroll) containerScroll.scrollTop = 0;
@@ -420,6 +424,7 @@ export default function UserPage() {
       setQuestaoSelecionada(null);
       setAlternativaSelecionada("");
       setRespostaEnviada(false);
+      setResultadoUltimaResposta(null);
     }
   };
 
@@ -428,6 +433,7 @@ export default function UserPage() {
     setIndiceQuestaoAtual(0);
     setAlternativaSelecionada("");
     setRespostaEnviada(false);
+    setResultadoUltimaResposta(null);
     setExibirBanco(false);
   };
 
@@ -506,6 +512,7 @@ export default function UserPage() {
                       setQuestaoSelecionada(null);
                       setAlternativaSelecionada("");
                       setRespostaEnviada(false);
+                      setResultadoUltimaResposta(null);
                     }}
                     className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer touch-manipulation active:scale-95 transition"
                   >
@@ -722,19 +729,25 @@ export default function UserPage() {
                     ) : (
                       <div className="mt-4 flex flex-col gap-3">
                         {(() => {
-                          const altSelecionadaObj =
-                            questaoSelecionada.alternativas?.find(
-                              (alt, index) => {
-                                const altId = getAltIdentifier(alt, index);
-                                return (
-                                  String(altId) ===
-                                  String(alternativaSelecionada)
-                                );
-                              }
-                            );
-                          const isCorretaReal = Boolean(
-                            altSelecionadaObj?.correta
-                          );
+                          const isCorretaReal =
+                            resultadoUltimaResposta?.acertou !== undefined
+                              ? Boolean(resultadoUltimaResposta.acertou)
+                              : (() => {
+                                  const altSelecionadaObj =
+                                    questaoSelecionada.alternativas?.find(
+                                      (alt, index) => {
+                                        const altId = getAltIdentifier(
+                                          alt,
+                                          index
+                                        );
+                                        return (
+                                          String(altId) ===
+                                          String(alternativaSelecionada)
+                                        );
+                                      }
+                                    );
+                                  return Boolean(altSelecionadaObj?.correta);
+                                })();
 
                           return (
                             <>
@@ -775,6 +788,7 @@ export default function UserPage() {
                               setIndiceQuestaoAtual(0);
                               setAlternativaSelecionada("");
                               setRespostaEnviada(false);
+                              setResultadoUltimaResposta(null);
                             }}
                             className="flex-1 bg-slate-200 text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
                           >
@@ -804,6 +818,7 @@ export default function UserPage() {
                           setIndiceQuestaoAtual(index);
                           setAlternativaSelecionada("");
                           setRespostaEnviada(false);
+                          setResultadoUltimaResposta(null);
                           setTempoInicio(Date.now());
                         }}
                         className="bg-white p-3 md:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-2 cursor-pointer hover:bg-slate-50 touch-manipulation active:scale-[0.99] transition"
