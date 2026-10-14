@@ -127,8 +127,14 @@ export default function SimuladosAdminPage() {
       return;
     }
 
-    if (questaoIdsSelecionadas.length === 0 || questaoIdsSelecionadas.length > 100) {
-      showAlert("Selecione de 1 a 100 questões para compor o simulado.", "error");
+    if (
+      questaoIdsSelecionadas.length === 0 ||
+      questaoIdsSelecionadas.length > 100
+    ) {
+      showAlert(
+        "Selecione de 1 a 100 questões para compor o simulado.",
+        "error"
+      );
       return;
     }
 
@@ -168,7 +174,11 @@ export default function SimuladosAdminPage() {
       descricaoSet(detalhe.descricao || "");
       setDuracaoMinutos(detalhe.duracaoMinutos || 60);
       setAtivo(detalhe.ativo);
-      setQuestaoIdsSelecionadas(detalhe.questoes ? detalhe.questoes.map((q) => q.questaoOrigemId || q.id) : []);
+      setQuestaoIdsSelecionadas(
+        detalhe.questoes
+          ? detalhe.questoes.map((q) => q.questaoOrigemId || q.id)
+          : []
+      );
       setShowSimuladoModal(true);
     } catch (error) {
       showAlert("Erro ao carregar detalhes para edição.", "error");
@@ -188,19 +198,32 @@ export default function SimuladosAdminPage() {
 
   // Excluir Simulado
   const handleDeleteSimulado = (id) => {
-    showAlert("Deseja realmente excluir este simulado?", "confirm", async () => {
-      try {
-        await simuladoService.deletar(id, token);
-        showAlert("Simulado excluído com sucesso!");
-        fetchData(currentPage);
-      } catch (error) {
-        if (error.status === 409 || (error.message && error.message.includes("409"))) {
-          showAlert("Simulado com tentativas possui histórico. Desative-o em vez de excluir.", "error");
-        } else {
-          showAlert(`Erro ao excluir simulado: ${error.message || error}`, "error");
+    showAlert(
+      "Deseja realmente excluir este simulado?",
+      "confirm",
+      async () => {
+        try {
+          await simuladoService.deletar(id, token);
+          showAlert("Simulado excluído com sucesso!");
+          fetchData(currentPage);
+        } catch (error) {
+          if (
+            error.status === 409 ||
+            (error.message && error.message.includes("409"))
+          ) {
+            showAlert(
+              "Simulado com tentativas possui histórico. Desative-o em vez de excluir.",
+              "error"
+            );
+          } else {
+            showAlert(
+              `Erro ao excluir simulado: ${error.message || error}`,
+              "error"
+            );
+          }
         }
       }
-    });
+    );
   };
 
   // Visualizar Detalhes do Simulado
@@ -217,7 +240,9 @@ export default function SimuladosAdminPage() {
   // Controle de Seleção de Questões na lista do Modal
   const handleToggleQuestaoSelecao = (id) => {
     if (questaoIdsSelecionadas.includes(id)) {
-      setQuestaoIdsSelecionadas(questaoIdsSelecionadas.filter((qId) => qId !== id));
+      setQuestaoIdsSelecionadas(
+        questaoIdsSelecionadas.filter((qId) => qId !== id)
+      );
     } else {
       if (questaoIdsSelecionadas.length >= 100) {
         showAlert("O limite máximo é de 100 questões por simulado.", "error");
@@ -235,7 +260,9 @@ export default function SimuladosAdminPage() {
         {/* Cabeçalho */}
         <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-5 sm:p-6 shadow-[6px_6px_0_black] mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black uppercase">Gerenciar Simulados</h1>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase">
+              Gerenciar Simulados
+            </h1>
             <p className="font-bold text-slate-600 text-sm sm:text-base">
               Crie avaliações, configure prazos e selecione questões do banco
             </p>
@@ -254,7 +281,9 @@ export default function SimuladosAdminPage() {
             <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-3xl w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-black uppercase">
-                  {editingSimuladoId ? "📝 Editar Simulado" : "📝 Novo Simulado"}
+                  {editingSimuladoId
+                    ? "📝 Editar Simulado"
+                    : "📝 Novo Simulado"}
                 </h3>
                 <button
                   onClick={handleResetForm}
@@ -268,7 +297,9 @@ export default function SimuladosAdminPage() {
               <form onSubmit={handleSaveSimulado} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-black text-xs uppercase mb-1">Título do Simulado</label>
+                    <label className="block font-black text-xs uppercase mb-1">
+                      Título do Simulado
+                    </label>
                     <input
                       type="text"
                       placeholder="Ex: Simulado Avançado CESPE"
@@ -279,7 +310,9 @@ export default function SimuladosAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block font-black text-xs uppercase mb-1">Duração (Minutos)</label>
+                    <label className="block font-black text-xs uppercase mb-1">
+                      Duração (Minutos)
+                    </label>
                     <input
                       type="number"
                       min="1"
@@ -292,7 +325,9 @@ export default function SimuladosAdminPage() {
                 </div>
 
                 <div>
-                  <label className="block font-black text-xs uppercase mb-1">Descrição</label>
+                  <label className="block font-black text-xs uppercase mb-1">
+                    Descrição
+                  </label>
                   <textarea
                     placeholder="Descrição detalhada sobre o simulado..."
                     value={descricao}
@@ -312,7 +347,10 @@ export default function SimuladosAdminPage() {
                     onChange={(e) => setAtivo(e.target.checked)}
                     className="w-5 h-5 border-2 border-black rounded cursor-pointer"
                   />
-                  <label htmlFor="ativoCheckbox" className="font-black text-sm cursor-pointer uppercase">
+                  <label
+                    htmlFor="ativoCheckbox"
+                    className="font-black text-sm cursor-pointer uppercase"
+                  >
                     Simulado Ativo para os Alunos
                   </label>
                 </div>
@@ -323,37 +361,51 @@ export default function SimuladosAdminPage() {
                     <h4 className="font-black text-sm uppercase">
                       Selecionar Questões ({questaoIdsSelecionadas.length}/100)
                     </h4>
-                    <span className="text-xs font-bold text-slate-500">Clique para selecionar/remover</span>
+                    <span className="text-xs font-bold text-slate-500">
+                      Clique para selecionar/remover
+                    </span>
                   </div>
+                </div>
 
-                  <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                    {loadingQuestoes ? (
-                      <p className="text-xs font-bold text-slate-500">Carregando questões disponíveis...</p>
-                    : questoesDisponiveis.length === 0 ? (
-                      <p className="text-xs font-bold text-slate-500">Nenhuma questão encontrada.</p>
-                    ) : (
-                      questoesDisponiveis.map((q) => {
-                        const selecionada = questaoIdsSelecionadas.includes(q.id);
-                        return (
-                          <div
-                            key={q.id}
-                            onClick={() => handleToggleQuestaoSelecao(q.id)}
-                            className={`border-2 border-black rounded-xl p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
-                              selecionada ? "bg-[#00D2DF]/30 font-black" : "bg-slate-50 hover:bg-slate-100"
+                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                  {loadingQuestoes ? (
+                    <p className="text-xs font-bold text-slate-500">
+                      Carregando questões disponíveis...
+                    </p>
+                  ) : questoesDisponiveis.length === 0 ? (
+                    <p className="text-xs font-bold text-slate-500">
+                      Nenhuma questão encontrada.
+                    </p>
+                  ) : (
+                    questoesDisponiveis.map((q) => {
+                      const selecionada = questaoIdsSelecionadas.includes(q.id);
+                      return (
+                        <div
+                          key={q.id}
+                          onClick={() => handleToggleQuestaoSelecao(q.id)}
+                          className={`border-2 border-black rounded-xl p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                            selecionada
+                              ? "bg-[#00D2DF]/30 font-black"
+                              : "bg-slate-50 hover:bg-slate-100"
+                          }`}
+                        >
+                          <div className="text-xs truncate">
+                            <span className="bg-black text-white px-1.5 py-0.5 rounded mr-2">
+                              ID {q.id}
+                            </span>
+                            {q.enunciado}
+                          </div>
+                          <span
+                            className={`text-xs px-2 py-1 rounded border border-black font-black shrink-0 ${
+                              selecionada ? "bg-[#00D2DF]" : "bg-white"
                             }`}
                           >
-                            <div className="text-xs truncate">
-                              <span className="bg-black text-white px-1.5 py-0.5 rounded mr-2">ID {q.id}</span>
-                              {q.enunciado}
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded border border-black font-black shrink-0 ${selecionada ? "bg-[#00D2DF]" : "bg-white"}`}>
-                              {selecionada ? "Selecionada" : "Selecionar"}
-                            </span>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+                            {selecionada ? "Selecionada" : "Selecionar"}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
 
                 <div className="flex gap-3 pt-2">
@@ -362,7 +414,11 @@ export default function SimuladosAdminPage() {
                     disabled={isSubmittingSimulado}
                     className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed uppercase text-sm"
                   >
-                    {isSubmittingSimulado ? "Salvando..." : editingSimuladoId ? "Atualizar Simulado" : "Cadastrar Simulado"}
+                    {isSubmittingSimulado
+                      ? "Salvando..."
+                      : editingSimuladoId
+                      ? "Atualizar Simulado"
+                      : "Cadastrar Simulado"}
                   </button>
                   <button
                     type="button"
@@ -383,7 +439,9 @@ export default function SimuladosAdminPage() {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-2xl w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-black uppercase">Detalhes do Simulado</h3>
+                <h3 className="text-xl font-black uppercase">
+                  Detalhes do Simulado
+                </h3>
                 <button
                   onClick={() => setShowDetalhesModal(false)}
                   className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
@@ -392,8 +450,12 @@ export default function SimuladosAdminPage() {
                 </button>
               </div>
               <div className="space-y-3 bg-white border-2 border-black rounded-xl p-4 mb-4">
-                <h4 className="font-black text-lg">{simuladoSelecionado.titulo}</h4>
-                <p className="text-sm font-bold text-slate-600">{simuladoSelecionado.descricao || "Sem descrição."}</p>
+                <h4 className="font-black text-lg">
+                  {simuladoSelecionado.titulo}
+                </h4>
+                <p className="text-sm font-bold text-slate-600">
+                  {simuladoSelecionado.descricao || "Sem descrição."}
+                </p>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <span className="bg-[#FFD700] border-2 border-black px-2.5 py-0.5 text-xs font-black rounded-lg">
                     Duração: {simuladoSelecionado.duracaoMinutos} min
@@ -401,17 +463,28 @@ export default function SimuladosAdminPage() {
                   <span className="bg-[#00D2DF] border-2 border-black px-2.5 py-0.5 text-xs font-black rounded-lg">
                     Total de Questões: {simuladoSelecionado.totalQuestoes}
                   </span>
-                  <span className={`border-2 border-black px-2.5 py-0.5 text-xs font-black rounded-lg ${simuladoSelecionado.ativo ? "bg-green-300" : "bg-red-300"}`}>
+                  <span
+                    className={`border-2 border-black px-2.5 py-0.5 text-xs font-black rounded-lg ${
+                      simuladoSelecionado.ativo ? "bg-green-300" : "bg-red-300"
+                    }`}
+                  >
                     {simuladoSelecionado.ativo ? "Ativo" : "Inativo"}
                   </span>
                 </div>
               </div>
 
-              <h4 className="font-black uppercase text-sm mb-2">Questões Vinculadas</h4>
+              <h4 className="font-black uppercase text-sm mb-2">
+                Questões Vinculadas
+              </h4>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {simuladoSelecionado.questoes?.map((q, idx) => (
-                  <div key={q.id || idx} className="bg-white border-2 border-black rounded-xl p-3 text-xs">
-                    <span className="font-black bg-slate-200 px-2 py-0.5 rounded border border-black mr-2">Q#{q.ordem}</span>
+                  <div
+                    key={q.id || idx}
+                    className="bg-white border-2 border-black rounded-xl p-3 text-xs"
+                  >
+                    <span className="font-black bg-slate-200 px-2 py-0.5 rounded border border-black mr-2">
+                      Q#{q.ordem}
+                    </span>
                     <span className="font-bold">{q.enunciado}</span>
                   </div>
                 ))}
@@ -423,14 +496,20 @@ export default function SimuladosAdminPage() {
         {/* LISTAGEM DE SIMULADOS */}
         <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
           <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
-            <h2 className="font-black uppercase text-xl">Simulados Cadastrados ({totalElements})</h2>
+            <h2 className="font-black uppercase text-xl">
+              Simulados Cadastrados ({totalElements})
+            </h2>
           </div>
 
           <div className="space-y-4">
             {loadingSimulados ? (
-              <p className="font-bold text-slate-500">Carregando simulados...</p>
+              <p className="font-bold text-slate-500">
+                Carregando simulados...
+              </p>
             ) : simulados.length === 0 ? (
-              <p className="font-bold text-slate-500">Nenhum simulado cadastrado no banco de dados.</p>
+              <p className="font-bold text-slate-500">
+                Nenhum simulado cadastrado no banco de dados.
+              </p>
             ) : (
               simulados.map((simulado) => (
                 <div
@@ -456,8 +535,12 @@ export default function SimuladosAdminPage() {
                         {simulado.ativo ? "Ativo" : "Inativo"}
                       </span>
                     </div>
-                    <h3 className="font-black text-lg mt-1">{simulado.titulo}</h3>
-                    <p className="font-bold text-sm text-slate-600 line-clamp-1">{simulado.descricao}</p>
+                    <h3 className="font-black text-lg mt-1">
+                      {simulado.titulo}
+                    </h3>
+                    <p className="font-bold text-sm text-slate-600 line-clamp-1">
+                      {simulado.descricao}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2 shrink-0">
@@ -468,7 +551,9 @@ export default function SimuladosAdminPage() {
                       Ver Detalhes
                     </button>
                     <button
-                      onClick={() => handleToggleAtivo(simulado.id, simulado.ativo)}
+                      onClick={() =>
+                        handleToggleAtivo(simulado.id, simulado.ativo)
+                      }
                       className={`border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] ${
                         simulado.ativo ? "bg-amber-300" : "bg-green-300"
                       }`}

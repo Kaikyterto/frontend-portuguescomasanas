@@ -75,7 +75,7 @@ export default function Navbar({ links = [], usuario }) {
         </div>
 
         {/* ÁREA DO USUÁRIO, BOTÃO ADMIN E HAMBÚRGUER MOBILE */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {isAdmin && (
             <Link
               to="/admin"
@@ -85,10 +85,11 @@ export default function Navbar({ links = [], usuario }) {
             </Link>
           )}
 
-          <div className="flex items-center gap-2.5 bg-white border border-black rounded-lg px-3.5 py-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex items-center gap-2 bg-white border border-black rounded-lg px-2.5 sm:px-3.5 py-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 border border-black shrink-0" />
-            <span className="text-xs font-black tracking-widest text-black uppercase max-w-[110px] sm:max-w-[185px] truncate block">
-              Bem-vindo, {nomeUsuario.split(" ")[0]}
+            <span className="text-[11px] sm:text-xs font-black tracking-widest text-black uppercase max-w-[100px] sm:max-w-[185px] truncate block">
+              <span className="hidden sm:inline">Bem-vindo, </span>
+              {nomeUsuario.split(" ")[0]}
             </span>
           </div>
 

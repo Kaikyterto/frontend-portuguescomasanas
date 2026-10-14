@@ -8,6 +8,8 @@ import RegisterPage from "./pages/RegisterPage";
 import TermsPage from "./pages/TermsPage";
 import StudentsPage from "./pages/StudentsPage";
 import CursePage from "./pages/CursePage";
+import SimuladosAdminPage from "./pages/SimuladosAdminPage";
+import SimuladosPage from "./pages/SimuladosPage";
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
       <Route path="/user" element={<UserPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/alunos" element={<StudentsPage />} />
+      <Route path="/simuladosAdmin" element={<SimuladosAdminPage />} />
+      <Route path="/simulados" element={<SimuladosPage />} />
 
       {/* Rota ajustada para aceitar o ID dinâmico do curso/módulo */}
       <Route path="/curso/:id" element={<CursePage />} />
