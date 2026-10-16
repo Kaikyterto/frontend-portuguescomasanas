@@ -377,6 +377,46 @@ export async function finalizarTentativa(tentativaId, token) {
   }
 }
 
+// --- Novo Método de Ranking para Equipe (Admin/Professor) ---
+
+export async function obterRanking(simuladoId, token, page = 0, size = 10) {
+  try {
+    const params = new URLSearchParams({
+      page: page,
+      size: size,
+    });
+
+    const response = await fetch(
+      `${API_URL}/api/simulados/${simuladoId}/ranking?${params.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      }
+    );
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      const error = new Error(
+        data.message ||
+          `Erro ao obter ranking do simulado (Status: ${response.status})`
+      );
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Erro em obterRanking:", error);
+    throw error;
+  }
+}
+
 export const simuladoService = {
   criar,
   listar,
@@ -389,4 +429,5 @@ export const simuladoService = {
   buscarTentativa,
   responderQuestao,
   finalizarTentativa,
+  obterRanking,
 };

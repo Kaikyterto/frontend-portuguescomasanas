@@ -36,9 +36,11 @@ export default function SimuladosAdminPage() {
   const [ativo, setAtivo] = useState(true);
   const [questaoIdsSelecionadas, setQuestaoIdsSelecionadas] = useState([]);
 
-  // Modal de Detalhes / Histórico do Simulado
-  const [showDetalhesModal, setShowDetalhesModal] = useState(false);
-  const [simuladoSelecionado, setSimuladoSelecionado] = useState(null);
+  // Estados do Modal de Ranking (Admin / Professor)
+  const [showRankingModal, setShowRankingModal] = useState(false);
+  const [rankingSimulado, setRankingSimulado] = useState(null);
+  const [listaRanking, setListaRanking] = useState([]);
+  const [loadingRanking, setLoadingRanking] = useState(false);
 
   // Alerta Modal
   const [alertConfig, setAlertConfig] = useState({
@@ -85,7 +87,6 @@ export default function SimuladosAdminPage() {
   const fetchQuestoesParaSelecao = async () => {
     try {
       setLoadingQuestoes(true);
-      // Busca uma quantidade razoável de questões ativas para seleção
       const res = await questaoService.listar(token, 0, 100, { ativa: true });
       const lista = Array.isArray(res) ? res : res?.content || [];
       setQuestoesDisponiveis(lista);
@@ -167,7 +168,6 @@ export default function SimuladosAdminPage() {
   // Abrir modal para edição
   const handleEditSimulado = async (simuladoResumo) => {
     try {
-      // Busca os detalhes completos para obter as questões já vinculadas
       const detalhe = await simuladoService.detalhar(simuladoResumo.id, token);
       setEditingSimuladoId(detalhe.id);
       setTitulo(detalhe.titulo || "");
@@ -226,14 +226,31 @@ export default function SimuladosAdminPage() {
     );
   };
 
-  // Visualizar Detalhes do Simulado
-  const handleOpenDetalhes = async (simuladoResumo) => {
+  // Ver Ranking Oficial do Simulado
+  const handleVerRanking = async (simulado) => {
     try {
-      const detalhe = await simuladoService.detalhar(simuladoResumo.id, token);
-      setSimuladoSelecionado(detalhe);
-      setShowDetalhesModal(true);
+      setRankingSimulado(simulado);
+      setLoadingRanking(true);
+      setShowRankingModal(true);
+      const data = await simuladoService.obterRanking(
+        simulado.id,
+        token,
+        0,
+        20
+      );
+      setListaRanking(data?.content || data || []);
     } catch (error) {
-      showAlert("Erro ao carregar detalhes do simulado.", "error");
+      if (error.status === 403) {
+        showAlert(
+          "Acesso negado: apenas a equipe pode ver o ranking.",
+          "error"
+        );
+      } else {
+        showAlert(error.message || "Erro ao carregar ranking.", "error");
+      }
+      setShowRankingModal(false);
+    } finally {
+      setLoadingRanking(false);
     }
   };
 
@@ -434,61 +451,91 @@ export default function SimuladosAdminPage() {
           </div>
         )}
 
-        {/* MODAL DE DETALHES DO SIMULADO */}
-        {showDetalhesModal && simuladoSelecionado && (
+        {/* MODAL DE RANKING DO SIMULADO */}
+        {showRankingModal && rankingSimulado && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-2xl w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
+            <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-2xl w-full shadow-[8px_8px_0_black]">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-black uppercase">
-                  Detalhes do Simulado
-                </h3>
+                <div>
+                  <h3 className="text-lg font-black uppercase mt-1">
+                    {rankingSimulado.titulo}
+                  </h3>
+                </div>
                 <button
-                  onClick={() => setShowDetalhesModal(false)}
+                  onClick={() => setShowRankingModal(false)}
                   className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
                 >
                   ✕
                 </button>
               </div>
-              <div className="space-y-3 bg-white border-2 border-black rounded-xl p-4 mb-4">
-                <h4 className="font-black text-lg">
-                  {simuladoSelecionado.titulo}
-                </h4>
-                <p className="text-sm font-bold text-slate-600">
-                  {simuladoSelecionado.descricao || "Sem descrição."}
-                </p>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <span className="bg-[#FFD700] border-2 border-black px-2.5 py-0.5 text-xs font-black rounded-lg">
-                    Duração: {simuladoSelecionado.duracaoMinutos} min
-                  </span>
-                  <span className="bg-[#00D2DF] border-2 border-black px-2.5 py-0.5 text-xs font-black rounded-lg">
-                    Total de Questões: {simuladoSelecionado.totalQuestoes}
-                  </span>
-                  <span
-                    className={`border-2 border-black px-2.5 py-0.5 text-xs font-black rounded-lg ${
-                      simuladoSelecionado.ativo ? "bg-green-300" : "bg-red-300"
-                    }`}
-                  >
-                    {simuladoSelecionado.ativo ? "Ativo" : "Inativo"}
-                  </span>
-                </div>
-              </div>
 
-              <h4 className="font-black uppercase text-sm mb-2">
-                Questões Vinculadas
-              </h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {simuladoSelecionado.questoes?.map((q, idx) => (
-                  <div
-                    key={q.id || idx}
-                    className="bg-white border-2 border-black rounded-xl p-3 text-xs"
-                  >
-                    <span className="font-black bg-slate-200 px-2 py-0.5 rounded border border-black mr-2">
-                      Q#{q.ordem}
-                    </span>
-                    <span className="font-bold">{q.enunciado}</span>
-                  </div>
-                ))}
-              </div>
+              {loadingRanking ? (
+                <p className="text-xs font-bold text-slate-500 text-center py-8 animate-pulse">
+                  Carregando ranking...
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                  {listaRanking.length === 0 ? (
+                    <p className="text-xs font-bold text-slate-500 text-center py-8">
+                      Ainda não existem tentativas finalizadas para este
+                      simulado.
+                    </p>
+                  ) : (
+                    listaRanking.map((item) => (
+                      <div
+                        key={item.tentativaId}
+                        className="bg-white border-2 border-black rounded-xl p-3.5 flex justify-between items-center text-xs gap-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-sm bg-amber-300 w-8 h-8 flex items-center justify-center rounded-xl border-2 border-black shrink-0 shadow-[2px_2px_0_black]">
+                            #{item.posicao}
+                          </span>
+                          <div>
+                            <p className="font-black text-sm text-slate-900">
+                              {item.alunoNome}
+                            </p>
+                            <span className="text-[11px] font-bold text-slate-500">
+                              Status: {item.status} | {item.acertos} /{" "}
+                              {item.totalQuestoes ||
+                                rankingSimulado.totalQuestoes}{" "}
+                              acertos
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Percentagem com tratamento robusto e destaque */}
+                        <div className="text-right shrink-0">
+                          <span className="inline-block bg-[#00D2DF] text-black border-2 border-black px-3 py-1.5 rounded-xl font-black text-sm shadow-[2px_2px_0_black]">
+                            {(() => {
+                              const rawVal =
+                                item.porcentagemAcertos ?? item.porcentagem;
+                              if (rawVal != null && rawVal > 0) {
+                                return rawVal <= 1
+                                  ? Math.round(rawVal * 100)
+                                  : Math.round(rawVal);
+                              }
+                              const acertos = item.acertos || 0;
+                              const total =
+                                item.totalQuestoes ||
+                                rankingSimulado.totalQuestoes ||
+                                1;
+                              return Math.round((acertos / total) * 100);
+                            })()}
+                            %
+                          </span>
+                          <span className="block text-[10px] font-bold text-slate-400 mt-1">
+                            {item.finalizadaEm
+                              ? new Date(item.finalizadaEm).toLocaleString(
+                                  "pt-BR"
+                                )
+                              : ""}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -545,10 +592,10 @@ export default function SimuladosAdminPage() {
 
                   <div className="flex flex-wrap gap-2 shrink-0">
                     <button
-                      onClick={() => handleOpenDetalhes(simulado)}
-                      className="bg-[#00D2DF] border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
+                      onClick={() => handleVerRanking(simulado)}
+                      className="bg-[#FF42DE] text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
                     >
-                      Ver Detalhes
+                      🏆 Ranking
                     </button>
                     <button
                       onClick={() =>
