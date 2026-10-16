@@ -7,6 +7,7 @@ import { bancaService } from "../service/banca";
 import { assuntoService } from "../service/assunto";
 import ReactMarkdown from "react-markdown";
 import Navbar from "../components/Navbar";
+import { links } from "../ultils/links";
 import SidebarStats from "../components/SidebarStats";
 import ModuleProgress from "../components/ModuleProgress";
 import EvolutionChart from "../components/EvolutionChart";
@@ -459,10 +460,10 @@ export default function UserPage() {
 
   return (
     <div className="min-h-screen bg-[#F4EFE6] font-sans flex flex-col">
-      <Navbar usuario={usuario} />
+      <Navbar links={links} usuario={usuario} />
 
-      <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black">
-        {/* CONTAINER 1 */}
+      <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black lg:overflow-hidden">
+        {/* CONTAINER 1 (Ordem Original) */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 order-1 lg:order-3">
           <div className="min-h-[200px] lg:flex-1 flex order-1 lg:order-1">
             <DailyQuestions className="w-full h-full" />
