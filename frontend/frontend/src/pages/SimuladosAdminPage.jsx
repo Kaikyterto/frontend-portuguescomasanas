@@ -4,6 +4,8 @@ import Card from "../components/Card";
 import AlertModal from "../components/AlertModal";
 import { simuladoService } from "../service/simulado";
 import { questaoService } from "../service/questao";
+import { bancaService } from "../service/banca";
+import { assuntoService } from "../service/assunto";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 
@@ -26,6 +28,18 @@ export default function SimuladosAdminPage() {
   // Lista de Questões disponíveis para compor o simulado
   const [questoesDisponiveis, setQuestoesDisponiveis] = useState([]);
   const [loadingQuestoes, setLoadingQuestoes] = useState(false);
+
+  // Estados para Filtros de Questões no Modal
+  const [listaAssuntos, setListaAssuntos] = useState([]);
+  const [listaBancas, setListaBancas] = useState([]);
+  const [mostrarFiltrosQuestoes, setMostrarFiltrosQuestoes] = useState(false);
+
+  const [filtrosQuestoes, setFiltrosQuestoes] = useState({
+    assuntoId: "",
+    bancaId: "",
+    nivel: "",
+    texto: "",
+  });
 
   // Modal de Criação / Edição de Simulado
   const [showSimuladoModal, setShowSimuladoModal] = useState(false);
@@ -83,11 +97,41 @@ export default function SimuladosAdminPage() {
     }
   };
 
+  // Carregar listas auxiliares de Assuntos e Bancas para o filtro de questões
+  const fetchFiltrosAuxiliares = async () => {
+    try {
+      const [assuntosRes, bancasRes] = await Promise.all([
+        assuntoService.listarAssuntos(token).catch(() => []),
+        bancaService.listar(token).catch(() => []),
+      ]);
+      setListaAssuntos(
+        Array.isArray(assuntosRes) ? assuntosRes : assuntosRes?.content || []
+      );
+      setListaBancas(
+        Array.isArray(bancasRes) ? bancasRes : bancasRes?.content || []
+      );
+    } catch (error) {
+      console.error("Erro ao carregar filtros auxiliares:", error);
+    }
+  };
+
   // Carregar questões para seleção na hora de montar o simulado
-  const fetchQuestoesParaSelecao = async () => {
+  const fetchQuestoesParaSelecao = async (
+    filtrosAplicados = filtrosQuestoes
+  ) => {
     try {
       setLoadingQuestoes(true);
-      const res = await questaoService.listar(token, 0, 100, { ativa: true });
+
+      const filtrosLimpos = Object.fromEntries(
+        Object.entries(filtrosAplicados || {}).filter(
+          ([_, v]) => v !== "" && v !== null && v !== undefined
+        )
+      );
+
+      const res = await questaoService.listar(token, 0, 100, {
+        ativa: true,
+        ...filtrosLimpos,
+      });
       const lista = Array.isArray(res) ? res : res?.content || [];
       setQuestoesDisponiveis(lista);
     } catch (error) {
@@ -99,8 +143,26 @@ export default function SimuladosAdminPage() {
 
   useEffect(() => {
     fetchData(0);
+    fetchFiltrosAuxiliares();
     fetchQuestoesParaSelecao();
   }, [token]);
+
+  // Handlers para os Filtros de Questões
+  const handleAplicarFiltrosQuestoes = (e) => {
+    e.preventDefault();
+    fetchQuestoesParaSelecao(filtrosQuestoes);
+  };
+
+  const handleLimparFiltrosQuestoes = () => {
+    const filtrosLimpos = {
+      assuntoId: "",
+      bancaId: "",
+      nivel: "",
+      texto: "",
+    };
+    setFiltrosQuestoes(filtrosLimpos);
+    fetchQuestoesParaSelecao(filtrosLimpos);
+  };
 
   // Resetar Formulário do Simulado
   const handleResetForm = () => {
@@ -111,6 +173,7 @@ export default function SimuladosAdminPage() {
     setAtivo(true);
     setQuestaoIdsSelecionadas([]);
     setShowSimuladoModal(false);
+    setMostrarFiltrosQuestoes(false);
   };
 
   const handleOpenCreateModal = () => {
@@ -286,7 +349,7 @@ export default function SimuladosAdminPage() {
           </div>
           <button
             onClick={handleOpenCreateModal}
-            className="bg-[#7B5CFA] text-white border-2 border-black px-5 py-3 font-black rounded-xl shadow-[3px_3px_0_black] text-sm uppercase hover:translate-y-[-2px] transition-transform"
+            className="bg-[#7B5CFA] text-white border-2 border-black px-5 py-3 font-black rounded-xl shadow-[3px_3px_0_black] text-sm uppercase hover:translate-y-[-2px] transition-transform cursor-pointer"
           >
             + Novo Simulado
           </button>
@@ -305,7 +368,7 @@ export default function SimuladosAdminPage() {
                 <button
                   onClick={handleResetForm}
                   disabled={isSubmittingSimulado}
-                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50"
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg disabled:opacity-50 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -372,64 +435,182 @@ export default function SimuladosAdminPage() {
                   </label>
                 </div>
 
-                {/* Seleção de Questões */}
-                <div className="border-2 border-black rounded-xl p-4 bg-white">
-                  <div className="flex justify-between items-center mb-3">
+                {/* Seleção de Questões com Filtros */}
+                <div className="border-2 border-black rounded-xl p-4 bg-white space-y-3">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
                     <h4 className="font-black text-sm uppercase">
                       Selecionar Questões ({questaoIdsSelecionadas.length}/100)
                     </h4>
-                    <span className="text-xs font-bold text-slate-500">
-                      Clique para selecionar/remover
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMostrarFiltrosQuestoes(!mostrarFiltrosQuestoes)
+                      }
+                      className="bg-[#FFD700] text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-400 cursor-pointer"
+                    >
+                      🔍{" "}
+                      {mostrarFiltrosQuestoes
+                        ? "Ocultar Filtros"
+                        : "Filtrar Questões"}
+                    </button>
                   </div>
-                </div>
 
-                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                  {loadingQuestoes ? (
-                    <p className="text-xs font-bold text-slate-500">
-                      Carregando questões disponíveis...
-                    </p>
-                  ) : questoesDisponiveis.length === 0 ? (
-                    <p className="text-xs font-bold text-slate-500">
-                      Nenhuma questão encontrada.
-                    </p>
-                  ) : (
-                    questoesDisponiveis.map((q) => {
-                      const selecionada = questaoIdsSelecionadas.includes(q.id);
-                      return (
-                        <div
-                          key={q.id}
-                          onClick={() => handleToggleQuestaoSelecao(q.id)}
-                          className={`border-2 border-black rounded-xl p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
-                            selecionada
-                              ? "bg-[#00D2DF]/30 font-black"
-                              : "bg-slate-50 hover:bg-slate-100"
-                          }`}
+                  {/* Formulário de Filtro de Questões */}
+                  {mostrarFiltrosQuestoes && (
+                    <div className="p-3 bg-slate-100 border-2 border-black rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                      <div>
+                        <label className="block font-black mb-0.5 text-slate-800">
+                          Texto / Enunciado
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: sintaxe..."
+                          value={filtrosQuestoes.texto}
+                          onChange={(e) =>
+                            setFiltrosQuestoes({
+                              ...filtrosQuestoes,
+                              texto: e.target.value,
+                            })
+                          }
+                          className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-black mb-0.5 text-slate-800">
+                          Assunto
+                        </label>
+                        <select
+                          value={filtrosQuestoes.assuntoId}
+                          onChange={(e) =>
+                            setFiltrosQuestoes({
+                              ...filtrosQuestoes,
+                              assuntoId: e.target.value,
+                            })
+                          }
+                          className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
                         >
-                          <div className="text-xs truncate">
-                            <span className="bg-black text-white px-1.5 py-0.5 rounded mr-2">
-                              ID {q.id}
-                            </span>
-                            {q.enunciado}
-                          </div>
-                          <span
-                            className={`text-xs px-2 py-1 rounded border border-black font-black shrink-0 ${
-                              selecionada ? "bg-[#00D2DF]" : "bg-white"
+                          <option value="">Todos os Assuntos</option>
+                          {listaAssuntos.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.nome || a.titulo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-black mb-0.5 text-slate-800">
+                          Banca
+                        </label>
+                        <select
+                          value={filtrosQuestoes.bancaId}
+                          onChange={(e) =>
+                            setFiltrosQuestoes({
+                              ...filtrosQuestoes,
+                              bancaId: e.target.value,
+                            })
+                          }
+                          className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                        >
+                          <option value="">Todas as Bancas</option>
+                          {listaBancas.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.nome || b.titulo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-black mb-0.5 text-slate-800">
+                          Nível
+                        </label>
+                        <select
+                          value={filtrosQuestoes.nivel}
+                          onChange={(e) =>
+                            setFiltrosQuestoes({
+                              ...filtrosQuestoes,
+                              nivel: e.target.value,
+                            })
+                          }
+                          className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white"
+                        >
+                          <option value="">Todos os Níveis</option>
+                          <option value="FACIL">Fácil</option>
+                          <option value="MEDIO">Médio</option>
+                          <option value="DIFICIL">Difícil</option>
+                        </select>
+                      </div>
+
+                      <div className="lg:col-span-4 flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleLimparFiltrosQuestoes}
+                          className="bg-slate-200 border border-black rounded-lg px-3 py-1 font-bold text-xs hover:bg-slate-300 cursor-pointer"
+                        >
+                          Limpar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAplicarFiltrosQuestoes}
+                          className="bg-[#00D2DF] border border-black rounded-lg px-4 py-1 font-black text-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+                        >
+                          Buscar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                    {loadingQuestoes ? (
+                      <p className="text-xs font-bold text-slate-500 py-4 text-center animate-pulse">
+                        Carregando questões disponíveis...
+                      </p>
+                    ) : questoesDisponiveis.length === 0 ? (
+                      <p className="text-xs font-bold text-slate-500 py-4 text-center">
+                        Nenhuma questão encontrada com esses filtros.
+                      </p>
+                    ) : (
+                      questoesDisponiveis.map((q) => {
+                        const selecionada = questaoIdsSelecionadas.includes(
+                          q.id
+                        );
+                        return (
+                          <div
+                            key={q.id}
+                            onClick={() => handleToggleQuestaoSelecao(q.id)}
+                            className={`border-2 border-black rounded-xl p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                              selecionada
+                                ? "bg-[#00D2DF]/30 font-black"
+                                : "bg-slate-50 hover:bg-slate-100"
                             }`}
                           >
-                            {selecionada ? "Selecionada" : "Selecionar"}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
+                            <div className="text-xs truncate">
+                              <span className="bg-black text-white px-1.5 py-0.5 rounded mr-2 font-mono">
+                                ID {q.id}
+                              </span>
+                              {q.enunciado}
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-1 rounded border border-black font-black shrink-0 ${
+                                selecionada ? "bg-[#00D2DF]" : "bg-white"
+                              }`}
+                            >
+                              {selecionada ? "Selecionada" : "Selecionar"}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-2">
                   <button
                     type="submit"
                     disabled={isSubmittingSimulado}
-                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed uppercase text-sm"
+                    className="flex-1 bg-[#00D2DF] border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed uppercase text-sm cursor-pointer"
                   >
                     {isSubmittingSimulado
                       ? "Salvando..."
@@ -441,7 +622,7 @@ export default function SimuladosAdminPage() {
                     type="button"
                     disabled={isSubmittingSimulado}
                     onClick={handleResetForm}
-                    className="bg-slate-200 border-2 border-black rounded-xl px-6 py-3 font-black disabled:opacity-50 text-sm"
+                    className="bg-slate-200 border-2 border-black rounded-xl px-6 py-3 font-black disabled:opacity-50 text-sm cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -463,7 +644,7 @@ export default function SimuladosAdminPage() {
                 </div>
                 <button
                   onClick={() => setShowRankingModal(false)}
-                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg cursor-pointer"
                 >
                   ✕
                 </button>
@@ -593,7 +774,7 @@ export default function SimuladosAdminPage() {
                   <div className="flex flex-wrap gap-2 shrink-0">
                     <button
                       onClick={() => handleVerRanking(simulado)}
-                      className="bg-[#FF42DE] text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
+                      className="bg-[#FF42DE] text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer"
                     >
                       🏆 Ranking
                     </button>
@@ -601,7 +782,7 @@ export default function SimuladosAdminPage() {
                       onClick={() =>
                         handleToggleAtivo(simulado.id, simulado.ativo)
                       }
-                      className={`border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] ${
+                      className={`border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer ${
                         simulado.ativo ? "bg-amber-300" : "bg-green-300"
                       }`}
                     >
@@ -609,13 +790,13 @@ export default function SimuladosAdminPage() {
                     </button>
                     <button
                       onClick={() => handleEditSimulado(simulado)}
-                      className="bg-[#FFD700] border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
+                      className="bg-[#FFD700] border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDeleteSimulado(simulado.id)}
-                      className="bg-red-400 text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
+                      className="bg-red-400 text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer"
                     >
                       Excluir
                     </button>
@@ -631,7 +812,7 @@ export default function SimuladosAdminPage() {
               <button
                 onClick={() => fetchData(currentPage - 1)}
                 disabled={currentPage === 0 || loadingSimulados}
-                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 ← Página Anterior
               </button>
@@ -643,7 +824,7 @@ export default function SimuladosAdminPage() {
               <button
                 onClick={() => fetchData(currentPage + 1)}
                 disabled={currentPage + 1 >= totalPages || loadingSimulados}
-                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 Próxima Página →
               </button>
