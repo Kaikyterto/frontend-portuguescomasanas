@@ -9,6 +9,8 @@ import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 
 export default function AdminPage() {
+  const [loading, setLoading] = useState(true);
+
   const [totalQuestoes, setTotalQuestoes] = useState(0);
   const [totalModulos, setTotalModulos] = useState(0);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
@@ -24,6 +26,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     async function carregarDados() {
+      setLoading(true);
       try {
         const token = localStorage.getItem("@PortuguessComAnas:token");
 
@@ -176,6 +179,8 @@ export default function AdminPage() {
         setDadosCrescimento(contagemMeses);
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -235,71 +240,84 @@ export default function AdminPage() {
           <p className="font-bold text-slate-600">Visão geral da plataforma</p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-          {stats.map((item) => (
-            <Card
-              key={item.title}
-              className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[5px_5px_0_black] hover:-translate-y-1 transition"
-            >
-              <div className="text-3xl">{item.icon}</div>
-              <p className="text-xs font-black uppercase text-slate-500 mt-4">
-                {item.title}
-              </p>
-              <h2 className="text-3xl font-black">{item.value}</h2>
-            </Card>
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
+            <div className="w-12 h-12 border-4 border-black border-t-[#00D2DF] rounded-full animate-spin mb-4"></div>
+            <p className="font-black text-lg text-slate-800 uppercase tracking-wide">
+              Carregando dados...
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+              {stats.map((item) => (
+                <Card
+                  key={item.title}
+                  className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[5px_5px_0_black] hover:-translate-y-1 transition"
+                >
+                  <div className="text-3xl">{item.icon}</div>
+                  <p className="text-xs font-black uppercase text-slate-500 mt-4">
+                    {item.title}
+                  </p>
+                  <h2 className="text-3xl font-black">{item.value}</h2>
+                </Card>
+              ))}
+            </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
-            <h2 className="font-black mb-5">
-              📊 Crescimento de alunos por mês
-            </h2>
-            <div className="h-60 flex items-end gap-2 border-l-2 border-b-2 border-black p-4">
-              {dadosCrescimento.map((quantidade, i) => {
-                const alturaCalculada = Math.max(
-                  (quantidade / maxMes) * alturaMaximaCss,
-                  quantidade > 0 ? 15 : 4
-                );
+            <div className="grid lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-2 bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
+                <h2 className="font-black mb-5">
+                  📊 Crescimento de alunos por mês
+                </h2>
+                <div className="h-60 flex items-end gap-2 border-l-2 border-b-2 border-black p-4">
+                  {dadosCrescimento.map((quantidade, i) => {
+                    const alturaCalculada = Math.max(
+                      (quantidade / maxMes) * alturaMaximaCss,
+                      quantidade > 0 ? 15 : 4
+                    );
 
-                return (
-                  <div
-                    className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
-                    key={i}
-                  >
-                    <span className="text-[11px] font-black text-slate-800 bg-white/80 border border-black/20 px-1 rounded shadow-sm">
-                      {quantidade}
-                    </span>
-                    <span className="absolute -top-7 opacity-0 group-hover:opacity-100 transition bg-black text-white text-[10px] font-black py-0.5 px-1.5 rounded pointer-events-none z-10 whitespace-nowrap">
-                      {quantidade} aluno(s)
-                    </span>
+                    return (
+                      <div
+                        className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
+                        key={i}
+                      >
+                        <span className="text-[11px] font-black text-slate-800 bg-white/80 border border-black/20 px-1 rounded shadow-sm">
+                          {quantidade}
+                        </span>
+                        <span className="absolute -top-7 opacity-0 group-hover:opacity-100 transition bg-black text-white text-[10px] font-black py-0.5 px-1.5 rounded pointer-events-none z-10 whitespace-nowrap">
+                          {quantidade} aluno(s)
+                        </span>
 
-                    <div
-                      className="w-full bg-[#00D2DF] border-2 border-black rounded-t-xl transition-all duration-300"
-                      style={{ height: `${alturaCalculada}px` }}
-                    />
-                    <span className="text-[10px] font-black">{labels[i]}</span>
+                        <div
+                          className="w-full bg-[#00D2DF] border-2 border-black rounded-t-xl transition-all duration-300"
+                          style={{ height: `${alturaCalculada}px` }}
+                        />
+                        <span className="text-[10px] font-black">
+                          {labels[i]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
+                <h2 className="font-black mb-4">Atividade hoje</h2>
+                <div className="space-y-3">
+                  <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
+                    👨‍🎓 {usuariosHoje} usuário(s) cadastrado(s) hoje
                   </div>
-                );
-              })}
+                  <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
+                    ▶️ {aulasHoje} aula(s) assistida(s) hoje
+                  </div>
+                  <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
+                    📝 {questoesHoje} questão(ões) respondida(s) hoje
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
-
-          <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black]">
-            <h2 className="font-black mb-4">Atividade hoje</h2>
-            <div className="space-y-3">
-              <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
-                👨‍🎓 {usuariosHoje} usuário(s) cadastrado(s) hoje
-              </div>
-              <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
-                ▶️ {aulasHoje} aula(s) assistida(s) hoje
-              </div>
-              <div className="bg-white border-2 border-black rounded-xl p-4 font-black">
-                📝 {questoesHoje} questão(ões) respondida(s) hoje
-              </div>
-            </div>
-          </Card>
-        </div>
+          </>
+        )}
       </main>
 
       <footer className="bg-[#F4EFE6] py-4 text-center text-xs font-bold text-slate-700 flex justify-center gap-6 px-4">
