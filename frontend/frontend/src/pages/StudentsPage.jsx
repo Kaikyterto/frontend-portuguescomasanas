@@ -549,36 +549,18 @@ export default function StudentsPage() {
                 <div className="space-y-3 mb-4">
                   {enrolledStudents.length > 0 ? (
                     enrolledStudents.map((matricula, index) => {
-                      console.log(`Matrícula [${index}]:`, matricula);
-                      const studentId =
-                        matricula.usuarioId ||
-                        matricula.idUsuario ||
-                        matricula.id ||
-                        matricula._id ||
-                        matricula.usuario?.id ||
-                        matricula.aluno?.id;
+                      const studentId = matricula.usuarioId;
 
                       const fullUser = allUsers.find(
                         (u) => String(u.id || u._id) === String(studentId)
                       );
 
                       const studentName =
-                        matricula.nomeUsuario ||
-                        matricula.nomeAluno ||
-                        matricula.nome ||
-                        matricula.usuario?.nome ||
-                        matricula.aluno?.nome ||
-                        fullUser?.nome ||
+                        matricula.usuarioNome ||
                         `Aluno ID: ${studentId || "N/A"}`;
 
                       const studentEmail =
-                        matricula.emailUsuario ||
-                        matricula.emailAluno ||
-                        matricula.email ||
-                        matricula.usuario?.email ||
-                        matricula.aluno?.email ||
-                        fullUser?.email ||
-                        "E-mail não informado";
+                        matricula.usuarioEmail || "E-mail não informado";
 
                       return (
                         <div
