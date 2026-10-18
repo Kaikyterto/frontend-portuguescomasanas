@@ -549,6 +549,7 @@ export default function StudentsPage() {
                 <div className="space-y-3 mb-4">
                   {enrolledStudents.length > 0 ? (
                     enrolledStudents.map((matricula, index) => {
+                      console.log(`Matrícula [${index}]:`, matricula);
                       const studentId =
                         matricula.usuarioId ||
                         matricula.idUsuario ||
