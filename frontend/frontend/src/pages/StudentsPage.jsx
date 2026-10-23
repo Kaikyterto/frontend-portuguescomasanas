@@ -48,7 +48,6 @@ export default function StudentsPage() {
 
   const [courses, setCourses] = useState([]);
 
-  // Estados para gerenciar os usuários da API com paginação real
   const [allUsers, setAllUsers] = useState([]);
   const [apiUserPage, setApiUserPage] = useState(0);
   const [apiUserTotalPages, setApiUserTotalPages] = useState(0);
@@ -57,11 +56,9 @@ export default function StudentsPage() {
 
   const [selectedCourse, setSelectedCourse] = useState(null);
 
-  // Cache independente por curso e página para os alunos matriculados
   const [studentsCache, setStudentsCache] = useState({});
   const [loadingStudents, setLoadingStudents] = useState(false);
 
-  // Paginação
   const [page, setPage] = useState(0);
   const [size] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
@@ -93,7 +90,6 @@ export default function StudentsPage() {
     }
   };
 
-  // Função para buscar usuários paginados da API
   const carregarUsuariosApi = async (paginaDesejada = 0, authToken = token) => {
     setLoadingModalUsers(true);
     try {
@@ -153,7 +149,6 @@ export default function StudentsPage() {
     const pagina = Math.max(0, paginaDesejada);
     const cacheKey = `${courseId}_${pagina}`;
 
-    // Se já temos os dados no cache independente e não estamos forçando a atualização, reaproveitamos
     if (!forceRefresh && studentsCache[cacheKey]) {
       setPage(pagina);
       setTotalPages(studentsCache[cacheKey].totalPages);
@@ -187,22 +182,27 @@ export default function StudentsPage() {
 
       const alunosAtivos = listaMatriculas.filter((matricula) => {
         const status = matricula.status || matricula.situacao;
-        return status !== "CANCELADA";
+        return status === "ATIVA";
       });
 
-      // Atualiza o cache independente para esta página específica
+      const totalAlunosAtivosExibidos = Array.isArray(resultadoPaginado)
+        ? alunosAtivos.length
+        : totalElems - (listaMatriculas.length - alunosAtivos.length);
+
+      const totalCalculado = Math.max(0, totalAlunosAtivosExibidos);
+
       setStudentsCache((prev) => ({
         ...prev,
         [cacheKey]: {
           students: alunosAtivos,
           totalPages: totalPgs,
-          totalElements: totalElems,
+          totalElements: totalCalculado,
         },
       }));
 
       setTotalPages(totalPgs);
       setPage(pagina);
-      setTotalElements(totalElems);
+      setTotalElements(totalCalculado);
     } catch (error) {
       console.error("Erro ao carregar alunos do curso:", error);
       setTotalPages(0);
@@ -341,14 +341,13 @@ export default function StudentsPage() {
     try {
       await cursoService.matricular(courseId, selectedUserToEnroll, token);
 
-      // Limpa o cache para forçar a recarga limpa da página atual com o novo aluno
       setStudentsCache({});
       await carregarAlunosDoCurso(selectedCourse, page, true);
 
       setSelectedUserToEnroll("");
       setUserSearchFilter("");
       setIsEnrollModalOpen(false);
-      carregarUsuariosApi(0); // Volta para a página 1 da listagem geral de usuários
+      carregarUsuariosApi(0);
 
       setModalConfig({
         isOpen: true,
@@ -387,7 +386,6 @@ export default function StudentsPage() {
             paginaParaRecarregar = page - 1;
           }
 
-          // Limpa o cache e recarrega os dados atualizados
           setStudentsCache({});
           await carregarAlunosDoCurso(
             selectedCourse,
@@ -413,7 +411,6 @@ export default function StudentsPage() {
     });
   };
 
-  // Obtém os alunos da página atual através do cache independente
   const currentCourseId = selectedCourse
     ? selectedCourse.id || selectedCourse._id
     : null;
@@ -502,7 +499,6 @@ export default function StudentsPage() {
         </Card>
       </main>
 
-      {/* Modal de Alunos do Curso */}
       {selectedCourse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="w-full max-w-2xl my-auto">
@@ -614,7 +610,6 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {/* Controles de Paginação */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t-2 border-black pt-3 mt-auto">
                   <button
@@ -645,7 +640,6 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Modal de Insights Individuais do Aluno */}
       {selectedStudent && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto">
           <div className="w-full max-w-xl my-auto">
@@ -779,7 +773,6 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Modal de Matrícula com Paginação Real da API */}
       {isEnrollModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
           <div className="w-full max-w-sm">
@@ -819,83 +812,41 @@ export default function StudentsPage() {
                   </label>
 
                   {loadingModalUsers ? (
-                    <p className="text-center text-xs font-bold py-6 animate-pulse text-slate-600">
-                      Carregando usuários da página...
+                    <p className="text-xs font-bold text-center py-4 text-slate-500 animate-pulse">
+                      Carregando lista...
                     </p>
                   ) : (
                     <select
                       value={selectedUserToEnroll}
                       onChange={(e) => setSelectedUserToEnroll(e.target.value)}
-                      required
                       disabled={isEnrolling}
-                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none text-sm cursor-pointer disabled:opacity-50"
+                      className="w-full border-2 border-black rounded-xl p-2.5 font-bold bg-white shadow-[3px_3px_0_black] focus:outline-none text-xs"
                     >
-                      <option value="" disabled>
-                        {filteredUsersToEnroll.length === 0
-                          ? "Nenhum usuário nesta página..."
-                          : "Escolha um usuário..."}
-                      </option>
-                      {filteredUsersToEnroll.map((user) => (
-                        <option
-                          key={user.id || user._id}
-                          value={user.id || user._id}
-                        >
-                          {user.nome} ({user.email})
+                      <option value="">-- Escolha um usuário --</option>
+                      {filteredUsersToEnroll.map((u) => (
+                        <option key={u.id || u._id} value={u.id || u._id}>
+                          {u.nome} ({u.email})
                         </option>
                       ))}
                     </select>
                   )}
-
-                  {/* Controles de Paginação Real da API para os Usuários */}
-                  {apiUserTotalPages > 1 && (
-                    <div className="flex items-center justify-between border-2 border-black rounded-xl p-2 mt-3 bg-white shadow-[2px_2px_0_black]">
-                      <button
-                        type="button"
-                        onClick={() => carregarUsuariosApi(apiUserPage - 1)}
-                        disabled={
-                          apiUserPage <= 0 || loadingModalUsers || isEnrolling
-                        }
-                        className="bg-[#F4EFE6] border border-black px-2.5 py-1 rounded-md text-xs font-black disabled:opacity-40 cursor-pointer"
-                      >
-                        ← Ant
-                      </button>
-                      <span className="text-xs font-black uppercase text-slate-700">
-                        Pág {apiUserPage + 1} de {apiUserTotalPages}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => carregarUsuariosApi(apiUserPage + 1)}
-                        disabled={
-                          apiUserPage >= apiUserTotalPages - 1 ||
-                          loadingModalUsers ||
-                          isEnrolling
-                        }
-                        className="bg-[#F4EFE6] border border-black px-2.5 py-1 rounded-md text-xs font-black disabled:opacity-40 cursor-pointer"
-                      >
-                        Próx →
-                      </button>
-                    </div>
-                  )}
                 </div>
 
-                <div className="flex gap-2 p-2">
-                  <button
-                    type="submit"
-                    disabled={isEnrolling || !selectedUserToEnroll}
-                    className="flex-1 bg-[#00D2DF] text-black border-2 border-black rounded-xl py-2.5 text-xs font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed transition"
-                  >
-                    {isEnrolling ? "Matriculando..." : "Confirmar"}
-                  </button>
+                <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsEnrollModalOpen(false);
-                      carregarUsuariosApi(0);
-                    }}
+                    onClick={() => setIsEnrollModalOpen(false)}
                     disabled={isEnrolling}
-                    className="bg-white text-black border-2 border-black rounded-xl px-3 py-2.5 text-xs font-black shadow-[3px_3px_0_black] disabled:opacity-50 cursor-pointer"
+                    className="bg-white border-2 border-black px-3 py-1.5 rounded-xl text-xs font-black shadow-[2px_2px_0_black] hover:shadow-none transition cursor-pointer"
                   >
                     Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!selectedUserToEnroll || isEnrolling}
+                    className="bg-[#00D2DF] border-2 border-black px-3 py-1.5 rounded-xl text-xs font-black shadow-[2px_2px_0_black] hover:shadow-none transition cursor-pointer disabled:opacity-50"
+                  >
+                    {isEnrolling ? "Matriculando..." : "Confirmar"}
                   </button>
                 </div>
               </form>
