@@ -217,11 +217,14 @@ export default function UserPage() {
           console.error("Erro ao carregar filtros auxiliares:", fErr);
         }
 
-const idsCursosComAcesso = new Set(
-  (meusCursosRes || [])
-    .filter((m) => m.curso?.status === 'ATIVA') 
-    .map((m) => m.cursoId)
-);
+      const idsCursosComAcesso = new Set(
+        (meusCursosRes || [])
+          .filter((m) => m.status === 'ATIVA') 
+          .map((m) => m.cursoId)
+      );
+
+        
+
        
 
         const cursosComStatus = (dadosCursos || []).map((curso) => ({
