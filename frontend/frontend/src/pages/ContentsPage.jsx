@@ -7,6 +7,8 @@ import { bancaService } from "../service/banca";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
 import { gravacaoService } from "../service/gravacao";
+import { aulaService } from "../service/aula";
+import { pdfService } from "../service/pdf";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 import { API_URL } from "../config/api";
@@ -120,30 +122,6 @@ export const assuntoService = {
 };
 
 // ==========================================
-// SERVIÇO DE AULAS (API)
-// ==========================================
-
-export const aulaService = {
-  async criar(cursoId, moduloId, aulaData, token) {
-    const response = await fetch(
-      `${API_URL}/api/cursos/${cursoId}/modulos/${moduloId}/aulas`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(aulaData),
-      }
-    );
-    const text = await response.text();
-    const data = text ? JSON.parse(text) : {};
-    if (!response.ok) throw new Error(data.message || "Erro ao criar aula");
-    return data;
-  },
-};
-
-// ==========================================
 // COMPONENTE PRINCIPAL
 // ==========================================
 
@@ -162,6 +140,7 @@ export default function ContentsPage() {
   const [isSubmittingDeleteCurso, setIsSubmittingDeleteCurso] = useState(false);
   const [isSubmittingDeleteQuestao, setIsSubmittingDeleteQuestao] =
     useState(false);
+  const [isSubmittingPdf, setIsSubmittingPdf] = useState(false);
 
   // Alerta Modal
   const [alertConfig, setAlertConfig] = useState({
@@ -194,6 +173,21 @@ export default function ContentsPage() {
 
   const [aulaOrdem, setAulaOrdem] = useState(1);
   const [aulaLinkVideo, setAulaLinkVideo] = useState("");
+
+  // ==========================================
+  // ESTADOS PARA PDF (UPLOAD E VÍNCULO)
+  // ==========================================
+  const [selectedCursoForPdf, setSelectedCursoForPdf] = useState("");
+  const [modulosDisponiveisParaPdf, setModulosDisponiveisParaPdf] = useState([]);
+  const [aulasDisponiveisParaPdf, setAulasDisponiveisParaPdf] = useState([]);
+  const [pdfArquivo, setPdfArquivo] = useState(null);
+  const [pdfTitulo, setPdfTitulo] = useState("");
+  const [pdfDescricao, setPdfDescricao] = useState("");
+  const [pdfModuloId, setPdfModuloId] = useState("");
+  const [pdfAulaId, setPdfAulaId] = useState("");
+  const [pdfOrdem, setPdfOrdem] = useState(1);
+  const [pdfPublicado, setPdfPublicado] = useState(false);
+  const [materiaisPdfCurso, setMateriaisPdfCurso] = useState([]);
 
   // Modal de Módulos
   const [showModuloModal, setShowModuloModal] = useState(false);
@@ -340,6 +334,144 @@ export default function ContentsPage() {
     }
   };
 
+  // ==========================================
+  // HANDLERS PARA PDF (CURSO / MÓDULO / AULA)
+  // ==========================================
+  const handleCursoPdfChange = async (cursoId) => {
+    setSelectedCursoForPdf(cursoId);
+    setPdfModuloId("");
+    setPdfAulaId("");
+    setModulosDisponiveisParaPdf([]);
+    setAulasDisponiveisParaPdf([]);
+    setMateriaisPdfCurso([]);
+
+    if (!cursoId) return;
+    try {
+      const [modulos, materiais] = await Promise.all([
+        moduloService.listarModulos(cursoId, token),
+        pdfService.listarMateriaisCurso(cursoId, 0, 100, token),
+      ]);
+      setModulosDisponiveisParaPdf(modulos || []);
+      setMateriaisPdfCurso(materiais?.content || []);
+    } catch (error) {
+      console.error("Erro ao carregar dados do curso para PDF:", error);
+    }
+  };
+
+  const handleModuloPdfChange = async (moduloId) => {
+    setPdfModuloId(moduloId);
+    setPdfAulaId("");
+    setAulasDisponiveisParaPdf([]);
+
+    if (!moduloId || !selectedCursoForPdf) return;
+    try {
+      const aulas = await aulaService.listar(selectedCursoForPdf, moduloId, token);
+      setAulasDisponiveisParaPdf(aulas || []);
+    } catch (error) {
+      console.error("Erro ao carregar aulas do módulo para PDF:", error);
+    }
+  };
+
+  const handleCreatePdfMaterial = async (e) => {
+    e.preventDefault();
+    if (isSubmittingPdf) return;
+
+    if (!selectedCursoForPdf || !pdfArquivo || !pdfTitulo.trim()) {
+      showAlert("Por favor, selecione o curso, anexe o arquivo PDF e preencha o título.", "error");
+      return;
+    }
+
+    if (pdfArquivo.size > 35 * 1024 * 1024) {
+      showAlert("O arquivo excede o limite permitido de 35 MiB.", "error");
+      return;
+    }
+
+    setIsSubmittingPdf(true);
+    try {
+      // 1. Upload do arquivo PDF
+      const arquivoResp = await pdfService.uploadArquivo(pdfArquivo, token);
+
+      // 2. Vinculação do material ao curso
+      const payloadVinculo = {
+        arquivoId: arquivoResp.id,
+        titulo: pdfTitulo.trim(),
+        descricao: pdfDescricao.trim() || null,
+        moduloId: pdfModuloId ? Number(pdfModuloId) : null,
+        aulaId: pdfAulaId ? Number(pdfAulaId) : null,
+        ordem: Number(pdfOrdem) || 1,
+        publicado: pdfPublicado,
+      };
+
+      await pdfService.vincularMaterial(selectedCursoForPdf, payloadVinculo, token);
+
+      showAlert("Material em PDF cadastrado e vinculado com sucesso!");
+
+      // Limpar formulário de PDF
+      setPdfArquivo(null);
+      setPdfTitulo("");
+      setPdfDescricao("");
+      setPdfModuloId("");
+      setPdfAulaId("");
+      setPdfOrdem(1);
+      setPdfPublicado(false);
+
+      // Atualizar listagem
+      const materiais = await pdfService.listarMateriaisCurso(selectedCursoForPdf, 0, 100, token);
+      setMateriaisPdfCurso(materiais?.content || []);
+    } catch (error) {
+      console.error("Erro ao cadastrar material PDF:", error);
+      showAlert(`Erro ao cadastrar PDF: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingPdf(false);
+    }
+  };
+
+  const handleTogglePublicadoPdf = async (material) => {
+    try {
+      await pdfService.atualizarMaterial(
+        selectedCursoForPdf,
+        material.id,
+        { publicado: !material.publicado },
+        token
+      );
+      const materiais = await pdfService.listarMateriaisCurso(selectedCursoForPdf, 0, 100, token);
+      setMateriaisPdfCurso(materiais?.content || []);
+    } catch (err) {
+      showAlert("Erro ao alterar status de publicação: " + err.message, "error");
+    }
+  };
+
+  const handleDesvincularPdf = async (materialId) => {
+    showAlert("Deseja realmente desvincular este PDF do curso?", "confirm", async () => {
+      try {
+        await pdfService.desvincularMaterial(selectedCursoForPdf, materialId, token);
+        showAlert("Material desvinculado com sucesso!");
+        const materiais = await pdfService.listarMateriaisCurso(selectedCursoForPdf, 0, 100, token);
+        setMateriaisPdfCurso(materiais?.content || []);
+      } catch (err) {
+        showAlert("Erro ao desvincular material: " + err.message, "error");
+      }
+    });
+  };
+
+  const handleDeletarArquivoDrive = async (material) => {
+    showAlert(
+      "ATENÇÃO: Isso enviará o arquivo para a LIXEIRA DO DRIVE e removerá o cadastro do sistema. Confirmar?",
+      "confirm",
+      async () => {
+        try {
+          await pdfService.desvincularMaterial(selectedCursoForPdf, material.id, token);
+          await pdfService.deletarArquivoPermanente(material.arquivoId, token);
+          showAlert("Arquivo enviado à lixeira do Drive com sucesso!");
+          const materiais = await pdfService.listarMateriaisCurso(selectedCursoForPdf, 0, 100, token);
+          setMateriaisPdfCurso(materiais?.content || []);
+        } catch (err) {
+          showAlert("Erro ao excluir arquivo permanentemente: " + err.message, "error");
+        }
+      }
+    );
+  };
+
   const handleCreateAula = async (e) => {
     e.preventDefault();
     if (isSubmittingVideo) return;
@@ -381,7 +513,6 @@ export default function ContentsPage() {
             ? todasGravacoes
             : todasGravacoes?.content || [];
 
-          // Extrai o ID do vídeo do YouTube digitado para comparar de forma segura (ex: "QVOOnN-YWYU")
           const extrairYoutubeId = (url) => {
             const regExp =
               /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -391,7 +522,6 @@ export default function ContentsPage() {
 
           const videoIdDigitado = extrairYoutubeId(aulaLinkVideo.trim());
 
-          // Procura na lista a gravação que tenha o mesmo ID do YouTube ou embed correspondente
           const gravacaoExistente = lista.find((g) => {
             if (
               videoIdDigitado &&
@@ -419,7 +549,6 @@ export default function ContentsPage() {
         }
       }
 
-      // Agora com o gravacaoId garantido, criamos a aula no curso/módulo correto
       const aulaPayload = {
         titulo: aulaTitulo.trim(),
         ordem: parseInt(aulaOrdem) || 1,
@@ -436,7 +565,6 @@ export default function ContentsPage() {
 
       showAlert("Aula cadastrada com sucesso!");
 
-      // Limpa o formulário
       setAulaTitulo("");
       setAulaOrdem(1);
       setAulaLinkVideo("");
@@ -778,7 +906,6 @@ export default function ContentsPage() {
       nivel: questionNivel,
       explicacao: questionExplicacao,
       fonte: questionFonte,
-      // FILTRE AQUI para enviar apenas as alternativas preenchidas:
       alternativas: alternativas
         .filter((alt) => alt.texto && alt.texto.trim() !== "")
         .map((alt) => ({
@@ -863,7 +990,6 @@ export default function ContentsPage() {
       setQuestaoParaExcluir(null);
       fetchQuestions(currentPage);
     } catch (error) {
-      // Tratamento específico para o erro 409 (Questão já respondida)
       if (
         error.status === 409 ||
         (error.message && error.message.includes("409"))
@@ -895,7 +1021,7 @@ export default function ContentsPage() {
               Gerenciar Conteúdos
             </h1>
             <p className="font-bold text-slate-600 text-sm sm:text-base">
-              Crie cursos, aulas, assuntos, bancas e questões integradas
+              Crie cursos, aulas, materiais PDF, assuntos, bancas e questões integradas
             </p>
           </div>
         </div>
@@ -1796,6 +1922,206 @@ export default function ContentsPage() {
                   {isSubmittingVideo ? "Cadastrando Aula..." : "Cadastrar Aula"}
                 </button>
               </form>
+            </Card>
+
+            {/* ========================================== */}
+            {/* FORMULÁRIO: UPLOAD E VÍNCULO DE PDF */}
+            {/* ========================================== */}
+            <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
+              <h2 className="font-black uppercase mb-5 text-xl">📄 Adicionar Material PDF</h2>
+              <form onSubmit={handleCreatePdfMaterial} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Selecione o Curso *
+                  </label>
+                  <select
+                    value={selectedCursoForPdf}
+                    disabled={isSubmittingPdf}
+                    onChange={(e) => handleCursoPdfChange(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  >
+                    <option value="">Escolha o curso...</option>
+                    {cursos.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.titulo || c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Arquivo PDF (Máx. 35 MiB) *
+                  </label>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    disabled={isSubmittingPdf}
+                    onChange={(e) => setPdfArquivo(e.target.files[0] || null)}
+                    className="w-full border-2 border-black rounded-xl p-2 font-bold text-xs bg-white disabled:opacity-50 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-[#00D2DF] file:text-black hover:file:bg-cyan-300"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Título do Material *
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={150}
+                    placeholder="Ex: Apostila de Revisão"
+                    value={pdfTitulo}
+                    disabled={isSubmittingPdf}
+                    onChange={(e) => setPdfTitulo(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Descrição (Opcional)
+                  </label>
+                  <textarea
+                    maxLength={2000}
+                    rows={2}
+                    placeholder="Leitura complementar..."
+                    value={pdfDescricao}
+                    disabled={isSubmittingPdf}
+                    onChange={(e) => setPdfDescricao(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Vincular a Módulo 
+                  </label>
+                  <select
+                    value={pdfModuloId}
+                    disabled={isSubmittingPdf || !selectedCursoForPdf}
+                    onChange={(e) => handleModuloPdfChange(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  >
+                    <option value="">(Nenhum - Geral do Curso)</option>
+                    {modulosDisponiveisParaPdf.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Vincular a Aula 
+                  </label>
+                  <select
+                    value={pdfAulaId}
+                    disabled={isSubmittingPdf || !pdfModuloId}
+                    onChange={(e) => setPdfAulaId(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  >
+                    <option value="">(Nenhuma - Apenas Módulo/Curso)</option>
+                    {aulasDisponiveisParaPdf.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black uppercase mb-1">
+                      Ordem *
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={pdfOrdem}
+                      disabled={isSubmittingPdf}
+                      onChange={(e) => setPdfOrdem(e.target.value)}
+                      className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-6">
+                    <input
+                      type="checkbox"
+                      id="pdfPubCheck"
+                      checked={pdfPublicado}
+                      disabled={isSubmittingPdf}
+                      onChange={(e) => setPdfPublicado(e.target.checked)}
+                      className="w-4 h-4 accent-[#7B5CFA] cursor-pointer"
+                    />
+                    <label
+                      htmlFor="pdfPubCheck"
+                      className="text-xs font-black uppercase cursor-pointer"
+                    >
+                      Publicar
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingPdf}
+                  className="w-full bg-[#FFD700] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingPdf ? "Enviando e Vinculando..." : "Salvar & Vincular PDF"}
+                </button>
+              </form>
+
+              {/* LISTAGEM DOS MATERIAIS JÁ VINCULADOS AO CURSO SELECIONADO */}
+              {selectedCursoForPdf && materiaisPdfCurso.length > 0 && (
+                <div className="mt-6 pt-4 border-t-2 border-black">
+                  <h3 className="font-black uppercase text-xs mb-3">
+                    PDFs Vinculados a este Curso ({materiaisPdfCurso.length})
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {materiaisPdfCurso.map((mat) => (
+                      <div
+                        key={mat.id}
+                        className="bg-white border-2 border-black rounded-xl p-2.5 flex flex-col gap-1 text-xs"
+                      >
+                        <div className="flex justify-between items-start gap-1">
+                          <span className="font-black truncate">{mat.titulo}</span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-black border border-black ${
+                              mat.publicado ? "bg-emerald-300" : "bg-amber-200"
+                            }`}
+                          >
+                            {mat.publicado ? "PÚBLICO" : "RASCUNHO"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 truncate">
+                          {mat.nomeArquivo}
+                        </span>
+                        <div className="flex flex-wrap gap-1 mt-1 pt-1 border-t border-dashed border-slate-200">
+                          <button
+                            onClick={() => handleTogglePublicadoPdf(mat)}
+                            className="bg-slate-100 border border-black px-1.5 py-0.5 rounded text-[10px] font-black"
+                          >
+                            {mat.publicado ? "Tornar Rascunho" : "Publicar"}
+                          </button>
+                          <button
+                            onClick={() => handleDesvincularPdf(mat.id)}
+                            className="bg-amber-100 border border-black px-1.5 py-0.5 rounded text-[10px] font-black"
+                          >
+                            Desvincular
+                          </button>
+                          <button
+                            onClick={() => handleDeletarArquivoDrive(mat)}
+                            className="bg-red-300 border border-black px-1.5 py-0.5 rounded text-[10px] font-black text-white"
+                          >
+                            Excluir do Drive
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         </div>
