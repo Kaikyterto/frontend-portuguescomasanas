@@ -90,25 +90,36 @@ export default function StudentsPage() {
     }
   };
 
-  const carregarUsuariosApi = async (paginaDesejada = 0, authToken = token) => {
+  const carregarUsuariosApi = async (authToken = token) => {
     setLoadingModalUsers(true);
     try {
-      const data = await listarUsuarios(paginaDesejada, 100, authToken);
+      let paginaAtual = 0;
+      let totalPgs = 1;
+      let todosOsUsuarios = [];
 
-      if (data && Array.isArray(data.content)) {
-        setAllUsers(data.content);
-        setApiUserPage(Number(data.number) || paginaDesejada);
-        setApiUserTotalPages(Number(data.totalPages) || 0);
-        setApiUserTotalElements(Number(data.totalElements) || 0);
+      const primeiraResposta = await listarUsuarios(paginaAtual, 100, authToken);
+
+      if (primeiraResposta && Array.isArray(primeiraResposta.content)) {
+        todosOsUsuarios = [...primeiraResposta.content];
+        totalPgs = Number(primeiraResposta.totalPages) || 1;
+
+        while (paginaAtual < totalPgs - 1) {
+          paginaAtual++;
+          const proximaResposta = await listarUsuarios(paginaAtual, 100, authToken);
+          if (proximaResposta && Array.isArray(proximaResposta.content)) {
+            todosOsUsuarios = [...todosOsUsuarios, ...proximaResposta.content];
+          }
+        }
+
+        setAllUsers(todosOsUsuarios);
+        setApiUserTotalElements(todosOsUsuarios.length);
       } else {
-        const listaArray = Array.isArray(data) ? data : [];
+        const listaArray = Array.isArray(primeiraResposta) ? primeiraResposta : [];
         setAllUsers(listaArray);
-        setApiUserPage(0);
-        setApiUserTotalPages(1);
         setApiUserTotalElements(listaArray.length);
       }
     } catch (error) {
-      console.error("Erro ao carregar usuários:", error);
+      console.error("Erro ao carregar todos os usuários:", error);
     } finally {
       setLoadingModalUsers(false);
     }
@@ -126,7 +137,7 @@ export default function StudentsPage() {
         setLoading(true);
         const dadosUsuario = await buscarDadosUsuarioLogado(token);
         setUsuario(dadosUsuario);
-        await Promise.all([fetchCourses(token), carregarUsuariosApi(0, token)]);
+        await Promise.all([fetchCourses(token), carregarUsuariosApi(token)]);
       } catch (error) {
         console.error("Erro de autenticação:", error);
         localStorage.removeItem("@PortuguessComAnas:token");
@@ -347,7 +358,7 @@ export default function StudentsPage() {
       setSelectedUserToEnroll("");
       setUserSearchFilter("");
       setIsEnrollModalOpen(false);
-      carregarUsuariosApi(0);
+      carregarUsuariosApi();
 
       setModalConfig({
         isOpen: true,
@@ -528,7 +539,7 @@ export default function StudentsPage() {
                   onClick={() => {
                     setUserSearchFilter("");
                     setSelectedUserToEnroll("");
-                    carregarUsuariosApi(0);
+                    carregarUsuariosApi();
                     setIsEnrollModalOpen(true);
                   }}
                   className="bg-[#00D2DF] text-black border-2 border-black rounded-lg px-3 py-1.5 text-xs font-black shadow-[2px_2px_0_black] transition cursor-pointer"
@@ -784,7 +795,7 @@ export default function StudentsPage() {
                 <button
                   onClick={() => {
                     setIsEnrollModalOpen(false);
-                    carregarUsuariosApi(0);
+                    carregarUsuariosApi();
                   }}
                   disabled={isEnrolling}
                   className="bg-white border-2 border-black rounded-lg px-2 py-0.5 text-xs font-black disabled:opacity-50 cursor-pointer"
