@@ -1,6 +1,6 @@
 import { API_URL } from "../config/api";
 
-export async function createCheckout(courseId) {
+export async function createCheckout(cursoId) {
   const token = localStorage.getItem("token");
 
   const response = await fetch(`${API_URL}/api/payments/checkout`, {
@@ -9,7 +9,7 @@ export async function createCheckout(courseId) {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ courseId }),
+    body: JSON.stringify({ cursoId: Number(cursoId) }), // Enviando como 'cursoId'
   });
 
   const data = await response.json();

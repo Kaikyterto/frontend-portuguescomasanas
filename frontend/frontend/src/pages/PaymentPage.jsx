@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { buscarPorId } from "../service/curso"; // Ajuste o caminho conforme a estrutura do seu projeto
+import { buscarPorId } from "../service/curso"; 
+import { createCheckout } from "../service/payment"; 
 
 export default function PaymentPage() {
   const { id } = useParams();
@@ -10,12 +11,12 @@ export default function PaymentPage() {
   // Obtém o ID do curso vindo do parâmetro de rota (:id) ou query string (?id=)
   const cursoId = id || searchParams.get("id");
 
-  // Estado para armazenar os dados do curso buscado na API
+  
   const [curso, setCurso] = useState(null);
   const [carregandoCurso, setCarregandoCurso] = useState(true);
   const [erroCurso, setErroCurso] = useState("");
 
-  // Navigation & Flow State
+  
   const [method, setMethod] = useState("credit_card"); // 'credit_card' | 'pix' | 'boleto'
   const [installments, setInstallments] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -23,7 +24,7 @@ export default function PaymentPage() {
   const [pixCopied, setPixCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Form State
+ 
   const [formData, setFormData] = useState({
     cardNumber: "",
     cardHolder: "",
@@ -36,7 +37,7 @@ export default function PaymentPage() {
     address: "",
   });
 
-  // Busca as informações do curso no Backend
+  
   useEffect(() => {
     async function carregarCurso() {
       if (!cursoId) {
@@ -48,7 +49,7 @@ export default function PaymentPage() {
       try {
         setCarregandoCurso(true);
         setErroCurso("");
-        const token = localStorage.getItem("@PortuguessComAnas:token");
+        const token = localStorage.getItem("token") || localStorage.getItem("@PortuguessComAnas:token");
 
         // Chamada à API
         const dados = await buscarPorId(cursoId, token);
@@ -79,7 +80,7 @@ export default function PaymentPage() {
     carregarCurso();
   }, [cursoId]);
 
-  // Valor total a ser pago
+  
   const totalAmount = curso?.precoNum || 0;
 
   // Formatação em Moeda Real (BRL)
@@ -176,38 +177,21 @@ export default function PaymentPage() {
     setTimeout(() => setPixCopied(false), 3000);
   };
 
-  // Processamento do pagamento
+  // Processamento do pagamento integrado ao backend
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("@PortuguessComAnas:token");
+      // Chama a função createCheckout passando o ID do curso
+      const response = await createCheckout(curso?.id);
 
-      const payload = {
-        cursoId: curso?.id,
-        paymentMethod: method,
-        amount:
-          method === "credit_card" ? selectedInstallmentObj.total : totalAmount,
-        installments: method === "credit_card" ? installments : 1,
-        payer: {
-          fullName: formData.fullName,
-          email: formData.email,
-          cpfCnpjs: formData.cpfCnpjs,
-        },
-        ...(method === "credit_card" && {
-          card: {
-            number: formData.cardNumber.replace(/\s/g, ""),
-            holder: formData.cardHolder,
-            expiry: formData.cardExpiry,
-            cvv: formData.cardCvv,
-          },
-        }),
-      };
-
-      // Simulação do tempo de resposta
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Se o backend retornar URL de preferência/checkout (ex: Mercado Pago), redireciona
+      if (response?.checkoutUrl || response?.initPoint || response?.url) {
+        window.location.href = response.checkoutUrl || response.initPoint || response.url;
+        return;
+      }
 
       setLoading(false);
       setPaymentSuccess(true);
@@ -365,7 +349,7 @@ export default function PaymentPage() {
                         : "bg-slate-100 hover:bg-slate-200"
                     }`}
                   >
-                    <span>⚡ Pix</span>
+                    <span> Pix</span>
                   </button>
 
                   <button
