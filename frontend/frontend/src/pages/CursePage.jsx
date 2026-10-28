@@ -6,6 +6,7 @@ import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
 import { aulaService } from "../service/aula";
+import { pdfService } from "../service/pdf";
 
 export default function CursePage() {
   const navigate = useNavigate();
@@ -20,6 +21,11 @@ export default function CursePage() {
   const [moduloAtivo, setModuloAtivo] = useState(null);
   const [videoSelecionado, setVideoSelecionado] = useState(null);
 
+  // ESTADOS PARA MATERIAIS PDF (APENAS LEITURA)
+  const [materiaisPdf, setMateriaisPdf] = useState([]);
+  const [pdfVisualizando, setPdfVisualizando] = useState(null);
+  const [carregandoPdf, setCarregandoPdf] = useState(false);
+
   let LINK_MEET_FIXO = "";
   if (Number(cursoId) === 8) {
     LINK_MEET_FIXO = "https://meet.google.com/yfm-ektc-svr";
@@ -33,6 +39,15 @@ export default function CursePage() {
     );
     return salvo ? JSON.parse(salvo) : [];
   });
+
+  const carregarMateriaisPdf = async (token) => {
+    try {
+      const data = await pdfService.listarMateriaisCurso(cursoId, 0, 100, token);
+      setMateriaisPdf(data?.content || []);
+    } catch (err) {
+      console.error("Erro ao carregar materiais PDF do curso:", err);
+    }
+  };
 
   useEffect(() => {
     async function carregarDadosPagina() {
@@ -53,6 +68,9 @@ export default function CursePage() {
         setUsuario(dadosUsuario);
         setCursoData(dadosCurso);
         setModulos(dadosModulos || []);
+
+        // Carrega apenas a lista de materiais em PDF disponíveis
+        await carregarMateriaisPdf(token);
 
         if (dadosModulos && dadosModulos.length > 0) {
           setModuloAtivo(dadosModulos[0].id);
@@ -107,6 +125,58 @@ export default function CursePage() {
         ? prev.filter((id) => id !== aulaId)
         : [...prev, aulaId]
     );
+  };
+
+  // ==========================================
+  // HANDLERS PARA VISUALIZAÇÃO E DOWNLOAD DE PDF
+  // ==========================================
+
+  const handleVisualizarPdf = async (material) => {
+    const token = localStorage.getItem("@PortuguessComAnas:token");
+    try {
+      setCarregandoPdf(true);
+      const blobUrl = await pdfService.obterConteudoUrl(
+        material.conteudoUrl,
+        token,
+        false
+      );
+      setPdfVisualizando({
+        titulo: material.titulo,
+        nomeArquivo: material.nomeArquivo,
+        blobUrl,
+      });
+    } catch (err) {
+      alert("Erro ao abrir PDF: " + err.message);
+    } finally {
+      setCarregandoPdf(false);
+    }
+  };
+
+  const handleBaixarPdf = async (material) => {
+    const token = localStorage.getItem("@PortuguessComAnas:token");
+    try {
+      const blobUrl = await pdfService.obterConteudoUrl(
+        material.conteudoUrl,
+        token,
+        true
+      );
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = material.nomeArquivo || "material.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (err) {
+      alert("Erro ao baixar PDF: " + err.message);
+    }
+  };
+
+  const fecharModalPdf = () => {
+    if (pdfVisualizando?.blobUrl) {
+      URL.revokeObjectURL(pdfVisualizando.blobUrl);
+    }
+    setPdfVisualizando(null);
   };
 
   if (loading) {
@@ -182,9 +252,7 @@ export default function CursePage() {
             )}
 
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] sm:text-xs font-black uppercase text-[#7B5CFA] bg-[#7B5CFA]/10 px-2.5 py-1 rounded-md border border-[#7B5CFA]/30 w-fit">
-                Grade Curricular
-              </span>
+            
               <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 uppercase break-words">
                 {cursoData.tituloCurso || cursoData.titulo || cursoData.nome}
               </h1>
@@ -192,6 +260,60 @@ export default function CursePage() {
                 {cursoData.descricaoCurso || cursoData.descricao}
               </p>
             </div>
+
+            {/* MATERIAIS COMPLEMENTARES GERAIS DO CURSO (Sem vínculo a módulo/aula) */}
+            {materiaisPdf.filter((m) => !m.moduloId).length > 0 && (
+              <div className="flex flex-col gap-3 p-4 bg-amber-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <h3 className="text-xs sm:text-sm font-black uppercase text-slate-900 flex items-center gap-2">
+                  📄 MATERIAIS COMPLEMENTARES DO CURSO
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {materiaisPdf
+                    .filter((m) => !m.moduloId)
+                    .map((material) => (
+                      <div
+                        key={material.id}
+                        className="bg-white border-2 border-black p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-lg">📕</span>
+                          <div className="flex flex-col">
+                            <span className="font-black text-xs sm:text-sm text-slate-900">
+                              {material.titulo}
+                            </span>
+                            {material.descricao && (
+                              <p className="text-[11px] font-bold text-slate-600">
+                                {material.descricao}
+                              </p>
+                            )}
+                            <span className="text-[10px] text-slate-400 font-semibold">
+                              {material.nomeArquivo} (
+                              {Math.round(material.tamanhoBytes / 1024)} KB)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <button
+                            onClick={() => handleVisualizarPdf(material)}
+                            disabled={carregandoPdf}
+                            className="bg-[#00D2DF] text-black text-[11px] font-black px-3 py-1.5 rounded-md border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-cyan-300 transition cursor-pointer"
+                          >
+                            👁️ Visualizar
+                          </button>
+                          <button
+                            onClick={() => handleBaixarPdf(material)}
+                            className="bg-emerald-400 text-black text-[11px] font-black px-3 py-1.5 rounded-md border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-emerald-300 transition cursor-pointer"
+                          >
+                            📥 Baixar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
             {/* LISTA DE MÓDULOS */}
             <div className="flex flex-col gap-3 sm:gap-4 mt-1">
               <h2 className="text-xs sm:text-sm font-black uppercase text-slate-900 tracking-wider">
@@ -203,6 +325,9 @@ export default function CursePage() {
                   modulos.map((modulo, index) => {
                     const isOpen = moduloAtivo === modulo.id;
                     const aulasDoModulo = aulasPorModulo[modulo.id] || [];
+                    const pdfsDoModulo = materiaisPdf.filter(
+                      (m) => m.moduloId === modulo.id
+                    );
 
                     return (
                       <div
@@ -236,7 +361,8 @@ export default function CursePage() {
                         </div>
 
                         {isOpen && (
-                          <div className="bg-slate-50 p-3 sm:p-4 border-t-2 border-black flex flex-col gap-3">
+                          <div className="bg-slate-50 p-3 sm:p-4 border-t-2 border-black flex flex-col gap-4">
+                            {/* AULAS DO MÓDULO */}
                             <div className="flex flex-col gap-2 mt-1">
                               <h4 className="text-xs font-black uppercase text-slate-800">
                                 🎥 Aulas e Gravações do Módulo (
@@ -249,60 +375,106 @@ export default function CursePage() {
                                     const assistida = aulasAssistidas.includes(
                                       aula.id
                                     );
+                                    const pdfsDaAula = pdfsDoModulo.filter(
+                                      (m) => m.aulaId === aula.id
+                                    );
+
                                     return (
                                       <div
                                         key={aula.id}
-                                        onClick={() =>
-                                          setVideoSelecionado(aula)
-                                        }
-                                        className={`bg-white hover:bg-slate-100 border-2 border-black p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition ${
+                                        className={`bg-white border-2 border-black p-3 rounded-xl flex flex-col gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
                                           assistida ? "bg-emerald-50/60" : ""
                                         }`}
                                       >
-                                        <div className="flex items-center gap-3">
-                                          <span
-                                            className={`border border-black p-2 rounded-lg text-xs font-black ${
-                                              assistida
-                                                ? "bg-emerald-400 text-black"
-                                                : "bg-[#00D2DF]"
-                                            }`}
-                                          >
-                                            {assistida ? "✓" : "▶"}
-                                          </span>
-                                          <div className="flex flex-col">
+                                        <div
+                                          onClick={() =>
+                                            setVideoSelecionado(aula)
+                                          }
+                                          className="flex items-center justify-between gap-3 cursor-pointer"
+                                        >
+                                          <div className="flex items-center gap-3">
                                             <span
-                                              className={`font-black text-xs sm:text-sm text-slate-900 ${
+                                              className={`border border-black p-2 rounded-lg text-xs font-black ${
                                                 assistida
-                                                  ? "line-through opacity-75"
-                                                  : ""
+                                                  ? "bg-emerald-400 text-black"
+                                                  : "bg-[#00D2DF]"
                                               }`}
                                             >
-                                              {aula.titulo}
+                                              {assistida ? "✓" : "▶"}
                                             </span>
-                                            {aula.gravacaoTitulo && (
-                                              <span className="text-[10px] text-slate-500 font-bold">
-                                                Gravação: {aula.gravacaoTitulo}
+                                            <div className="flex flex-col">
+                                              <span
+                                                className={`font-black text-xs sm:text-sm text-slate-900 ${
+                                                  assistida
+                                                    ? "line-through opacity-75"
+                                                    : ""
+                                                }`}
+                                              >
+                                                {aula.titulo}
                                               </span>
-                                            )}
+                                              {aula.gravacaoTitulo && (
+                                                <span className="text-[10px] text-slate-500 font-bold">
+                                                  Gravação:{" "}
+                                                  {aula.gravacaoTitulo}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={(e) =>
+                                                toggleAssistida(e, aula.id)
+                                              }
+                                              className={`text-[10px] sm:text-xs font-black px-2.5 py-1.5 rounded-lg border-2 border-black transition cursor-pointer ${
+                                                assistida
+                                                  ? "bg-emerald-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                                  : "bg-white text-slate-700 hover:bg-slate-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                              }`}
+                                            >
+                                              {assistida
+                                                ? "✓ Assistida"
+                                                : "Marcar como Assistida"}
+                                            </button>
                                           </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={(e) =>
-                                              toggleAssistida(e, aula.id)
-                                            }
-                                            className={`text-[10px] sm:text-xs font-black px-2.5 py-1.5 rounded-lg border-2 border-black transition cursor-pointer ${
-                                              assistida
-                                                ? "bg-emerald-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                                : "bg-white text-slate-700 hover:bg-slate-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                            }`}
-                                          >
-                                            {assistida
-                                              ? "✓ Assistida"
-                                              : "Marcar como Assistida"}
-                                          </button>
-                                        </div>
+                                        {/* PDFs VINCULADOS A ESTA AULA ESPECÍFICA */}
+                                        {pdfsDaAula.length > 0 && (
+                                          <div className="mt-2 pt-2 border-t border-dashed border-slate-300 flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase">
+                                              📄 Materiais PDF desta aula:
+                                            </span>
+                                            {pdfsDaAula.map((pdf) => (
+                                              <div
+                                                key={pdf.id}
+                                                className="bg-amber-50 p-2 rounded border border-black flex items-center justify-between text-xs"
+                                              >
+                                                <span className="font-bold text-slate-800 truncate">
+                                                  {pdf.titulo}
+                                                </span>
+                                                <div className="flex gap-1 shrink-0">
+                                                  <button
+                                                    onClick={() =>
+                                                      handleVisualizarPdf(pdf)
+                                                    }
+                                                    className="bg-white text-[10px] font-black px-2 py-1 rounded border border-black cursor-pointer"
+                                                  >
+                                                    Ver
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      handleBaixarPdf(pdf)
+                                                    }
+                                                    className="bg-emerald-300 text-[10px] font-black px-2 py-1 rounded border border-black cursor-pointer"
+                                                  >
+                                                    Baixar
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -313,6 +485,57 @@ export default function CursePage() {
                                 </p>
                               )}
                             </div>
+
+                            {/* PDFs DO MÓDULO (Sem vínculo direto com aula específica) */}
+                            {pdfsDoModulo.filter((m) => !m.aulaId).length > 0 && (
+                              <div className="flex flex-col gap-2 pt-2 border-t-2 border-black/10">
+                                <h4 className="text-xs font-black uppercase text-slate-800">
+                                  📚 Materiais PDF do Módulo (
+                                  {pdfsDoModulo.filter((m) => !m.aulaId).length})
+                                </h4>
+                                <div className="space-y-2">
+                                  {pdfsDoModulo
+                                    .filter((m) => !m.aulaId)
+                                    .map((material) => (
+                                      <div
+                                        key={material.id}
+                                        className="bg-white border-2 border-black p-2.5 rounded-xl flex items-center justify-between gap-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-base">📄</span>
+                                          <div className="flex flex-col">
+                                            <span className="font-black text-xs text-slate-900">
+                                              {material.titulo}
+                                            </span>
+                                            {material.descricao && (
+                                              <span className="text-[10px] text-slate-500 font-bold">
+                                                {material.descricao}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5">
+                                          <button
+                                            onClick={() =>
+                                              handleVisualizarPdf(material)
+                                            }
+                                            className="bg-[#00D2DF] text-black text-[10px] font-black px-2.5 py-1 rounded border border-black cursor-pointer"
+                                          >
+                                            Ver
+                                          </button>
+                                          <button
+                                            onClick={() => handleBaixarPdf(material)}
+                                            className="bg-emerald-400 text-black text-[10px] font-black px-2.5 py-1 rounded border border-black cursor-pointer"
+                                          >
+                                            Baixar
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -329,7 +552,39 @@ export default function CursePage() {
         </div>
       </main>
 
-      {/* Modal de Vídeo */}
+      {/* MODAL DE PRÉ-VISUALIZAÇÃO DE PDF */}
+      {pdfVisualizando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-xs">
+          <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-4 sm:p-5 max-w-4xl w-full h-[90vh] flex flex-col shadow-[8px_8px_0_black]">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex flex-col">
+                <h3 className="font-black text-sm sm:text-base uppercase truncate text-slate-900">
+                  📄 {pdfVisualizando.titulo}
+                </h3>
+                <span className="text-[10px] text-slate-600 font-bold">
+                  {pdfVisualizando.nomeArquivo}
+                </span>
+              </div>
+              <button
+                onClick={fecharModalPdf}
+                className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg cursor-pointer hover:bg-red-500 transition"
+              >
+                ✕ Fechar
+              </button>
+            </div>
+
+            <div className="flex-1 bg-slate-900 rounded-xl border-2 border-black overflow-hidden relative">
+              <iframe
+                src={pdfVisualizando.blobUrl}
+                title={pdfVisualizando.titulo}
+                className="w-full h-full border-none"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Vídeo Existente */}
       {videoSelecionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
           <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-5 max-w-2xl w-full shadow-[8px_8px_0_black]">
