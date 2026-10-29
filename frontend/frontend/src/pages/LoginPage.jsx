@@ -126,14 +126,18 @@ export default function Login() {
             </form>
 
             <div className="mt-6 flex flex-col gap-3 text-center text-sm sm:flex-row sm:justify-between">
-              <button type="button" className="font-medium hover:underline">
+              <button
+                type="button"
+                onClick={() => navigate("/esqueci-senha")}
+                className="font-medium hover:underline text-left text-gray-700 hover:text-black"
+              >
                 Esqueci minha senha
               </button>
 
               <button
                 type="button"
                 onClick={() => navigate("/register")}
-                className="font-medium hover:underline text-[#1B63D6]"
+                className="font-medium hover:underline text-[#1B63D6] text-right"
               >
                 Criar conta
               </button>
