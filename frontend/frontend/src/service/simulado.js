@@ -256,6 +256,7 @@ export async function listarHistorico(
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : {};
+    console.log("listarHistorico response:", data);
 
     if (!response.ok) {
       const error = new Error(
