@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 import { links } from "../ultils/links";
 import Card from "../components/Card";
 import AlertModal from "../components/AlertModal";
-import { simuladoService } from "../service/simulado";
+import { simuladoService, buscarTentativa } from "../service/simulado";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import ReactMarkdown from "react-markdown";
 
@@ -28,6 +28,10 @@ export default function SimuladosPage() {
   const [showHistoricoModal, setShowHistoricoModal] = useState(false);
   const [simuladoSelecionadoHistorico, setSimuladoSelecionadoHistorico] =
     useState(null);
+  
+  // Estados de carregamento específicos solicitados
+  const [carregandoHistoricoId, setCarregandoHistoricoId] = useState(null);
+  const [carregandoTentativaHistorico, setCarregandoTentativaHistorico] = useState(null);
 
   // Estado para guardar a alternativa selecionada em cada questão antes de enviar
   const [alternativasSelecionadas, setAlternativasSelecionadas] = useState({});
@@ -192,10 +196,8 @@ export default function SimuladosPage() {
         indiceQuestao + 1 >= tentativaAtual.questoes.length;
 
       if (ehUltimaQuestao) {
-        // Se for a última questão, finaliza a tentativa automaticamente
         await handleFinalizar(tentativaAtual.id, false);
       } else {
-        // Caso contrário, apenas avança para a próxima questão
         setIndiceQuestao((prev) => prev + 1);
       }
     } catch (error) {
@@ -205,9 +207,10 @@ export default function SimuladosPage() {
     }
   };
 
-  // Ver histórico de um simulado
+  // Ver histórico de um simulado com estado de carregamento específico
   const handleVerHistorico = async (simulado) => {
     try {
+      setCarregandoHistoricoId(simulado.id);
       setSimuladoSelecionadoHistorico(simulado);
       const hist = await simuladoService.listarHistorico(
         simulado.id,
@@ -219,6 +222,30 @@ export default function SimuladosPage() {
       setShowHistoricoModal(true);
     } catch (error) {
       showAlert("Erro ao carregar histórico de tentativas.", "error");
+    } finally {
+      setCarregandoHistoricoId(null);
+    }
+  };
+
+  // Abrir os detalhes de uma tentativa específica do histórico
+  const handleSelecionarTentativaHistorico = async (tentativaId) => {
+    try {
+      setCarregandoTentativaHistorico(tentativaId);
+      const detalheTentativa = await buscarTentativa(tentativaId, token);
+      
+      setTentativaAtual(detalheTentativa);
+      setIndiceQuestao(0);
+      setShowHistoricoModal(false);
+
+      const mapaRespostas = {};
+      detalheTentativa.respostas?.forEach((resp) => {
+        mapaRespostas[resp.simuladoQuestaoId] = resp.simuladoAlternativaId;
+      });
+      setAlternativasSelecionadas(mapaRespostas);
+    } catch (error) {
+      showAlert("Erro ao carregar detalhes da tentativa.", "error");
+    } finally {
+      setCarregandoTentativaHistorico(null);
     }
   };
 
@@ -251,16 +278,18 @@ export default function SimuladosPage() {
                   {tentativaAtual.status}
                 </span>
                 <h2 className="text-lg font-black mt-2">
-                  Resolução de Simulado
+                  {tentativaAtual.status === "EM_ANDAMENTO" ? "Resolução de Simulado" : "Revisão de Tentativa"}
                 </h2>
               </div>
               <div className="flex items-center gap-4">
-                <div className="bg-white border-2 border-black px-4 py-2 rounded-xl font-black text-sm shadow-[2px_2px_0_black]">
-                  ⏱️ Tempo Restante:{" "}
-                  <span className="text-red-600">
-                    {formatarTempo(tempoRestante)}
-                  </span>
-                </div>
+                {tentativaAtual.status === "EM_ANDAMENTO" && (
+                  <div className="bg-white border-2 border-black px-4 py-2 rounded-xl font-black text-sm shadow-[2px_2px_0_black]">
+                    ⏱️ Tempo Restante:{" "}
+                    <span className="text-red-600">
+                      {formatarTempo(tempoRestante)}
+                    </span>
+                  </div>
+                )}
                 {tentativaAtual.status === "EM_ANDAMENTO" && (
                   <button
                     onClick={() => handleFinalizar(tentativaAtual.id)}
@@ -331,7 +360,9 @@ export default function SimuladosPage() {
                               );
                             }
                           }}
-                          className={`p-3 rounded-xl border-2 border-black flex items-start gap-3 cursor-pointer transition ${estiloCor}`}
+                          className={`p-3 rounded-xl border-2 border-black flex items-start gap-3 transition ${
+                            !concluida ? "cursor-pointer" : ""
+                          } ${estiloCor}`}
                         >
                           <span className="font-black">({alt.letra})</span>
                           <div className="text-xs md:text-sm font-bold flex-1">
@@ -426,14 +457,12 @@ export default function SimuladosPage() {
                   </button>
                 </div>
 
-                {tentativaAtual.status !== "EM_ANDAMENTO" && (
-                  <button
-                    onClick={() => setTentativaAtual(null)}
-                    className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] mt-2"
-                  >
-                    VOLTAR PARA A LISTA DE SIMULADOS
-                  </button>
-                )}
+                <button
+                  onClick={() => setTentativaAtual(null)}
+                  className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] mt-2 cursor-pointer hover:bg-[#6c4ee2] transition"
+                >
+                  VOLTAR PARA A LISTA DE SIMULADOS
+                </button>
               </div>
             )}
           </div>
@@ -452,7 +481,7 @@ export default function SimuladosPage() {
               </div>
               <button
                 onClick={() => navigate("/user")}
-                className="bg-slate-200 border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black]"
+                className="bg-slate-200 border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] cursor-pointer hover:bg-slate-300 transition"
               >
                 Voltar ao Painel Principal
               </button>
@@ -487,14 +516,15 @@ export default function SimuladosPage() {
                     <div className="flex flex-wrap gap-2 shrink-0">
                       <button
                         onClick={() => handleVerHistorico(s)}
-                        className="bg-slate-100 border-2 border-black px-3 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black]"
+                        disabled={carregandoHistoricoId === s.id}
+                        className="bg-slate-100 border-2 border-black px-3 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] hover:bg-slate-200 transition disabled:opacity-50 cursor-pointer"
                       >
-                        Meu Histórico
+                        {carregandoHistoricoId === s.id ? "Carregando histórico..." : "Meu Histórico"}
                       </button>
                       <button
                         onClick={() => handleIniciarSimulado(s.id)}
                         disabled={loadingSimulados}
-                        className="bg-[#7B5CFA] text-white border-2 border-black px-4 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 transition disabled:opacity-50"
+                        className="bg-[#7B5CFA] text-white border-2 border-black px-4 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 transition disabled:opacity-50 cursor-pointer"
                       >
                         {loadingSimulados
                           ? "Carregando..."
@@ -519,45 +549,61 @@ export default function SimuladosPage() {
               </h3>
               <button
                 onClick={() => setShowHistoricoModal(false)}
-                className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg"
+                className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg cursor-pointer hover:bg-red-500 transition"
               >
                 ✕
               </button>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <p className="text-xs font-bold text-slate-600 mb-3">
+              Clique em uma tentativa para ver o gabarito detalhado (acertos e erros):
+            </p>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {historicoTentativas.length === 0 ? (
                 <p className="text-xs font-bold text-slate-500 text-center py-4">
                   Você ainda não realizou tentativas neste simulado.
                 </p>
               ) : (
-                historicoTentativas.map((h) => (
-                  <div
-                    key={h.id}
-                    className="bg-white border-2 border-black rounded-xl p-3 flex justify-between items-center text-xs"
-                  >
-                    <div>
-                      <span className="font-black mr-2">
-                        Tentativa #{h.numero}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded font-black border border-black ${
-                          h.status === "FINALIZADO"
-                            ? "bg-emerald-200"
-                            : h.status === "EXPIRADO"
-                            ? "bg-amber-200"
-                            : "bg-cyan-200"
-                        }`}
-                      >
-                        {h.status}
-                      </span>
+                historicoTentativas.map((h) => {
+                  const estaCarregandoEstaTentativa = carregandoTentativaHistorico === h.id;
+                  return (
+                    <div
+                      key={h.id}
+                      onClick={() => {
+                        if (!carregandoTentativaHistorico) {
+                          handleSelecionarTentativaHistorico(h.id);
+                        }
+                      }}
+                      className={`bg-white border-2 border-black rounded-xl p-3 flex justify-between items-center text-xs transition ${
+                        carregandoTentativaHistorico ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-cyan-50"
+                      }`}
+                    >
+                      <div>
+                        <span className="font-black mr-2">
+                          {estaCarregandoEstaTentativa ? "Carregando tentativa..." : `Tentativa #${h.numero}`}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded font-black border border-black ${
+                            h.status === "FINALIZADO"
+                              ? "bg-emerald-200"
+                              : h.status === "EXPIRADO"
+                              ? "bg-amber-200"
+                              : "bg-cyan-200"
+                          }`}
+                        >
+                          {h.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black">
+                          Acertos: {h.acertos ?? 0} /{" "}
+                          {h.totalQuestoes ||
+                            simuladoSelecionadoHistorico.totalQuestoes}
+                        </span>
+                        <span className="text-slate-400 font-black">→</span>
+                      </div>
                     </div>
-                    <div className="font-black">
-                      Acertos: {h.acertos ?? 0} /{" "}
-                      {h.totalQuestoes ||
-                        simuladoSelecionadoHistorico.totalQuestoes}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
