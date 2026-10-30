@@ -20,7 +20,7 @@ export default function SimuladosPage() {
   const [loadingSimulados, setLoadingSimulados] = useState(false);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Estados da tentativa ativa (resolução de simulado)
+  // Estados da tentativa ativa / revisão
   const [tentativaAtual, setTentativaAtual] = useState(null);
   const [indiceQuestao, setIndiceQuestao] = useState(0);
   const [tempoRestante, setTempoRestante] = useState(null);
@@ -28,12 +28,13 @@ export default function SimuladosPage() {
   const [showHistoricoModal, setShowHistoricoModal] = useState(false);
   const [simuladoSelecionadoHistorico, setSimuladoSelecionadoHistorico] =
     useState(null);
-  
-  // Estados de carregamento específicos solicitados
-  const [carregandoHistoricoId, setCarregandoHistoricoId] = useState(null);
-  const [carregandoTentativaHistorico, setCarregandoTentativaHistorico] = useState(null);
 
-  // Estado para guardar a alternativa selecionada em cada questão antes de enviar
+  // Estados de carregamento específicos
+  const [carregandoHistoricoId, setCarregandoHistoricoId] = useState(null);
+  const [carregandoTentativaHistorico, setCarregandoTentativaHistorico] =
+    useState(null);
+
+  // Estado para guardar a alternativa selecionada em cada questão
   const [alternativasSelecionadas, setAlternativasSelecionadas] = useState({});
   const [salvandoResposta, setSalvandoResposta] = useState(false);
 
@@ -134,8 +135,11 @@ export default function SimuladosPage() {
 
       const mapaRespostasIniciais = {};
       tentativa.respostas?.forEach((resp) => {
-        mapaRespostasIniciais[resp.simuladoQuestaoId] =
-          resp.simuladoAlternativaId;
+        const qId = resp.questaoId ?? resp.simuladoQuestaoId ?? resp.questaoOrigemId;
+        const altId = resp.alternativaId ?? resp.simuladoAlternativaId ?? resp.alternativaEscolhidaId;
+        if (qId && altId) {
+          mapaRespostasIniciais[qId] = altId;
+        }
       });
       setAlternativasSelecionadas(mapaRespostasIniciais);
     } catch (error) {
@@ -179,7 +183,7 @@ export default function SimuladosPage() {
     }
   };
 
-  // Responder questão e avançar ou finalizar automaticamente se for a última
+  // Responder questão
   const handleResponder = async (questaoId, alternativaId) => {
     if (!tentativaAtual || tentativaAtual.status !== "EM_ANDAMENTO") return;
     setSalvandoResposta(true);
@@ -207,7 +211,7 @@ export default function SimuladosPage() {
     }
   };
 
-  // Ver histórico de um simulado com estado de carregamento específico
+  // Ver histórico de tentativas do simulado
   const handleVerHistorico = async (simulado) => {
     try {
       setCarregandoHistoricoId(simulado.id);
@@ -227,19 +231,23 @@ export default function SimuladosPage() {
     }
   };
 
-  // Abrir os detalhes de uma tentativa específica do histórico
+  // Abrir detalhes da tentativa específica selecionada no histórico
   const handleSelecionarTentativaHistorico = async (tentativaId) => {
     try {
       setCarregandoTentativaHistorico(tentativaId);
       const detalheTentativa = await buscarTentativa(tentativaId, token);
-      
+
       setTentativaAtual(detalheTentativa);
       setIndiceQuestao(0);
       setShowHistoricoModal(false);
 
       const mapaRespostas = {};
       detalheTentativa.respostas?.forEach((resp) => {
-        mapaRespostas[resp.simuladoQuestaoId] = resp.simuladoAlternativaId;
+        const qId = resp.questaoId ?? resp.simuladoQuestaoId ?? resp.questaoOrigemId;
+        const altId = resp.alternativaId ?? resp.simuladoAlternativaId ?? resp.alternativaEscolhidaId;
+        if (qId && altId) {
+          mapaRespostas[qId] = altId;
+        }
       });
       setAlternativasSelecionadas(mapaRespostas);
     } catch (error) {
@@ -278,7 +286,9 @@ export default function SimuladosPage() {
                   {tentativaAtual.status}
                 </span>
                 <h2 className="text-lg font-black mt-2">
-                  {tentativaAtual.status === "EM_ANDAMENTO" ? "Resolução de Simulado" : "Revisão de Tentativa"}
+                  {tentativaAtual.status === "EM_ANDAMENTO"
+                    ? "Resolução de Simulado"
+                    : "Revisão de Tentativa"}
                 </h2>
               </div>
               <div className="flex items-center gap-4">
@@ -293,7 +303,7 @@ export default function SimuladosPage() {
                 {tentativaAtual.status === "EM_ANDAMENTO" && (
                   <button
                     onClick={() => handleFinalizar(tentativaAtual.id)}
-                    className="bg-red-400 text-white border-2 border-black px-4 py-2 font-black rounded-xl text-xs shadow-[2px_2px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 transition"
+                    className="bg-red-400 text-white border-2 border-black px-4 py-2 font-black rounded-xl text-xs shadow-[2px_2px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 transition cursor-pointer"
                   >
                     FINALIZAR SIMULADO
                   </button>
@@ -325,26 +335,38 @@ export default function SimuladosPage() {
                 <div className="flex flex-col gap-3 mt-2">
                   {tentativaAtual.questoes[indiceQuestao].alternativas.map(
                     (alt) => {
+                      const questaoAtualId =
+                        tentativaAtual.questoes[indiceQuestao].id;
+
                       const respostaSalva = tentativaAtual.respostas?.find(
                         (r) =>
-                          r.simuladoQuestaoId ===
-                          tentativaAtual.questoes[indiceQuestao].id
+                          Number(
+                            r.questaoId ??
+                              r.simuladoQuestaoId ??
+                              r.questaoOrigemId
+                          ) === Number(questaoAtualId)
                       );
-                      const questaoIdAtual =
-                        tentativaAtual.questoes[indiceQuestao].id;
+
+                      const alternativaMarcadaId =
+                        respostaSalva?.alternativaId ??
+                        respostaSalva?.simuladoAlternativaId ??
+                        respostaSalva?.alternativaEscolhidaId ??
+                        alternativasSelecionadas[questaoAtualId];
+
                       const selecionada =
-                        respostaSalva?.simuladoAlternativaId === alt.id ||
-                        alternativasSelecionadas[questaoIdAtual] === alt.id;
+                        Number(alternativaMarcadaId) === Number(alt.id);
                       const concluida =
                         tentativaAtual.status !== "EM_ANDAMENTO";
 
                       let estiloCor = "bg-white hover:bg-slate-50";
                       if (concluida) {
-                        if (alt.correta)
+                        if (alt.correta) {
                           estiloCor =
-                            "bg-emerald-100 border-emerald-600 text-emerald-900";
-                        else if (selecionada && !alt.correta)
-                          estiloCor = "bg-red-100 border-red-600 text-red-900";
+                            "bg-emerald-100 border-emerald-600 text-emerald-900 font-bold";
+                        } else if (selecionada && !alt.correta) {
+                          estiloCor =
+                            "bg-red-100 border-red-600 text-red-900 font-bold";
+                        }
                       } else if (selecionada) {
                         estiloCor = "bg-cyan-50 border-cyan-500 font-black";
                       }
@@ -355,7 +377,7 @@ export default function SimuladosPage() {
                           onClick={() => {
                             if (!concluida) {
                               setAlternativaSelecionadaParaQuestao(
-                                questaoIdAtual,
+                                questaoAtualId,
                                 alt.id
                               );
                             }
@@ -370,6 +392,19 @@ export default function SimuladosPage() {
                               {alt.texto}
                             </ReactMarkdown>
                           </div>
+                          {concluida && selecionada && (
+                            <span
+                              className={`text-[10px] font-black px-2 py-0.5 rounded border border-black shrink-0 ${
+                                alt.correta
+                                  ? "bg-emerald-300 text-black"
+                                  : "bg-red-300 text-black"
+                              }`}
+                            >
+                              {alt.correta
+                                ? "Sua resposta (Correta)"
+                                : "Sua resposta (Errada)"}
+                            </span>
+                          )}
                         </div>
                       );
                     }
@@ -426,7 +461,7 @@ export default function SimuladosPage() {
                     onClick={() =>
                       setIndiceQuestao((prev) => Math.max(0, prev - 1))
                     }
-                    className="bg-slate-200 border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40"
+                    className="bg-slate-200 border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 cursor-pointer"
                   >
                     ← Questão Anterior
                   </button>
@@ -451,7 +486,7 @@ export default function SimuladosPage() {
                         Math.min(tentativaAtual.questoes.length - 1, prev + 1)
                       )
                     }
-                    className="bg-[#00D2DF] border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40"
+                    className="bg-[#00D2DF] border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 cursor-pointer"
                   >
                     Próxima Questão →
                   </button>
@@ -519,7 +554,9 @@ export default function SimuladosPage() {
                         disabled={carregandoHistoricoId === s.id}
                         className="bg-slate-100 border-2 border-black px-3 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] hover:bg-slate-200 transition disabled:opacity-50 cursor-pointer"
                       >
-                        {carregandoHistoricoId === s.id ? "Carregando histórico..." : "Meu Histórico"}
+                        {carregandoHistoricoId === s.id
+                          ? "Carregando histórico..."
+                          : "Meu Histórico"}
                       </button>
                       <button
                         onClick={() => handleIniciarSimulado(s.id)}
@@ -555,7 +592,8 @@ export default function SimuladosPage() {
               </button>
             </div>
             <p className="text-xs font-bold text-slate-600 mb-3">
-              Clique em uma tentativa para ver o gabarito detalhado (acertos e erros):
+              Clique em uma tentativa para ver o gabarito detalhado (acertos e
+              erros):
             </p>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {historicoTentativas.length === 0 ? (
@@ -564,7 +602,8 @@ export default function SimuladosPage() {
                 </p>
               ) : (
                 historicoTentativas.map((h) => {
-                  const estaCarregandoEstaTentativa = carregandoTentativaHistorico === h.id;
+                  const estaCarregandoEstaTentativa =
+                    carregandoTentativaHistorico === h.id;
                   return (
                     <div
                       key={h.id}
@@ -574,12 +613,16 @@ export default function SimuladosPage() {
                         }
                       }}
                       className={`bg-white border-2 border-black rounded-xl p-3 flex justify-between items-center text-xs transition ${
-                        carregandoTentativaHistorico ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-cyan-50"
+                        carregandoTentativaHistorico
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer hover:bg-cyan-50"
                       }`}
                     >
                       <div>
                         <span className="font-black mr-2">
-                          {estaCarregandoEstaTentativa ? "Carregando tentativa..." : `Tentativa #${h.numero}`}
+                          {estaCarregandoEstaTentativa
+                            ? "Carregando tentativa..."
+                            : `Tentativa #${h.numero}`}
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded font-black border border-black ${
