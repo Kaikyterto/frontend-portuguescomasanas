@@ -6,6 +6,7 @@ import { simuladoService } from "../service/simulado";
 import { questaoService } from "../service/questao";
 import { bancaService } from "../service/banca";
 import { assuntoService } from "../service/assunto";
+import { cursoService } from "../service/curso"; // NOVO: Importando o serviço de cursos
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 
@@ -32,6 +33,7 @@ export default function SimuladosAdminPage() {
   // Estados para Filtros de Questões no Modal
   const [listaAssuntos, setListaAssuntos] = useState([]);
   const [listaBancas, setListaBancas] = useState([]);
+  const [listaCursos, setListaCursos] = useState([]); // NOVO: Lista de cursos para o select
   const [mostrarFiltrosQuestoes, setMostrarFiltrosQuestoes] = useState(false);
 
   const [filtrosQuestoes, setFiltrosQuestoes] = useState({
@@ -47,6 +49,7 @@ export default function SimuladosAdminPage() {
   const [titulo, setTitulo] = useState("");
   const [descricao, descricaoSet] = useState("");
   const [duracaoMinutos, setDuracaoMinutos] = useState(60);
+  const [cursoId, setCursoId] = useState(""); // NOVO: Estado para armazenar o ID do curso selecionado
   const [ativo, setAtivo] = useState(true);
   const [questaoIdsSelecionadas, setQuestaoIdsSelecionadas] = useState([]);
 
@@ -97,18 +100,22 @@ export default function SimuladosAdminPage() {
     }
   };
 
-  // Carregar listas auxiliares de Assuntos e Bancas para o filtro de questões
+  // Carregar listas auxiliares de Assuntos, Bancas e Cursos
   const fetchFiltrosAuxiliares = async () => {
     try {
-      const [assuntosRes, bancasRes] = await Promise.all([
+      const [assuntosRes, bancasRes, cursosRes] = await Promise.all([
         assuntoService.listarAssuntos(token).catch(() => []),
         bancaService.listar(token).catch(() => []),
+        cursoService.listar(token).catch(() => []), // NOVO: Buscando cursos
       ]);
       setListaAssuntos(
         Array.isArray(assuntosRes) ? assuntosRes : assuntosRes?.content || []
       );
       setListaBancas(
         Array.isArray(bancasRes) ? bancasRes : bancasRes?.content || []
+      );
+      setListaCursos(
+        Array.isArray(cursosRes) ? cursosRes : cursosRes?.content || []
       );
     } catch (error) {
       console.error("Erro ao carregar filtros auxiliares:", error);
@@ -170,6 +177,7 @@ export default function SimuladosAdminPage() {
     setTitulo("");
     descricaoSet("");
     setDuracaoMinutos(60);
+    setCursoId(""); // NOVO: Reseta o curso selecionado
     setAtivo(true);
     setQuestaoIdsSelecionadas([]);
     setShowSimuladoModal(false);
@@ -191,6 +199,11 @@ export default function SimuladosAdminPage() {
       return;
     }
 
+    if (!cursoId) {
+      showAlert("É obrigatório vincular o simulado a um curso.", "error");
+      return;
+    }
+
     if (
       questaoIdsSelecionadas.length === 0 ||
       questaoIdsSelecionadas.length > 100
@@ -206,6 +219,7 @@ export default function SimuladosAdminPage() {
       titulo: titulo.trim(),
       descricao: descricao.trim() || null,
       duracaoMinutos: parseInt(duracaoMinutos) || 60,
+      cursoId: parseInt(cursoId), // NOVO: Enviando o ID do curso no payload
       ativo: Boolean(ativo),
       questaoIds: questaoIdsSelecionadas,
     };
@@ -236,6 +250,7 @@ export default function SimuladosAdminPage() {
       setTitulo(detalhe.titulo || "");
       descricaoSet(detalhe.descricao || "");
       setDuracaoMinutos(detalhe.duracaoMinutos || 60);
+      setCursoId(detalhe.cursoId || detalhe.curso?.id || ""); // NOVO: Carrega o ID do curso vinculado
       setAtivo(detalhe.ativo);
       setQuestaoIdsSelecionadas(
         detalhe.questoes
@@ -344,7 +359,7 @@ export default function SimuladosAdminPage() {
               Gerenciar Simulados
             </h1>
             <p className="font-bold text-slate-600 text-sm sm:text-base">
-              Crie avaliações, configure prazos e selecione questões do banco
+              Crie avaliações, vincule a cursos, configure prazos e selecione questões do banco
             </p>
           </div>
           <button
@@ -402,6 +417,26 @@ export default function SimuladosAdminPage() {
                       className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                     />
                   </div>
+                </div>
+
+                {/* NOVO: Campo de Seleção de Curso */}
+                <div>
+                  <label className="block font-black text-xs uppercase mb-1">
+                    Vincular ao Curso *
+                  </label>
+                  <select
+                    value={cursoId}
+                    disabled={isSubmittingSimulado}
+                    onChange={(e) => setCursoId(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    <option value="">Selecione um curso...</option>
+                    {listaCursos.map((curso) => (
+                      <option key={curso.id} value={curso.id}>
+                        {curso.nome || curso.titulo}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -783,14 +818,14 @@ export default function SimuladosAdminPage() {
                         handleToggleAtivo(simulado.id, simulado.ativo)
                       }
                       className={`border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer ${
-                        simulado.ativo ? "bg-amber-300" : "bg-green-300"
+                        simulado.ativo ? "bg-amber-300" : "bg-emerald-300"
                       }`}
                     >
                       {simulado.ativo ? "Desativar" : "Ativar"}
                     </button>
                     <button
                       onClick={() => handleEditSimulado(simulado)}
-                      className="bg-[#FFD700] border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer"
+                      className="bg-[#00D2DF] border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer"
                     >
                       Editar
                     </button>
@@ -805,31 +840,6 @@ export default function SimuladosAdminPage() {
               ))
             )}
           </div>
-
-          {/* PAGINAÇÃO */}
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-6 pt-4 border-t-2 border-black flex-wrap gap-4">
-              <button
-                onClick={() => fetchData(currentPage - 1)}
-                disabled={currentPage === 0 || loadingSimulados}
-                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                ← Página Anterior
-              </button>
-
-              <span className="font-black text-sm">
-                Página {currentPage + 1} de {totalPages}
-              </span>
-
-              <button
-                onClick={() => fetchData(currentPage + 1)}
-                disabled={currentPage + 1 >= totalPages || loadingSimulados}
-                className="bg-white border-2 border-black px-4 py-2 font-black text-sm rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                Próxima Página →
-              </button>
-            </div>
-          )}
         </Card>
       </main>
 
@@ -838,7 +848,7 @@ export default function SimuladosAdminPage() {
         type={alertConfig.type}
         message={alertConfig.message}
         onConfirm={alertConfig.onConfirm}
-        onClose={() => setAlertConfig({ ...alertConfig, isOpen: false })}
+        onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
