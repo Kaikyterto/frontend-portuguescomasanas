@@ -6,7 +6,7 @@ import { simuladoService } from "../service/simulado";
 import { questaoService } from "../service/questao";
 import { bancaService } from "../service/banca";
 import { assuntoService } from "../service/assunto";
-import { cursoService } from "../service/curso"; // NOVO: Importando o serviço de cursos
+import { cursoService } from "../service/curso";
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 
@@ -33,7 +33,7 @@ export default function SimuladosAdminPage() {
   // Estados para Filtros de Questões no Modal
   const [listaAssuntos, setListaAssuntos] = useState([]);
   const [listaBancas, setListaBancas] = useState([]);
-  const [listaCursos, setListaCursos] = useState([]); // NOVO: Lista de cursos para o select
+  const [listaCursos, setListaCursos] = useState([]);
   const [mostrarFiltrosQuestoes, setMostrarFiltrosQuestoes] = useState(false);
 
   const [filtrosQuestoes, setFiltrosQuestoes] = useState({
@@ -49,7 +49,7 @@ export default function SimuladosAdminPage() {
   const [titulo, setTitulo] = useState("");
   const [descricao, descricaoSet] = useState("");
   const [duracaoMinutos, setDuracaoMinutos] = useState(60);
-  const [cursoId, setCursoId] = useState(""); // NOVO: Estado para armazenar o ID do curso selecionado
+  const [cursoId, setCursoId] = useState("");
   const [ativo, setAtivo] = useState(true);
   const [questaoIdsSelecionadas, setQuestaoIdsSelecionadas] = useState([]);
 
@@ -106,7 +106,7 @@ export default function SimuladosAdminPage() {
       const [assuntosRes, bancasRes, cursosRes] = await Promise.all([
         assuntoService.listarAssuntos(token).catch(() => []),
         bancaService.listar(token).catch(() => []),
-        cursoService.listar(token).catch(() => []), // NOVO: Buscando cursos
+        cursoService.listar(token).catch(() => []),
       ]);
       setListaAssuntos(
         Array.isArray(assuntosRes) ? assuntosRes : assuntosRes?.content || []
@@ -177,7 +177,7 @@ export default function SimuladosAdminPage() {
     setTitulo("");
     descricaoSet("");
     setDuracaoMinutos(60);
-    setCursoId(""); // NOVO: Reseta o curso selecionado
+    setCursoId("");
     setAtivo(true);
     setQuestaoIdsSelecionadas([]);
     setShowSimuladoModal(false);
@@ -219,7 +219,7 @@ export default function SimuladosAdminPage() {
       titulo: titulo.trim(),
       descricao: descricao.trim() || null,
       duracaoMinutos: parseInt(duracaoMinutos) || 60,
-      cursoId: parseInt(cursoId), // NOVO: Enviando o ID do curso no payload
+      cursoId: parseInt(cursoId),
       ativo: Boolean(ativo),
       questaoIds: questaoIdsSelecionadas,
     };
@@ -242,23 +242,36 @@ export default function SimuladosAdminPage() {
     }
   };
 
-  // Abrir modal para edição
+  // CORRIGIDO: Abrir modal para edição preenchendo todos os campos robustamente
   const handleEditSimulado = async (simuladoResumo) => {
     try {
       const detalhe = await simuladoService.detalhar(simuladoResumo.id, token);
-      setEditingSimuladoId(detalhe.id);
-      setTitulo(detalhe.titulo || "");
-      descricaoSet(detalhe.descricao || "");
-      setDuracaoMinutos(detalhe.duracaoMinutos || 60);
-      setCursoId(detalhe.cursoId || detalhe.curso?.id || ""); // NOVO: Carrega o ID do curso vinculado
-      setAtivo(detalhe.ativo);
+      
+      setEditingSimuladoId(detalhe.id || simuladoResumo.id);
+      setTitulo(detalhe.titulo || detalhe.nome || simuladoResumo.titulo || "");
+      descricaoSet(detalhe.descricao || simuladoResumo.descricao || "");
+      setDuracaoMinutos(detalhe.duracaoMinutos || simuladoResumo.duracaoMinutos || 60);
+      
+      // Tratamento seguro para extrair o ID do curso vinculado (seja objeto ou ID direto)
+      const idCursoExtraido = 
+        detalhe.cursoId || 
+        detalhe.curso?.id || 
+        simuladoResumo.cursoId || 
+        simuladoResumo.curso?.id || 
+        "";
+      setCursoId(idCursoExtraido);
+
+      setAtivo(detalhe.ativo ?? simuladoResumo.ativo ?? true);
+      
+      // Mapeamento seguro das questões selecionadas
+      const questoesList = detalhe.questoes || simuladoResumo.questoes || [];
       setQuestaoIdsSelecionadas(
-        detalhe.questoes
-          ? detalhe.questoes.map((q) => q.questaoOrigemId || q.id)
-          : []
+        questoesList.map((q) => q.questaoOrigemId || q.id || q)
       );
+
       setShowSimuladoModal(true);
     } catch (error) {
+      console.error("Erro ao carregar detalhes para edição:", error);
       showAlert("Erro ao carregar detalhes para edição.", "error");
     }
   };
@@ -419,7 +432,7 @@ export default function SimuladosAdminPage() {
                   </div>
                 </div>
 
-                {/* NOVO: Campo de Seleção de Curso */}
+                {/* Campo de Seleção de Curso */}
                 <div>
                   <label className="block font-black text-xs uppercase mb-1">
                     Vincular ao Curso *
