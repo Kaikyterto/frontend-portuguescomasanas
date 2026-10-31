@@ -236,6 +236,7 @@ export default function SimuladosPage() {
     try {
       setCarregandoTentativaHistorico(tentativaId);
       const detalheTentativa = await buscarTentativa(tentativaId, token);
+      console.log("Detalhe da tentativa selecionada:", detalheTentativa);
 
       setTentativaAtual(detalheTentativa);
       setIndiceQuestao(0);
