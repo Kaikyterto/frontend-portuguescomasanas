@@ -442,8 +442,8 @@ export default function UserPage() {
 
   if (loading && !erroAuth) {
     return (
-      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center">
-        <h1 className="text-2xl font-black text-slate-900 animate-pulse uppercase tracking-wider">
+      <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex items-center justify-center">
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 animate-pulse uppercase tracking-wider">
           Carregando plataforma...
         </h1>
       </div>
@@ -452,8 +452,8 @@ export default function UserPage() {
 
   if (erroAuth) {
     return (
-      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center p-4">
-        <div className="rounded-2xl border-[3px] border-black bg-[#FF6B6B] p-6 text-center font-bold text-black shadow-[6px_6px_0px_#000] max-w-sm w-full">
+      <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex items-center justify-center p-4">
+        <div className="rounded-2xl border-[3px] border-black bg-[#FF6B6B] dark:bg-red-900 p-6 text-center font-bold text-black dark:text-white shadow-[6px_6px_0px_#000] max-w-sm w-full">
           {erroAuth}
         </div>
       </div>
@@ -461,7 +461,7 @@ export default function UserPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4EFE6] font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 font-sans flex flex-col transition-colors duration-200">
       <Navbar links={links} usuario={usuario} />
 
       <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black lg:overflow-hidden">
@@ -481,13 +481,13 @@ export default function UserPage() {
 
         {/* CONTAINER 2 */}
         <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
-          <Card className="flex-1 flex flex-col bg-[#F4EFE6] h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl">
-            <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black bg-white flex items-center justify-between gap-2 flex-wrap">
+          <Card className="flex-1 flex flex-col bg-[#F4EFE6] dark:bg-slate-900 h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl">
+            <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 ">
                 <span className="text-lg md:text-xl">
                   {questaoSelecionada ? "✍️" : exibirBanco ? "📂" : "📚"}
                 </span>
-                <h2 className="text-slate-900 text-sm md:text-lg font-black tracking-wide uppercase truncate">
+                <h2 className="text-slate-900 dark:text-slate-100 text-sm md:text-lg font-black tracking-wide uppercase truncate">
                   {questaoSelecionada
                     ? `Responder Questão (${indiceQuestaoAtual + 1}/${
                         questoes.length
@@ -503,7 +503,7 @@ export default function UserPage() {
                 {exibirBanco && !questaoSelecionada && (
                   <button
                     onClick={() => setMostrarFiltros(!mostrarFiltros)}
-                    className="bg-[#FFD700] text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-400 cursor-pointer touch-manipulation active:scale-95 transition"
+                    className="bg-[#FFD700] dark:bg-amber-500 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black dark:border-slate-700 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-yellow-400 cursor-pointer touch-manipulation active:scale-95 transition"
                   >
                     🔍 {mostrarFiltros ? "Ocultar Filtros" : "Filtrar"}
                   </button>
@@ -517,19 +517,19 @@ export default function UserPage() {
                       setRespostaEnviada(false);
                       setResultadoUltimaResposta(null);
                     }}
-                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer touch-manipulation active:scale-95 transition"
+                    className="bg-slate-200 dark:bg-slate-800 text-black dark:text-white text-xs font-bold px-2.5 py-1 rounded-md border border-black dark:border-slate-700 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer touch-manipulation active:scale-95 transition"
                   >
                     Voltar à Lista
                   </button>
                 ) : exibirBanco ? (
                   <button
                     onClick={handleVoltarBanco}
-                    className="bg-slate-200 text-black text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-slate-300 cursor-pointer touch-manipulation active:scale-95 transition"
+                    className="bg-slate-200 dark:bg-slate-800 text-black dark:text-white text-xs font-bold px-2.5 py-1 rounded-md border border-black dark:border-slate-700 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer touch-manipulation active:scale-95 transition"
                   >
                     Voltar
                   </button>
                 ) : null}
-                <span className="bg-[#7B5CFA] text-white text-xs font-bold px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <span className="bg-[#7B5CFA] text-white text-xs font-bold px-2.5 py-1 rounded-md border border-black dark:border-slate-700 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
                   {questaoSelecionada
                     ? `Questão #${questaoSelecionada.id || "Detalhe"}`
                     : exibirBanco
@@ -543,10 +543,10 @@ export default function UserPage() {
             {exibirBanco && !questaoSelecionada && mostrarFiltros && (
               <form
                 onSubmit={handleAplicarFiltros}
-                className="p-3 bg-slate-100 border-b-2 border-black grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs"
+                className="p-3 bg-slate-100 dark:bg-slate-950 border-b-2 border-black dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs"
               >
                 <div>
-                  <label className="block font-black mb-0.5 text-slate-800">
+                  <label className="block font-black mb-0.5 text-slate-800 dark:text-slate-200">
                     Texto / Enunciado
                   </label>
                   <input
@@ -556,12 +556,12 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, texto: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
+                    className="w-full border-2 border-black dark:border-slate-700 rounded-lg p-1.5 font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-black mb-0.5 text-slate-800">
+                  <label className="block font-black mb-0.5 text-slate-800 dark:text-slate-200">
                     Assunto
                   </label>
                   <select
@@ -569,7 +569,7 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, assuntoId: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
+                    className="w-full border-2 border-black dark:border-slate-700 rounded-lg p-1.5 font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   >
                     <option value="">Todos os Assuntos</option>
                     {listaAssuntos.map((a) => (
@@ -581,7 +581,7 @@ export default function UserPage() {
                 </div>
 
                 <div>
-                  <label className="block font-black mb-0.5 text-slate-800">
+                  <label className="block font-black mb-0.5 text-slate-800 dark:text-slate-200">
                     Banca
                   </label>
                   <select
@@ -589,7 +589,7 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, bancaId: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
+                    className="w-full border-2 border-black dark:border-slate-700 rounded-lg p-1.5 font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   >
                     <option value="">Todas as Bancas</option>
                     {listaBancas.map((b) => (
@@ -601,7 +601,7 @@ export default function UserPage() {
                 </div>
 
                 <div>
-                  <label className="block font-black mb-0.5 text-slate-800">
+                  <label className="block font-black mb-0.5 text-slate-800 dark:text-slate-200">
                     Nível
                   </label>
                   <select
@@ -609,7 +609,7 @@ export default function UserPage() {
                     onChange={(e) =>
                       setFiltros({ ...filtros, nivel: e.target.value })
                     }
-                    className="w-full border-2 border-black rounded-lg p-1.5 font-bold bg-white focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
+                    className="w-full border-2 border-black dark:border-slate-700 rounded-lg p-1.5 font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#7B5CFA]"
                   >
                     <option value="">Todos os Níveis</option>
                     <option value="FACIL">Fácil</option>
@@ -622,13 +622,13 @@ export default function UserPage() {
                   <button
                     type="button"
                     onClick={handleLimparFiltros}
-                    className="bg-slate-200 border border-black rounded-lg px-3 py-1 font-bold text-xs hover:bg-slate-300 touch-manipulation cursor-pointer"
+                    className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-black dark:border-slate-700 rounded-lg px-3 py-1 font-bold text-xs hover:bg-slate-300 dark:hover:bg-slate-700 touch-manipulation cursor-pointer"
                   >
                     Limpar Filtros
                   </button>
                   <button
                     type="submit"
-                    className="bg-[#00D2DF] border border-black rounded-lg px-4 py-1 font-black text-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] touch-manipulation cursor-pointer"
+                    className="bg-[#00D2DF] dark:bg-cyan-600 text-black dark:text-white border border-black dark:border-slate-700 rounded-lg px-4 py-1 font-black text-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:shadow-none touch-manipulation cursor-pointer"
                   >
                     Buscar Questões
                   </button>
@@ -636,22 +636,22 @@ export default function UserPage() {
               </form>
             )}
 
-            <div className="flex-1 relative p-3 md:p-5 overflow-hidden flex flex-col">
+            <div className="flex-1 relative p-3 md:p-5 overflow-hidden flex flex-col bg-[#F4EFE6] dark:bg-slate-900">
               <div className="flex-1 flex flex-col gap-3 max-h-[60vh] lg:max-h-[calc(100vh-320px)] overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4">
                 {carregandoQuestoes && exibirBanco ? (
-                  <div className="text-center font-bold text-slate-700 py-10 animate-pulse">
+                  <div className="text-center font-bold text-slate-700 dark:text-slate-300 py-10 animate-pulse">
                     Carregando questões...
                   </div>
                 ) : questaoSelecionada ? (
                   <form
                     onSubmit={handleResponderQuestao}
-                    className="flex flex-col gap-4 bg-white p-4 md:p-5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    className="flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-5 rounded-xl border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none"
                   >
                     <div>
-                      <span className="text-xs font-black uppercase text-[#7B5CFA] bg-[#7B5CFA]/10 px-2 py-1 rounded border border-[#7B5CFA]/30">
+                      <span className="text-xs font-black uppercase text-[#7B5CFA] dark:text-cyan-400 bg-[#7B5CFA]/10 dark:bg-cyan-950 px-2 py-1 rounded border border-[#7B5CFA]/30 dark:border-cyan-800">
                         {questaoSelecionada.tema || "Questão de Português"}
                       </span>
-                      <div className="text-slate-900 text-sm md:text-base mt-3 leading-relaxed markdown-content">
+                      <div className="text-slate-900 dark:text-slate-100 text-sm md:text-base mt-3 leading-relaxed markdown-content">
                         <ReactMarkdown>
                           {questaoSelecionada.enunciado ||
                             "Sem enunciado informado."}
@@ -660,7 +660,7 @@ export default function UserPage() {
                     </div>
 
                     <div className="flex flex-col gap-2 mt-2">
-                      <span className="text-xs font-black uppercase text-slate-700">
+                      <span className="text-xs font-black uppercase text-slate-700 dark:text-slate-300">
                         Alternativas:
                       </span>
                       {questaoSelecionada.alternativas &&
@@ -675,23 +675,23 @@ export default function UserPage() {
                           const isSelecionada =
                             String(alternativaSelecionada) === String(altId);
 
-                          let corFundo = "bg-white hover:bg-slate-50";
+                          let corFundo = "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80";
                           if (respostaEnviada) {
                             if (isCorreta) {
                               corFundo =
-                                "bg-emerald-100 border-emerald-600 text-emerald-900";
+                                "bg-emerald-100 dark:bg-emerald-950 border-emerald-600 text-emerald-900 dark:text-emerald-200";
                             } else if (isSelecionada && !isCorreta) {
                               corFundo =
-                                "bg-red-100 border-red-600 text-red-900";
+                                "bg-red-100 dark:bg-red-950 border-red-600 text-red-900 dark:text-red-200";
                             }
                           } else if (isSelecionada) {
-                            corFundo = "bg-cyan-50 border-cyan-500";
+                            corFundo = "bg-cyan-50 dark:bg-cyan-950/60 border-cyan-500 text-slate-900 dark:text-slate-100";
                           }
 
                           return (
                             <label
                               key={altId}
-                              className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black cursor-pointer transition select-none touch-manipulation active:scale-[0.99] ${corFundo}`}
+                              className={`flex items-start gap-3 p-3 rounded-xl border-2 border-black dark:border-slate-700 cursor-pointer transition select-none touch-manipulation active:scale-[0.99] ${corFundo}`}
                             >
                               <input
                                 type="radio"
@@ -704,7 +704,7 @@ export default function UserPage() {
                                 disabled={respostaEnviada}
                                 className="mt-1 shrink-0 accent-[#7B5CFA] cursor-pointer"
                               />
-                              <div className="font-bold text-xs md:text-sm text-slate-800 break-words flex-1 pointer-events-none">
+                              <div className="font-bold text-xs md:text-sm text-slate-800 dark:text-slate-200 break-words flex-1 pointer-events-none">
                                 <span className="font-black mr-2">
                                   ({letra})
                                 </span>
@@ -716,7 +716,7 @@ export default function UserPage() {
                           );
                         })
                       ) : (
-                        <div className="text-sm font-bold text-slate-500 italic p-2">
+                        <div className="text-sm font-bold text-slate-500 dark:text-slate-400 italic p-2">
                           Nenhuma alternativa cadastrada para esta questão.
                         </div>
                       )}
@@ -725,7 +725,7 @@ export default function UserPage() {
                     {!respostaEnviada ? (
                       <button
                         type="submit"
-                        className="mt-4 bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation"
+                        className="mt-4 bg-[#7B5CFA] text-white border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black shadow-[3px_3px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation"
                       >
                         RESPONDER
                       </button>
@@ -755,10 +755,10 @@ export default function UserPage() {
                           return (
                             <>
                               <div
-                                className={`p-3 rounded-xl border-2 border-black text-center font-black text-sm ${
+                                className={`p-3 rounded-xl border-2 border-black dark:border-slate-700 text-center font-black text-sm ${
                                   isCorretaReal
-                                    ? "bg-emerald-300 text-emerald-950"
-                                    : "bg-red-300 text-red-950"
+                                    ? "bg-emerald-300 dark:bg-emerald-900 text-emerald-950 dark:text-emerald-100"
+                                    : "bg-red-300 dark:bg-red-900 text-red-950 dark:text-red-100"
                                 }`}
                               >
                                 {isCorretaReal
@@ -766,11 +766,11 @@ export default function UserPage() {
                                   : "❌ Resposta Incorreta!"}
                               </div>
                               {questaoSelecionada.explicacao && (
-                                <div className="bg-slate-100 p-4 rounded-xl border-2 border-black overflow-hidden">
-                                  <span className="block text-xs font-black uppercase text-slate-700 mb-1">
+                                <div className="bg-slate-100 dark:bg-slate-950 p-4 rounded-xl border-2 border-black dark:border-slate-700 overflow-hidden">
+                                  <span className="block text-xs font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
                                     Explicação:
                                   </span>
-                                  <div className="text-xs md:text-sm font-bold text-slate-800 markdown-content break-words overflow-x-auto">
+                                  <div className="text-xs md:text-sm font-bold text-slate-800 dark:text-slate-200 markdown-content break-words overflow-x-auto">
                                     <ReactMarkdown>
                                       {questaoSelecionada.explicacao}
                                     </ReactMarkdown>
@@ -793,7 +793,7 @@ export default function UserPage() {
                               setRespostaEnviada(false);
                               setResultadoUltimaResposta(null);
                             }}
-                            className="flex-1 bg-slate-200 text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
+                            className="flex-1 bg-slate-200 dark:bg-slate-800 text-black dark:text-white border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black shadow-[3px_3px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
                           >
                             VOLTAR À LISTA
                           </button>
@@ -801,7 +801,7 @@ export default function UserPage() {
                           <button
                             type="button"
                             onClick={handleProximaQuestao}
-                            className="flex-1 bg-[#00D2DF] text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
+                            className="flex-1 bg-[#00D2DF] dark:bg-cyan-600 text-black dark:text-white border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black shadow-[3px_3px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
                           >
                             {indiceQuestaoAtual + 1 < questoes.length
                               ? "PRÓXIMA QUESTÃO ➔"
@@ -824,17 +824,17 @@ export default function UserPage() {
                           setResultadoUltimaResposta(null);
                           setTempoInicio(Date.now());
                         }}
-                        className="bg-white p-3 md:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-2 cursor-pointer hover:bg-slate-50 touch-manipulation active:scale-[0.99] transition"
+                        className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-xl border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none flex flex-col gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/80 touch-manipulation active:scale-[0.99] transition"
                       >
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-[10px] md:text-xs font-black uppercase text-[#7B5CFA] truncate">
+                          <span className="text-[10px] md:text-xs font-black uppercase text-[#7B5CFA] dark:text-cyan-400 truncate">
                             {q.tema || "Questão de Português"}
                           </span>
-                          <span className="bg-[#FFD700] text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shrink-0">
+                          <span className="bg-[#FFD700] dark:bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded border border-black dark:border-slate-700 shrink-0">
                             Resolver →
                           </span>
                         </div>
-                        <div className="font-bold text-slate-800 text-xs md:text-sm line-clamp-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-100 text-xs md:text-sm line-clamp-2">
                           <ReactMarkdown components={{ p: "span" }}>
                             {q.enunciado || "Sem enunciado."}
                           </ReactMarkdown>
@@ -842,7 +842,7 @@ export default function UserPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center font-bold text-slate-600 py-10">
+                    <div className="text-center font-bold text-slate-600 dark:text-slate-400 py-10">
                       Nenhuma questão encontrada no banco com esses filtros.
                     </div>
                   )
@@ -887,11 +887,11 @@ export default function UserPage() {
                         return (
                           <div
                             key={curso.id}
-                            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 rounded-xl border border-slate-300 bg-white/50 transition mb-2"
+                            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 transition mb-2"
                           >
                             <div className="flex-1 relative">
                               {!temAcesso && (
-                                <div className="absolute top-2 right-2 z-10 bg-white/90 backdrop-blur-sm text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-md border border-slate-300 shadow-sm flex items-center gap-1">
+                                <div className="absolute top-2 right-2 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-slate-100 text-[10px] font-black px-2 py-0.5 rounded-md border border-slate-300 dark:border-slate-700 shadow-sm flex items-center gap-1">
                                   <span>🔒</span>
                                   <span>{precoFormatado}</span>
                                 </div>
@@ -907,7 +907,7 @@ export default function UserPage() {
                         );
                       })
                     ) : (
-                      <div className="text-center font-bold text-slate-600 py-10 text-xs">
+                      <div className="text-center font-bold text-slate-600 dark:text-slate-400 py-10 text-xs">
                         Nenhum curso cadastrado no momento.
                       </div>
                     )}
@@ -917,29 +917,29 @@ export default function UserPage() {
 
               {/* Rodapé de Paginação do Banco de Questões */}
               {exibirBanco && !questaoSelecionada && totalPages > 1 && (
-                <div className="pt-3 border-t-2 border-black flex items-center justify-between bg-white px-3 py-2 rounded-xl mt-2">
+                <div className="pt-3 border-t-2 border-black dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 px-3 py-2 rounded-xl mt-2">
                   <button
                     onClick={() => handleMudarPagina(paginaAtual - 1)}
                     disabled={isFirst || carregandoQuestoes}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] touch-manipulation transition ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none touch-manipulation transition ${
                       isFirst || carregandoQuestoes
-                        ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                        : "bg-[#00D2DF] text-black hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 cursor-pointer"
+                        ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none"
+                        : "bg-[#00D2DF] dark:bg-cyan-600 text-black dark:text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 cursor-pointer"
                     }`}
                   >
                     ← Anterior
                   </button>
-                  <span className="text-xs font-black text-slate-800">
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">
                     Página {paginaAtual + 1}/{totalPages}
                   </span>
 
                   <button
                     onClick={() => handleMudarPagina(paginaAtual + 1)}
                     disabled={isLast || carregandoQuestoes}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] touch-manipulation transition ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none touch-manipulation transition ${
                       isLast || carregandoQuestoes
-                        ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                        : "bg-[#7B5CFA] text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 cursor-pointer"
+                        ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none"
+                        : "bg-[#7B5CFA] dark:bg-violet-600 text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 cursor-pointer"
                     }`}
                   >
                     Próxima →
@@ -955,7 +955,7 @@ export default function UserPage() {
           <button
             onClick={() => handleCarregarBancoQuestoes(0, filtrosAtivos)}
             disabled={carregandoQuestoes}
-            className="bg-cyan-300 border-2 border-black rounded-full py-2.5 px-4 text-center font-extrabold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation"
+            className="bg-cyan-300 dark:bg-cyan-700 text-black dark:text-white border-2 border-black dark:border-slate-700 rounded-full py-2.5 px-4 text-center font-extrabold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation"
           >
             {carregandoQuestoes ? "CARREGANDO..." : "ABRIR BANCO DE QUESTÕES"}
           </button>
@@ -963,14 +963,14 @@ export default function UserPage() {
           <SidebarStats stats={userStats} className="w-full h-full" />
 
           {erroQuestoes && (
-            <span className="text-xs font-bold text-red-700 bg-red-100 p-2 rounded border border-black text-center">
+            <span className="text-xs font-bold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950 p-2 rounded border border-black dark:border-slate-700 text-center">
               {erroQuestoes}
             </span>
           )}
         </div>
       </main>
 
-      <footer className="bg-[#F4EFE6] py-4 text-center text-xs font-bold text-slate-700 flex justify-center gap-6 px-4">
+      <footer className="bg-[#F4EFE6] dark:bg-slate-950 py-4 text-center text-xs font-bold text-slate-700 dark:text-slate-400 flex justify-center gap-6 px-4 transition-colors">
         <a href="about" className="hover:underline">
           Sobre a Plataforma
         </a>

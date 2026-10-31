@@ -1,26 +1,41 @@
 @import "tailwindcss";
 
-/* Estilização da barra de rolagem Neo-brutalista */
+/* 1. Ativa a variante 'dark:' para Tailwind v4 via classe .dark */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 2. Estilização da barra de rolagem Neo-brutalista (Modo Claro) */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 12px; /* Largura da barra vertical */
+  width: 12px;
 }
 
-/* O fundo da barra (Track) */
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f4efe6; /* Mesmo tom bege dos cards */
-  border-left: 2px solid #000000; /* Linha preta marcando a divisão */
+  background: #f4efe6;
+  border-left: 2px solid #000000;
   border-radius: 4px;
 }
 
-/* O indicador de rolagem (Thumb) */
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #22d3ee; /* Cor Cyan-400 combinando com os botões e barras de progresso */
-  border: 2px solid #000000; /* Borda preta em volta do indicador */
+  background: #22d3ee;
+  border: 2px solid #000000;
   border-radius: 4px;
 }
 
-/* Efeito ao passar o mouse no indicador */
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #06b6d4; /* Escurece levemente o cyan ao passar o mouse */
+  background: #06b6d4;
   cursor: grab;
+}
+
+/* 3. Ajuste da barra de rolagem quando o Dark Mode estiver ativo */
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937; /* Fundo escuro para a track */
+  border-left: 2px solid #000000;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #0891b2; /* Cyan um pouco mais fechado para harmonizar com o fundo escuro */
+  border: 2px solid #000000;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
 }
