@@ -57,11 +57,12 @@ export default function UserPage() {
     texto: "",
   });
 
-  // Estados para responder a questão selecionada e medir o tempo
+  // Estados para responder a questão selecionada, medir o tempo e controlar duplo clique
   const [questaoSelecionada, setQuestaoSelecionada] = useState(null);
   const [indiceQuestaoAtual, setIndiceQuestaoAtual] = useState(0);
   const [alternativaSelecionada, setAlternativaSelecionada] = useState("");
   const [respostaEnviada, setRespostaEnviada] = useState(false);
+  const [enviandoResposta, setEnviandoResposta] = useState(false);
   const [tempoInicio, setTempoInicio] = useState(null);
   const [resultadoUltimaResposta, setResultadoUltimaResposta] = useState(null);
 
@@ -163,11 +164,14 @@ export default function UserPage() {
   // Função para buscar e calcular as estatísticas reais do usuário
   const carregarEstatisticasUsuario = async () => {
     try {
-      const minhasRespostas = await listarMinhasRespostas();
-      const total = minhasRespostas ? minhasRespostas.length : 0;
-      const correct = minhasRespostas
-        ? minhasRespostas.filter((r) => r.acertou).length
-        : 0;
+      const responseRespostas = await listarMinhasRespostas();
+
+      const minhasRespostas = Array.isArray(responseRespostas)
+        ? responseRespostas
+        : responseRespostas?.content || responseRespostas?.dados || [];
+
+      const total = minhasRespostas.length;
+      const correct = minhasRespostas.filter((r) => r.acertou).length;
       const wrong = total - correct;
       const evolutionPercentage =
         total > 0 ? Math.round((correct / total) * 100) : 0;
@@ -220,11 +224,11 @@ export default function UserPage() {
           console.error("Erro ao carregar filtros auxiliares:", fErr);
         }
 
-            const idsCursosComAcesso = new Set(
-            (meusCursosRes || [])
-              .filter((m) => m.status === 'ATIVA') 
-              .map((m) => m.cursoId)
-          );
+        const idsCursosComAcesso = new Set(
+          (meusCursosRes || [])
+            .filter((m) => m.status === "ATIVA")
+            .map((m) => m.cursoId)
+        );
 
         const cursosComStatus = (dadosCursos || []).map((curso) => ({
           ...curso,
@@ -251,7 +255,7 @@ export default function UserPage() {
     verificarAutenticacao();
   }, [navigate]);
 
-  // Função central para carregar questões garantindo que o objeto de filtro ativo seja passado
+  // Função central para carregar questões
   const handleCarregarBancoQuestoes = async (
     paginaDesejada = 0,
     filtrosParaAplicar = null
@@ -261,11 +265,9 @@ export default function UserPage() {
       setErroQuestoes("");
       const token = localStorage.getItem("@PortuguessComAnas:token");
 
-      // Usar os filtros passados explicitamente ou o estado dos filtros ativos
       const objetoFiltros =
         filtrosParaAplicar !== null ? filtrosParaAplicar : filtrosAtivos;
 
-      // Limpar campos vazios
       const filtrosLimpos = Object.fromEntries(
         Object.entries(objetoFiltros || {}).filter(
           ([_, v]) => v !== "" && v !== null && v !== undefined
@@ -308,6 +310,7 @@ export default function UserPage() {
       setIndiceQuestaoAtual(0);
       setAlternativaSelecionada("");
       setRespostaEnviada(false);
+      setEnviandoResposta(false);
       setResultadoUltimaResposta(null);
     } catch (error) {
       setErroQuestoes(
@@ -342,7 +345,6 @@ export default function UserPage() {
     handleCarregarBancoQuestoes(0, filtrosLimpos);
   };
 
-  // Helper universal para obter identificador único de alternativa
   const getAltIdentifier = (alt, index) => {
     if (
       alt &&
@@ -357,6 +359,9 @@ export default function UserPage() {
 
   const handleResponderQuestao = async (e) => {
     e.preventDefault();
+
+    if (enviandoResposta || respostaEnviada) return;
+
     if (!alternativaSelecionada) {
       setModalConfig({
         isOpen: true,
@@ -366,7 +371,8 @@ export default function UserPage() {
       return;
     }
 
-    // Busca de forma resiliente o objeto da alternativa selecionada
+    setEnviandoResposta(true);
+
     const altObj = questaoSelecionada?.alternativas?.find((alt, index) => {
       const altId = getAltIdentifier(alt, index);
       return String(altId) === String(alternativaSelecionada);
@@ -376,7 +382,6 @@ export default function UserPage() {
       altObj ||
       questaoSelecionada?.alternativas[Number(alternativaSelecionada)];
 
-    // Garante o ID correto que o backend espera
     const altIdParaEnviar =
       altFinal?.id !== undefined && altFinal?.id !== null
         ? Number(altFinal.id)
@@ -404,6 +409,8 @@ export default function UserPage() {
         type: "error",
         message: "Erro ao salvar sua resposta: " + (error.message || error),
       });
+    } finally {
+      setEnviandoResposta(false);
     }
   };
 
@@ -414,6 +421,7 @@ export default function UserPage() {
       setQuestaoSelecionada(questoes[proximoIndice]);
       setAlternativaSelecionada("");
       setRespostaEnviada(false);
+      setEnviandoResposta(false);
       setResultadoUltimaResposta(null);
       setTempoInicio(Date.now());
       const containerScroll = document.querySelector(".custom-scrollbar");
@@ -427,6 +435,7 @@ export default function UserPage() {
       setQuestaoSelecionada(null);
       setAlternativaSelecionada("");
       setRespostaEnviada(false);
+      setEnviandoResposta(false);
       setResultadoUltimaResposta(null);
     }
   };
@@ -436,6 +445,7 @@ export default function UserPage() {
     setIndiceQuestaoAtual(0);
     setAlternativaSelecionada("");
     setRespostaEnviada(false);
+    setEnviandoResposta(false);
     setResultadoUltimaResposta(null);
     setExibirBanco(false);
   };
@@ -465,7 +475,7 @@ export default function UserPage() {
       <Navbar links={links} usuario={usuario} />
 
       <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] border-b-2 border-black lg:overflow-hidden">
-        {/* CONTAINER 1 (Ordem Original) */}
+        {/* CONTAINER 1 */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4 order-1 lg:order-3">
           <div className="min-h-[200px] lg:flex-1 flex order-1 lg:order-1">
             <DailyQuestions className="w-full h-full" />
@@ -515,6 +525,7 @@ export default function UserPage() {
                       setQuestaoSelecionada(null);
                       setAlternativaSelecionada("");
                       setRespostaEnviada(false);
+                      setEnviandoResposta(false);
                       setResultadoUltimaResposta(null);
                     }}
                     className="bg-slate-200 dark:bg-slate-800 text-black dark:text-white text-xs font-bold px-2.5 py-1 rounded-md border border-black dark:border-slate-700 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer touch-manipulation active:scale-95 transition"
@@ -675,7 +686,8 @@ export default function UserPage() {
                           const isSelecionada =
                             String(alternativaSelecionada) === String(altId);
 
-                          let corFundo = "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80";
+                          let corFundo =
+                            "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80";
                           if (respostaEnviada) {
                             if (isCorreta) {
                               corFundo =
@@ -685,7 +697,8 @@ export default function UserPage() {
                                 "bg-red-100 dark:bg-red-950 border-red-600 text-red-900 dark:text-red-200";
                             }
                           } else if (isSelecionada) {
-                            corFundo = "bg-cyan-50 dark:bg-cyan-950/60 border-cyan-500 text-slate-900 dark:text-slate-100";
+                            corFundo =
+                              "bg-cyan-50 dark:bg-cyan-950/60 border-cyan-500 text-slate-900 dark:text-slate-100";
                           }
 
                           return (
@@ -698,10 +711,11 @@ export default function UserPage() {
                                 name="alternativa"
                                 checked={isSelecionada}
                                 onChange={() => {
-                                  if (respostaEnviada) return;
+                                  if (respostaEnviada || enviandoResposta)
+                                    return;
                                   setAlternativaSelecionada(altId);
                                 }}
-                                disabled={respostaEnviada}
+                                disabled={respostaEnviada || enviandoResposta}
                                 className="mt-1 shrink-0 accent-[#7B5CFA] cursor-pointer"
                               />
                               <div className="font-bold text-xs md:text-sm text-slate-800 dark:text-slate-200 break-words flex-1 pointer-events-none">
@@ -725,9 +739,16 @@ export default function UserPage() {
                     {!respostaEnviada ? (
                       <button
                         type="submit"
-                        className="mt-4 bg-[#7B5CFA] text-white border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black shadow-[3px_3px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation"
+                        disabled={enviandoResposta || !alternativaSelecionada}
+                        className={`mt-4 border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black transition text-xs md:text-sm ${
+                          enviandoResposta
+                            ? "bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none animate-pulse"
+                            : "bg-[#7B5CFA] text-white shadow-[3px_3px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 cursor-pointer touch-manipulation"
+                        }`}
                       >
-                        RESPONDER
+                        {enviandoResposta
+                          ? "ENVIANDO RESPOSTA..."
+                          : "RESPONDER"}
                       </button>
                     ) : (
                       <div className="mt-4 flex flex-col gap-3">
@@ -791,6 +812,7 @@ export default function UserPage() {
                               setIndiceQuestaoAtual(0);
                               setAlternativaSelecionada("");
                               setRespostaEnviada(false);
+                              setEnviandoResposta(false);
                               setResultadoUltimaResposta(null);
                             }}
                             className="flex-1 bg-slate-200 dark:bg-slate-800 text-black dark:text-white border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black shadow-[3px_3px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 transition cursor-pointer touch-manipulation text-xs"
@@ -821,6 +843,7 @@ export default function UserPage() {
                           setIndiceQuestaoAtual(index);
                           setAlternativaSelecionada("");
                           setRespostaEnviada(false);
+                          setEnviandoResposta(false);
                           setResultadoUltimaResposta(null);
                           setTempoInicio(Date.now());
                         }}
