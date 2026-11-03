@@ -4,10 +4,12 @@ import { paymentService } from "../service/payment";
 const CONTAINER_ID = "checkout-card-payment";
 let brickLifecycle = Promise.resolve();
 
-export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, onError, onExpired, payerAddress }) {
+export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, onError, onExpired, payerAddress, payerIdentification, payerPhone }) {
   const submitting = useRef(false);
   const onOrderRef = useRef(onOrder);
   const payerAddressRef = useRef(payerAddress);
+  const payerIdentificationRef = useRef(payerIdentification);
+  const payerPhoneRef = useRef(payerPhone);
   const onErrorRef = useRef(onError);
   const onExpiredRef = useRef(onExpired);
   const [ready, setReady] = useState(false);
@@ -15,9 +17,11 @@ export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, 
   useEffect(() => {
     onOrderRef.current = onOrder;
     payerAddressRef.current = payerAddress;
+    payerIdentificationRef.current = payerIdentification;
+    payerPhoneRef.current = payerPhone;
     onErrorRef.current = onError;
     onExpiredRef.current = onExpired;
-  }, [onOrder, onError, onExpired, payerAddress]);
+  }, [onOrder, onError, onExpired, payerAddress, payerIdentification, payerPhone]);
 
   useEffect(() => {
     if (!publicKey || !quote?.quoteId) return undefined;
@@ -51,6 +55,10 @@ export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, 
             onErrorRef.current("Preencha o endereço real do pagador antes de pagar.");
             throw new Error("Endereço do pagador incompleto");
           }
+          if (!payerIdentificationRef.current?.number) {
+            onErrorRef.current("Informe o CPF do pagador antes de pagar.");
+            throw new Error("Identificação do pagador incompleta");
+          }
           if (submitting.current) throw new Error("Pagamento em processamento.");
           if (!active || Date.parse(quote.expiresAt) <= Date.now()) {
             onErrorRef.current("A cotação expirou. Atualize o pagamento antes de tentar novamente.");
@@ -75,6 +83,8 @@ export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, 
               paymentMethodId: cardData.payment_method_id,
               cardToken: cardData.token,
               payerAddress: payerAddressRef.current,
+              payerIdentification: payerIdentificationRef.current,
+              payerPhone: payerPhoneRef.current,
             });
             if (active) onOrderRef.current(order);
           } catch (error) {
