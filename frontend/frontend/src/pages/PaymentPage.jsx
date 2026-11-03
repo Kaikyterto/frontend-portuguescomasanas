@@ -414,7 +414,7 @@ export default function PaymentPage() {
                     </div>
 
                     <div className="flex justify-between items-baseline text-xs font-bold text-slate-600">
-                      <span>Taxas do cartão:</span>
+                      <span>Taxas do mercado pago:</span>
                       <span>{taxAmount === null ? "—" : formatMoney(taxAmount)}</span>
                     </div>
                   </div>
