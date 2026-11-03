@@ -228,7 +228,7 @@ export default function PaymentPage() {
   const handleCreatedOrder = (order) => {
     localStorage.setItem(ORDER_KEY(curso.id), String(order.id));
     setCreatedOrder(order);
-    if (order.challengeUrl) window.location.assign(order.challengeUrl);
+
   };
 
   const handleSubmitPayment = async (e) => {
@@ -454,6 +454,13 @@ export default function PaymentPage() {
 
                 {createdOrder ? (
                   <div className="space-y-4">
+                    {createdOrder.challengeUrl && (
+                      <iframe
+                        title="Autenticação do pagamento pelo banco"
+                        src={createdOrder.challengeUrl}
+                        className="w-full min-h-[500px] border-0"
+                      />
+                    )}
                     {method === "PIX" && (
                       <div className="p-4 bg-[#00D2DF]/10 border-2 border-black rounded-xl text-center space-y-3">
                         <p className="text-xs font-bold text-slate-800">
