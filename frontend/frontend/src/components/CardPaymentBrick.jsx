@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { paymentService } from "../service/payment";
 
 const CONTAINER_ID = "checkout-card-payment";
+let brickLifecycle = Promise.resolve();
 
 export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, onError, onExpired }) {
   const submitting = useRef(false);
@@ -31,7 +32,7 @@ export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, 
     const bricks = mp.bricks();
     const installments = Number(quote.installments);
 
-    bricks.create("cardPayment", CONTAINER_ID, {
+    const settings = {
       initialization: { amount: Number(quote.totalAmount) },
       customization: {
         paymentMethods: {
@@ -77,16 +78,20 @@ export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, 
           }
         },
       },
-    }).then((created) => {
-      if (active) controller = created;
-      else created.unmount();
-    }).catch(() => {
-      if (active) onErrorRef.current("Não foi possível iniciar o formulário seguro do cartão.");
+    };
+
+    brickLifecycle = brickLifecycle.catch(() => {}).then(async () => {
+      if (!active) return;
+      try {
+        controller = await bricks.create("cardPayment", CONTAINER_ID, settings);
+      } catch {
+        if (active) onErrorRef.current("Não foi possível iniciar o formulário seguro do cartão.");
+      }
     });
 
     return () => {
       active = false;
-      controller?.unmount();
+      brickLifecycle = brickLifecycle.catch(() => {}).then(() => controller?.unmount());
     };
   }, [publicKey, quote, courseId]);
 
