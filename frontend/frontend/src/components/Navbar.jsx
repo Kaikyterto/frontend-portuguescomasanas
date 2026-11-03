@@ -159,7 +159,7 @@ export default function Navbar({ links = [], usuario }) {
             onClick={toggleTheme}
             className="flex items-center justify-center gap-2 bg-amber-200 dark:bg-slate-800 text-black dark:text-white text-xs font-black uppercase tracking-wider p-2.5 rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
           >
-            {theme === "dark" ? "☀️ Mudar para Modo Claro" : "🌙 Mudar para Modo Escuro"}
+            {theme === "dark" ? "☀️" : "🌙 "}
           </button>
 
           {isAdmin && (
