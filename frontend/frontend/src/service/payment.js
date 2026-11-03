@@ -58,7 +58,7 @@ export async function createOrder(orderData) {
   const response = await fetch(`${API_URL}/api/payments/orders`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify(orderData),
+    body: JSON.stringify({ ...orderData, ...(window.MP_DEVICE_SESSION_ID ? { deviceSessionId: window.MP_DEVICE_SESSION_ID } : {}) }),
   });
 
   const data = await response.json();

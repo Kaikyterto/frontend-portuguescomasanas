@@ -7,6 +7,16 @@ import CardPaymentBrick from "../components/CardPaymentBrick";
 const ORDER_KEY = (courseId) => `checkout-order:${courseId}`;
 const FINAL_FAILURES = new Set(["REJECTED", "CANCELED", "REFUNDED", "CHARGED_BACK", "ERROR"]);
 
+function toPayerAddress(data) {
+  return { streetName: data.streetName.trim(), streetNumber: data.streetNumber.trim(),
+    zipCode: data.zipCode.replace(/\D/g, ""), city: data.city.trim(), state: data.state.trim().toUpperCase() };
+}
+function isValidPayerAddress(data) {
+  const a = toPayerAddress(data);
+  return Boolean(a.streetName && a.streetNumber && a.city && /^[0-9]{8}$/.test(a.zipCode)
+    && /^(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)$/.test(a.state));
+}
+
 export default function PaymentPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -228,7 +238,7 @@ export default function PaymentPage() {
   const handleCreatedOrder = (order) => {
     localStorage.setItem(ORDER_KEY(curso.id), String(order.id));
     setCreatedOrder(order);
-    if (order.challengeUrl) window.location.assign(order.challengeUrl);
+
   };
 
   const handleSubmitPayment = async (e) => {
@@ -246,6 +256,9 @@ export default function PaymentPage() {
 
     try {
       const cleanCpf = formData.cpf.replace(/\D/g, "");
+      if (method === "PIX" && !isValidPayerAddress(formData)) {
+        throw new Error("Preencha o endereço real do pagador para continuar.");
+      }
       const quoteId = quote.quoteId || quote.id;
 
       let payload = {
@@ -257,6 +270,7 @@ export default function PaymentPage() {
 
       if (method === "PIX") {
         payload.paymentMethodId = "pix";
+        payload.payerAddress = toPayerAddress(formData);
       } else if (method === "BOLETO") {
         payload.paymentMethodId = "boleto";
         payload.boletoPayer = {
@@ -452,8 +466,27 @@ export default function PaymentPage() {
                   </div>
                 )}
 
+                {!createdOrder && method !== "BOLETO" && (
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <p className="col-span-2 text-xs font-bold">Endereço do pagador</p>
+                    {[['streetName', 'Rua'], ['streetNumber', 'Número'], ['zipCode', 'CEP'], ['city', 'Cidade'], ['state', 'UF']].map(([name, label]) => (
+                      <label key={name} className="text-xs font-bold">{label}
+                        <input name={name} value={formData[name]} onChange={handleInputChange}
+                          required maxLength={name === 'zipCode' ? 9 : name === 'state' ? 2 : undefined}
+                          className="w-full border-2 border-black rounded-lg p-2" />
+                      </label>
+                    ))}
+                  </div>
+                )}
                 {createdOrder ? (
                   <div className="space-y-4">
+                    {createdOrder.challengeUrl && (
+                      <iframe
+                        title="Autenticação do pagamento pelo banco"
+                        src={createdOrder.challengeUrl}
+                        className="w-full min-h-[500px] border-0"
+                      />
+                    )}
                     {method === "PIX" && (
                       <div className="p-4 bg-[#00D2DF]/10 border-2 border-black rounded-xl text-center space-y-3">
                         <p className="text-xs font-bold text-slate-800">
@@ -535,6 +568,7 @@ export default function PaymentPage() {
                         publicKey={mpPublicKey}
                         quote={quote}
                         courseId={curso.id}
+                        payerAddress={isValidPayerAddress(formData) ? toPayerAddress(formData) : null}
                         onOrder={handleCreatedOrder}
                         onError={setErrorMessage}
                         onExpired={() => setQuoteRevision((current) => current + 1)}
