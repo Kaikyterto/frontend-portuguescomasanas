@@ -414,7 +414,7 @@ export default function PaymentPage() {
                     </div>
 
                     <div className="flex justify-between items-baseline text-xs font-bold text-slate-600">
-                      <span>Ajuste do método:</span>
+                      <span>Taxas do cartão:</span>
                       <span>{taxAmount === null ? "—" : formatMoney(taxAmount)}</span>
                     </div>
                   </div>
@@ -602,8 +602,8 @@ export default function PaymentPage() {
                         <p className="font-bold">Total no cartão: {formatMoney(finalAmount)}</p>
                         {taxAmount > 0 ? (
                           <p className="mt-2 text-xs">
-                            O ajuste de {formatMoney(taxAmount)} já está somado ao total acima antes da confirmação.
-                            Nenhum ajuste será acrescentado depois que o pagamento for confirmado.
+                            As taxas do cartão, no valor de {formatMoney(taxAmount)}, já estão incluídas no total antes da confirmação.
+                            Nenhuma taxa será acrescentada depois que o pagamento for confirmado.
                           </p>
                         ) : (
                           <p className="mt-2 text-xs">Esse é o total que será enviado para pagamento.</p>
