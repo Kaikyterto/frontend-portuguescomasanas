@@ -229,6 +229,36 @@ export async function iniciarTentativa(simuladoId, token) {
   }
 }
 
+export async function corrigirGabarito(simuladoId, questaoId, alternativaId, token) {
+  try {
+    const response = await fetch(`${API_URL}/api/simulados/${simuladoId}/gabarito`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ questaoId, alternativaId }),
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      const error = new Error(
+        data.message || `Erro ao corrigir gabarito (Status: ${response.status})`
+      );
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Erro em corrigirGabarito:", error);
+    throw error;
+  }
+}
+
 export async function listarHistorico(
   simuladoId,
   alunoId = null,
@@ -256,6 +286,7 @@ export async function listarHistorico(
 
     const responseText = await response.text();
     const data = responseText ? JSON.parse(responseText) : {};
+    console.log("listarHistorico response:", data);
 
     if (!response.ok) {
       const error = new Error(
@@ -430,4 +461,5 @@ export const simuladoService = {
   responderQuestao,
   finalizarTentativa,
   obterRanking,
+  corrigirGabarito,
 };

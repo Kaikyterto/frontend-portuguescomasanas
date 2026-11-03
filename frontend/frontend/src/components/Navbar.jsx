@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import Logo from "../assets/logo-sem-fundo.png";
+import { useTheme } from "../ThemeContext"; 
 
 export default function Navbar({ links = [], usuario }) {
   const nomeUsuario = usuario?.nome || "Estudante";
   const location = useLocation();
   const [menuAberto, setMenuAberto] = useState(false);
+  const { theme, toggleTheme } = useTheme(); 
 
   // Verifica se o usuário é administrador
   const isAdmin = usuario?.perfil === "ADMIN" || usuario?.perfi === "admin";
@@ -14,13 +16,14 @@ export default function Navbar({ links = [], usuario }) {
     <nav
       className="
       relative 
-      bg-[#F4EFE6] 
-      border-b-2 border-black 
+      bg-[#F4EFE6] dark:bg-slate-900 
+      border-b-2 border-black dark:border-slate-800 
       px-4 md:px-8 
       py-4 
       font-sans 
-      text-slate-900 
+      text-slate-900 dark:text-slate-100
       z-50
+      transition-colors duration-200
       "
     >
       <div
@@ -62,9 +65,11 @@ export default function Navbar({ links = [], usuario }) {
                 href={link.href || "#"}
                 className={`
                 transition-all duration-150
-                hover:text-black hover:translate-y-[-1px]
+                hover:text-black dark:hover:text-white hover:translate-y-[-1px]
                 ${
-                  isActive ? "border-b-2 border-black pb-0.5" : "text-slate-600"
+                  isActive 
+                    ? "border-b-2 border-black dark:border-white pb-0.5 text-black dark:text-white" 
+                    : "text-slate-600 dark:text-slate-400"
                 }
                 `}
               >
@@ -74,20 +79,29 @@ export default function Navbar({ links = [], usuario }) {
           })}
         </div>
 
-        {/* ÁREA DO USUÁRIO, BOTÃO ADMIN E HAMBÚRGUER MOBILE */}
+        {/* ÁREA DO USUÁRIO, BOTÃO DE TEMA, PAINEL ADMIN E HAMBÚRGUER MOBILE */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* BOTÃO DE TEMA (DESKTOP) */}
+          <button
+            onClick={toggleTheme}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-wider bg-amber-200 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition"
+            title="Alternar tema"
+          >
+            {theme === "dark" ? "☀️"  : "🌙"}
+          </button>
+
           {isAdmin && (
             <Link
               to="/admin"
-              className="hidden sm:inline-block bg-[#FFD700] text-black text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#ffde21] transition"
+              className="hidden sm:inline-block bg-[#FFD700] dark:bg-amber-500 text-black text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-[#ffde21] transition"
             >
               Painel Admin
             </Link>
           )}
 
-          <div className="flex items-center gap-2 bg-white border border-black rounded-lg px-2.5 sm:px-3.5 py-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-black dark:border-slate-700 rounded-lg px-2.5 sm:px-3.5 py-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
             <span className="w-2 h-2 rounded-full bg-emerald-400 border border-black shrink-0" />
-            <span className="text-[11px] sm:text-xs font-black tracking-widest text-black uppercase max-w-[100px] sm:max-w-[185px] truncate block">
+            <span className="text-[11px] sm:text-xs font-black tracking-widest text-black dark:text-white uppercase max-w-[100px] sm:max-w-[185px] truncate block">
               <span className="hidden sm:inline">Bem-vindo, </span>
               {nomeUsuario.split(" ")[0]}
             </span>
@@ -96,21 +110,21 @@ export default function Navbar({ links = [], usuario }) {
           {/* BOTÃO HAMBÚRGUER (Visível apenas no mobile) */}
           <button
             onClick={() => setMenuAberto(!menuAberto)}
-            className="md:hidden flex flex-col justify-center items-center w-9 h-9 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:outline-none cursor-pointer active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition"
+            className="md:hidden flex flex-col justify-center items-center w-9 h-9 bg-white dark:bg-slate-800 border-2 border-black dark:border-slate-700 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none focus:outline-none cursor-pointer active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition"
             aria-label="Abrir Menu"
           >
             <span
-              className={`block w-4 h-0.5 bg-black transition-transform duration-200 ${
+              className={`block w-4 h-0.5 bg-black dark:bg-white transition-transform duration-200 ${
                 menuAberto ? "rotate-45 translate-y-1.5" : "-translate-y-1"
               }`}
             />
             <span
-              className={`block w-4 h-0.5 bg-black transition-opacity duration-200 ${
+              className={`block w-4 h-0.5 bg-black dark:bg-white transition-opacity duration-200 ${
                 menuAberto ? "opacity-0" : "opacity-100"
               }`}
             />
             <span
-              className={`block w-4 h-0.5 bg-black transition-transform duration-200 ${
+              className={`block w-4 h-0.5 bg-black dark:bg-white transition-transform duration-200 ${
                 menuAberto ? "-rotate-45 -translate-y-1.5" : "translate-y-1"
               }`}
             />
@@ -120,7 +134,7 @@ export default function Navbar({ links = [], usuario }) {
 
       {/* MENU DROPDOWN MOBILE */}
       {menuAberto && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-[#F4EFE6] border-b-2 border-black p-4 shadow-xl flex flex-col gap-3 animate-fadeIn">
+        <div className="md:hidden absolute top-full left-0 w-full bg-[#F4EFE6] dark:bg-slate-900 border-b-2 border-black dark:border-slate-800 p-4 shadow-xl flex flex-col gap-3 animate-fadeIn">
           {links.map((link, index) => {
             const isActive = location.pathname === link.href;
 
@@ -129,10 +143,10 @@ export default function Navbar({ links = [], usuario }) {
                 key={index}
                 href={link.href || "#"}
                 onClick={() => setMenuAberto(false)}
-                className={`font-black tracking-widest text-xs uppercase p-2.5 rounded-lg border border-black transition ${
+                className={`font-black tracking-widest text-xs uppercase p-2.5 rounded-lg border border-black dark:border-slate-700 transition ${
                   isActive
                     ? "bg-[#7B5CFA] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                    : "bg-white text-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                 }`}
               >
                 {link.label}
@@ -140,11 +154,19 @@ export default function Navbar({ links = [], usuario }) {
             );
           })}
 
+          {/* BOTÃO DE TEMA (MOBILE) */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center gap-2 bg-amber-200 dark:bg-slate-800 text-black dark:text-white text-xs font-black uppercase tracking-wider p-2.5 rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+          >
+            {theme === "dark" ? "☀️" : "🌙 "}
+          </button>
+
           {isAdmin && (
             <Link
               to="/admin"
               onClick={() => setMenuAberto(false)}
-              className="bg-[#FFD700] text-black text-xs font-black uppercase tracking-wider p-2.5 text-center rounded-lg border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              className="bg-[#FFD700] dark:bg-amber-500 text-black text-xs font-black uppercase tracking-wider p-2.5 text-center rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
             >
               Painel Admin
             </Link>

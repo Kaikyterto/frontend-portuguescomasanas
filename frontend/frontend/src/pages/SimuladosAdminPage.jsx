@@ -43,7 +43,7 @@ export default function SimuladosAdminPage() {
     texto: "",
   });
 
-  // Modal de Criação / Edição de Simulado
+  // Modal de Criação / Edição Geral de Simulado
   const [showSimuladoModal, setShowSimuladoModal] = useState(false);
   const [editingSimuladoId, setEditingSimuladoId] = useState(null);
   const [titulo, setTitulo] = useState("");
@@ -52,6 +52,12 @@ export default function SimuladosAdminPage() {
   const [cursoId, setCursoId] = useState("");
   const [ativo, setAtivo] = useState(true);
   const [questaoIdsSelecionadas, setQuestaoIdsSelecionadas] = useState([]);
+
+  // Modal de Edição Específica do Gabarito (para simulados com tentativas)
+  const [showGabaritoModal, setShowGabaritoModal] = useState(false);
+  const [simuladoGabarito, setSimuladoGabarito] = useState(null);
+  const [questoesGabarito, setQuestoesGabarito] = useState([]); // [{ id, enunciado, alternativas, alternativaCorretaId }]
+  const [isSubmittingGabarito, setIsSubmittingGabarito] = useState(false);
 
   // Estados do Modal de Ranking (Admin / Professor)
   const [showRankingModal, setShowRankingModal] = useState(false);
@@ -236,34 +242,48 @@ export default function SimuladosAdminPage() {
       handleResetForm();
       fetchData(currentPage);
     } catch (error) {
-      showAlert(`Erro ao salvar simulado: ${error.message || error}`, "error");
+      if (error.status === 400 || error.status === 409) {
+        showAlert(
+          "Este simulado possui tentativas iniciadas e não pode ter conteúdo ou duração alterados. Utilize a opção de corrigir gabarito (🎯 Gabarito).",
+          "error",
+          () => {
+            const currentSimuladoId = editingSimuladoId;
+            handleResetForm();
+            if (currentSimuladoId) {
+              handleAbrirModalGabarito({ id: currentSimuladoId });
+            }
+          }
+        );
+      } else {
+        showAlert(`Erro ao salvar simulado: ${error.message || error}`, "error");
+      }
     } finally {
       setIsSubmittingSimulado(false);
     }
   };
 
-  // CORRIGIDO: Abrir modal para edição preenchendo todos os campos robustamente
+  // Abrir modal para edição geral de simulado
   const handleEditSimulado = async (simuladoResumo) => {
     try {
       const detalhe = await simuladoService.detalhar(simuladoResumo.id, token);
-      
+
       setEditingSimuladoId(detalhe.id || simuladoResumo.id);
       setTitulo(detalhe.titulo || detalhe.nome || simuladoResumo.titulo || "");
       descricaoSet(detalhe.descricao || simuladoResumo.descricao || "");
-      setDuracaoMinutos(detalhe.duracaoMinutos || simuladoResumo.duracaoMinutos || 60);
-      
-      // Tratamento seguro para extrair o ID do curso vinculado (seja objeto ou ID direto)
-      const idCursoExtraido = 
-        detalhe.cursoId || 
-        detalhe.curso?.id || 
-        simuladoResumo.cursoId || 
-        simuladoResumo.curso?.id || 
+      setDuracaoMinutos(
+        detalhe.duracaoMinutos || simuladoResumo.duracaoMinutos || 60
+      );
+
+      const idCursoExtraido =
+        detalhe.cursoId ||
+        detalhe.curso?.id ||
+        simuladoResumo.cursoId ||
+        simuladoResumo.curso?.id ||
         "";
       setCursoId(idCursoExtraido);
 
       setAtivo(detalhe.ativo ?? simuladoResumo.ativo ?? true);
-      
-      // Mapeamento seguro das questões selecionadas
+
       const questoesList = detalhe.questoes || simuladoResumo.questoes || [];
       setQuestaoIdsSelecionadas(
         questoesList.map((q) => q.questaoOrigemId || q.id || q)
@@ -273,6 +293,70 @@ export default function SimuladosAdminPage() {
     } catch (error) {
       console.error("Erro ao carregar detalhes para edição:", error);
       showAlert("Erro ao carregar detalhes para edição.", "error");
+    }
+  };
+
+  
+const handleAbrirModalGabarito = async (simuladoResumo) => {
+    try {
+      const detalhe = await simuladoService.detalhar(simuladoResumo.id, token);
+      
+      // Garante que o objeto salvo no estado possua explicitamente a propriedade id
+      setSimuladoGabarito({
+        ...detalhe,
+        id: detalhe.id || simuladoResumo.id
+      });
+
+      const questoesComGabarito = (detalhe.questoes || []).map((q) => ({
+        id: q.id, // ID da questão no simulado (simulado_questao_id)
+        enunciado: q.enunciado,
+        alternativas: q.alternativas || [],
+        alternativaCorretaId:
+          q.alternativaCorretaId ||
+          q.alternativas?.find((alt) => alt.correta)?.id ||
+          null,
+      }));
+      setQuestoesGabarito(questoesComGabarito);
+      setShowGabaritoModal(true);
+    } catch (error) {
+      console.error("Erro ao carregar gabarito do simulado:", error);
+      showAlert("Erro ao carregar questões do simulado para correção.", "error");
+    }
+  };
+
+  const handleAlterarAlternativaCorreta = (questaoId, alternativaId) => {
+    setQuestoesGabarito((prev) =>
+      prev.map((q) =>
+        q.id === questaoId ? { ...q, alternativaCorretaId: alternativaId } : q
+      )
+    );
+  };
+
+  const handleSaveGabarito = async (e) => {
+    e.preventDefault();
+    if (isSubmittingGabarito || !simuladoGabarito) return;
+
+    setIsSubmittingGabarito(true);
+    try {
+      // Dispara a correção individual alinhada com SimuladoDtos.CorrigirGabarito (questaoId, alternativaId)
+      for (const q of questoesGabarito) {
+        if (q.alternativaCorretaId) {
+          await simuladoService.corrigirGabarito(
+            simuladoGabarito.id,
+            q.id,
+            q.alternativaCorretaId,
+            token
+          );
+        }
+      }
+
+      showAlert("Gabarito do simulado e notas das tentativas recalculados com sucesso!");
+      setShowGabaritoModal(false);
+      fetchData(currentPage);
+    } catch (error) {
+      showAlert(`Erro ao atualizar gabarito: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingGabarito(false);
     }
   };
 
@@ -383,7 +467,7 @@ export default function SimuladosAdminPage() {
           </button>
         </div>
 
-        {/* MODAL DE CRIAÇÃO / EDIÇÃO DE SIMULADO */}
+        {/* MODAL DE CRIAÇÃO / EDIÇÃO GERAL DE SIMULADO */}
         {showSimuladoModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-3xl w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
@@ -680,6 +764,95 @@ export default function SimuladosAdminPage() {
           </div>
         )}
 
+        {/* MODAL DE EDICÃO DE GABARITO (PATCH) */}
+        {showGabaritoModal && simuladoGabarito && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-3xl w-full shadow-[8px_8px_0_black] max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-xl font-black uppercase">
+                    🎯 Corrigir Gabarito do Simulado
+                  </h3>
+                  <p className="text-xs font-bold text-slate-600">
+                    {simuladoGabarito.titulo} — Esta ação altera o gabarito das cópias no simulado e recalcula automaticamente as notas das tentativas.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowGabaritoModal(false)}
+                  disabled={isSubmittingGabarito}
+                  className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveGabarito} className="space-y-4">
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                  {questoesGabarito.map((q, index) => (
+                    <div
+                      key={q.id}
+                      className="bg-white border-2 border-black rounded-xl p-4 shadow-[2px_2px_0_black]"
+                    >
+                      <p className="font-black text-xs text-slate-800 mb-2">
+                        {index + 1}. {q.enunciado}
+                      </p>
+                      <div className="space-y-1.5 pl-2">
+                        {(q.alternativas || []).map((alt) => {
+                          const isSelected = q.alternativaCorretaId === alt.id;
+                          return (
+                            <label
+                              key={alt.id}
+                              className={`flex items-center gap-2 text-xs font-bold p-2 rounded-lg border border-black cursor-pointer transition-colors ${
+                                isSelected
+                                  ? "bg-green-200 border-green-600 font-black"
+                                  : "bg-slate-50 hover:bg-slate-100"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`gabarito-q-${q.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  handleAlterarAlternativaCorreta(q.id, alt.id)
+                                }
+                                className="w-4 h-4 cursor-pointer"
+                              />
+                              <span>
+                                {alt.letra ? `(${alt.letra}) ` : ""}
+                                {alt.texto || alt.descricao}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingGabarito}
+                    className="flex-1 bg-green-400 text-black border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 uppercase text-sm cursor-pointer"
+                  >
+                    {isSubmittingGabarito
+                      ? "Salvar e Recalcular..."
+                      : "Salvar Novo Gabarito"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSubmittingGabarito}
+                    onClick={() => setShowGabaritoModal(false)}
+                    className="bg-slate-200 border-2 border-black rounded-xl px-6 py-3 font-black disabled:opacity-50 text-sm cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* MODAL DE RANKING DO SIMULADO */}
         {showRankingModal && rankingSimulado && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -687,7 +860,7 @@ export default function SimuladosAdminPage() {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="text-lg font-black uppercase mt-1">
-                    {rankingSimulado.titulo}
+                    🏆 Ranking: {rankingSimulado.titulo}
                   </h3>
                 </div>
                 <button
@@ -825,6 +998,12 @@ export default function SimuladosAdminPage() {
                       className="bg-[#FF42DE] text-white border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer"
                     >
                       🏆 Ranking
+                    </button>
+                    <button
+                      onClick={() => handleAbrirModalGabarito(simulado)}
+                      className="bg-yellow-300 border-2 border-black px-3 py-1.5 text-xs font-black rounded-xl shadow-[2px_2px_0_black] cursor-pointer"
+                    >
+                      🎯 Gabarito
                     </button>
                     <button
                       onClick={() =>

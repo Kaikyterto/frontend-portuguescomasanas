@@ -59,19 +59,45 @@ export async function criarRespostasEmLote(respostas) {
 
 export async function listarMinhasRespostas() {
   try {
-    const response = await fetch(`${API_URL}/api/respostas/minhas`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
+    let todasAsRespostas = [];
+    let pagina = 0;
+    let tamanhoPorPagina = 100; // Buscamos blocos de 100 por vez para ser rápido e eficiente
+    let temMaisPaginas = true;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || "Erro ao carregar o histórico de respostas."
+    while (temMaisPaginas) {
+      const response = await fetch(
+        `${API_URL}/api/respostas/minhas?page=${pagina}&size=${tamanhoPorPagina}`,
+        {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }
       );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || "Erro ao carregar o histórico de respostas."
+        );
+      }
+
+      const dados = response.json ? await response.json() : response;
+
+      // O Spring Data retorna um objeto PaginaResponse ou Page contendo 'content'
+      const conteudo = dados.content || dados.dados || (Array.isArray(dados) ? dados : []);
+
+      if (conteudo.length > 0) {
+        todasAsRespostas.push(...conteudo);
+      }
+
+      // Verifica se chegamos na última página com base nas flags do Spring Data ou se a lista veio menor que o tamanho
+      if (dados.last === true || conteudo.length < tamanhoPorPagina || conteudo.length === 0) {
+        temMaisPaginas = false;
+      } else {
+        pagina++;
+      }
     }
 
-    return await response.json();
+    return todasAsRespostas;
   } catch (error) {
     console.error("Erro em listarMinhasRespostas:", error);
     throw error;

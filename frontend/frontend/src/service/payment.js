@@ -1,22 +1,94 @@
 import { API_URL } from "../config/api";
 
-export async function createCheckout(cursoId) {
-  const token = localStorage.getItem("token");
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || localStorage.getItem("@PortuguessComAnas:token");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
-  const response = await fetch(`${API_URL}/api/payments/checkout`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ cursoId: Number(cursoId) }), // Enviando como 'cursoId'
+export async function getMercadoPagoConfig() {
+  const response = await fetch(`${API_URL}/api/payments/orders/config`, {
+    method: "GET",
+    headers: getAuthHeaders(),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Erro ao iniciar o processo de pagamento.");
+    throw new Error(data.message || "Erro ao buscar configurações de pagamento.");
   }
 
   return data;
 }
+
+export async function getQuoteOptions() {
+  const response = await fetch(`${API_URL}/api/payments/quotes/options`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Erro ao buscar opções de cotação.");
+  }
+
+  return data;
+}
+
+export async function createQuote(quoteData) {
+  const response = await fetch(`${API_URL}/api/payments/quotes`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(quoteData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Erro ao criar cotação de pagamento.");
+  }
+
+  return data;
+}
+
+export async function createOrder(orderData) {
+  const response = await fetch(`${API_URL}/api/payments/orders`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(orderData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Erro ao criar ordem de pagamento.");
+  }
+
+  return data;
+}
+
+export async function getOrderStatus(orderId) {
+  const response = await fetch(`${API_URL}/api/payments/orders/${orderId}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Erro ao consultar status da ordem.");
+  }
+
+  return data;
+}
+
+export const paymentService = {
+  getMercadoPagoConfig,
+  getQuoteOptions,
+  createQuote,
+  createOrder,
+  getOrderStatus,
+};

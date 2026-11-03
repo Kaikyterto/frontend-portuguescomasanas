@@ -236,6 +236,7 @@ export default function SimuladosPage() {
     try {
       setCarregandoTentativaHistorico(tentativaId);
       const detalheTentativa = await buscarTentativa(tentativaId, token);
+      console.log("Detalhe da tentativa selecionada:", detalheTentativa);
 
       setTentativaAtual(detalheTentativa);
       setIndiceQuestao(0);
@@ -259,8 +260,8 @@ export default function SimuladosPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center">
-        <h1 className="text-2xl font-black uppercase tracking-wider animate-pulse">
+      <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex items-center justify-center">
+        <h1 className="text-2xl font-black uppercase tracking-wider animate-pulse text-slate-900 dark:text-slate-100">
           Carregando simulados...
         </h1>
       </div>
@@ -272,20 +273,20 @@ export default function SimuladosPage() {
     indiceQuestao + 1 >= tentativaAtual.questoes.length;
 
   return (
-    <div className="min-h-screen bg-[#F4EFE6] font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 font-sans flex flex-col transition-colors duration-200">
       <Navbar links={links} usuario={usuario} />
 
       <main className="flex-1 p-4 md:p-8 bg-gradient-to-tr from-[#00D2DF] via-[#7B5CFA] to-[#FF42DE] flex flex-col gap-6">
         {tentativaAtual ? (
           <div className="flex-1 flex flex-col gap-4 max-w-4xl mx-auto w-full">
             {/* Barra superior do simulado */}
-            <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0_black] flex flex-wrap justify-between items-center gap-4">
+            <div className="bg-[#F4EFE6] dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-2xl p-4 shadow-[4px_4px_0_black] dark:shadow-none flex flex-wrap justify-between items-center gap-4">
               <div>
-                <span className="text-xs font-black uppercase bg-[#7B5CFA] text-white px-2 py-1 rounded border border-black">
+                <span className="text-xs font-black uppercase bg-[#7B5CFA] text-white px-2 py-1 rounded border border-black dark:border-slate-700">
                   Tentativa #{tentativaAtual.numero} — Status:{" "}
                   {tentativaAtual.status}
                 </span>
-                <h2 className="text-lg font-black mt-2">
+                <h2 className="text-lg font-black mt-2 text-slate-900 dark:text-slate-100">
                   {tentativaAtual.status === "EM_ANDAMENTO"
                     ? "Resolução de Simulado"
                     : "Revisão de Tentativa"}
@@ -293,9 +294,9 @@ export default function SimuladosPage() {
               </div>
               <div className="flex items-center gap-4">
                 {tentativaAtual.status === "EM_ANDAMENTO" && (
-                  <div className="bg-white border-2 border-black px-4 py-2 rounded-xl font-black text-sm shadow-[2px_2px_0_black]">
+                  <div className="bg-white dark:bg-slate-800 border-2 border-black dark:border-slate-700 px-4 py-2 rounded-xl font-black text-sm text-slate-900 dark:text-slate-100 shadow-[2px_2px_0_black] dark:shadow-none">
                     ⏱️ Tempo Restante:{" "}
-                    <span className="text-red-600">
+                    <span className="text-red-600 dark:text-red-400">
                       {formatarTempo(tempoRestante)}
                     </span>
                   </div>
@@ -303,7 +304,7 @@ export default function SimuladosPage() {
                 {tentativaAtual.status === "EM_ANDAMENTO" && (
                   <button
                     onClick={() => handleFinalizar(tentativaAtual.id)}
-                    className="bg-red-400 text-white border-2 border-black px-4 py-2 font-black rounded-xl text-xs shadow-[2px_2px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 transition cursor-pointer"
+                    className="bg-red-400 dark:bg-red-700 text-white border-2 border-black dark:border-slate-700 px-4 py-2 font-black rounded-xl text-xs shadow-[2px_2px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition cursor-pointer"
                   >
                     FINALIZAR SIMULADO
                   </button>
@@ -313,19 +314,19 @@ export default function SimuladosPage() {
 
             {/* Bloco da Questão Atual */}
             {tentativaAtual.questoes && tentativaAtual.questoes.length > 0 && (
-              <div className="bg-white border-2 border-black rounded-2xl p-6 shadow-[6px_6px_0_black] flex flex-col gap-4">
-                <div className="flex justify-between items-center border-b-2 border-black pb-3">
-                  <span className="font-black text-sm bg-[#00D2DF] px-3 py-1 rounded-lg border border-black">
+              <div className="bg-white dark:bg-slate-800 border-2 border-black dark:border-slate-700 rounded-2xl p-6 shadow-[6px_6px_0_black] dark:shadow-none flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b-2 border-black dark:border-slate-700 pb-3">
+                  <span className="font-black text-sm bg-[#00D2DF] dark:bg-cyan-600 text-black dark:text-white px-3 py-1 rounded-lg border border-black dark:border-slate-700">
                     Questão {indiceQuestao + 1} de{" "}
                     {tentativaAtual.questoes.length}
                   </span>
-                  <span className="text-xs font-bold text-slate-600">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
                     Nível: {tentativaAtual.questoes[indiceQuestao].nivel} | Ano:{" "}
                     {tentativaAtual.questoes[indiceQuestao].ano}
                   </span>
                 </div>
 
-                <div className="text-slate-900 font-bold text-sm md:text-base leading-relaxed">
+                <div className="text-slate-900 dark:text-slate-100 font-bold text-sm md:text-base leading-relaxed">
                   <ReactMarkdown>
                     {tentativaAtual.questoes[indiceQuestao].enunciado}
                   </ReactMarkdown>
@@ -358,17 +359,17 @@ export default function SimuladosPage() {
                       const concluida =
                         tentativaAtual.status !== "EM_ANDAMENTO";
 
-                      let estiloCor = "bg-white hover:bg-slate-50";
+                      let estiloCor = "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/80";
                       if (concluida) {
                         if (alt.correta) {
                           estiloCor =
-                            "bg-emerald-100 border-emerald-600 text-emerald-900 font-bold";
+                            "bg-emerald-100 dark:bg-emerald-950 border-emerald-600 text-emerald-900 dark:text-emerald-200 font-bold";
                         } else if (selecionada && !alt.correta) {
                           estiloCor =
-                            "bg-red-100 border-red-600 text-red-900 font-bold";
+                            "bg-red-100 dark:bg-red-950 border-red-600 text-red-900 dark:text-red-200 font-bold";
                         }
                       } else if (selecionada) {
-                        estiloCor = "bg-cyan-50 border-cyan-500 font-black";
+                        estiloCor = "bg-cyan-50 dark:bg-cyan-950/60 border-cyan-500 text-slate-900 dark:text-slate-100 font-black";
                       }
 
                       return (
@@ -382,22 +383,22 @@ export default function SimuladosPage() {
                               );
                             }
                           }}
-                          className={`p-3 rounded-xl border-2 border-black flex items-start gap-3 transition ${
+                          className={`p-3 rounded-xl border-2 border-black dark:border-slate-700 flex items-start gap-3 transition ${
                             !concluida ? "cursor-pointer" : ""
                           } ${estiloCor}`}
                         >
                           <span className="font-black">({alt.letra})</span>
-                          <div className="text-xs md:text-sm font-bold flex-1">
+                          <div className="text-xs md:text-sm font-bold flex-1 text-slate-800 dark:text-slate-200">
                             <ReactMarkdown components={{ p: "span" }}>
                               {alt.texto}
                             </ReactMarkdown>
                           </div>
                           {concluida && selecionada && (
                             <span
-                              className={`text-[10px] font-black px-2 py-0.5 rounded border border-black shrink-0 ${
+                              className={`text-[10px] font-black px-2 py-0.5 rounded border border-black dark:border-slate-700 shrink-0 ${
                                 alt.correta
-                                  ? "bg-emerald-300 text-black"
-                                  : "bg-red-300 text-black"
+                                  ? "bg-emerald-300 dark:bg-emerald-800 text-black dark:text-white"
+                                  : "bg-red-300 dark:bg-red-800 text-black dark:text-white"
                               }`}
                             >
                               {alt.correta
@@ -429,7 +430,7 @@ export default function SimuladosPage() {
                       }
                       handleResponder(questaoAtualId, altEscolhida);
                     }}
-                    className="mt-4 bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 transition cursor-pointer disabled:opacity-50"
+                    className="mt-4 bg-[#7B5CFA] dark:bg-violet-600 text-white border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black shadow-[3px_3px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition cursor-pointer disabled:opacity-50"
                   >
                     {salvandoResposta
                       ? "SALVANDO..."
@@ -442,11 +443,11 @@ export default function SimuladosPage() {
                 {/* Explicação (se concluído) */}
                 {tentativaAtual.status !== "EM_ANDAMENTO" &&
                   tentativaAtual.questoes[indiceQuestao].explicacao && (
-                    <div className="bg-slate-100 border-2 border-black p-4 rounded-xl mt-4">
-                      <span className="block text-xs font-black uppercase text-slate-700 mb-1">
+                    <div className="bg-slate-100 dark:bg-slate-900 border-2 border-black dark:border-slate-700 p-4 rounded-xl mt-4">
+                      <span className="block text-xs font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
                         Explicação:
                       </span>
-                      <div className="text-xs font-bold text-slate-800">
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
                         <ReactMarkdown>
                           {tentativaAtual.questoes[indiceQuestao].explicacao}
                         </ReactMarkdown>
@@ -455,24 +456,24 @@ export default function SimuladosPage() {
                   )}
 
                 {/* Navegação entre questões */}
-                <div className="flex justify-between items-center pt-4 border-t-2 border-black mt-4">
+                <div className="flex justify-between items-center pt-4 border-t-2 border-black dark:border-slate-700 mt-4">
                   <button
                     disabled={indiceQuestao === 0}
                     onClick={() =>
                       setIndiceQuestao((prev) => Math.max(0, prev - 1))
                     }
-                    className="bg-slate-200 border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 cursor-pointer"
+                    className="bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 border-2 border-black dark:border-slate-600 px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] dark:shadow-none disabled:opacity-40 cursor-pointer"
                   >
                     ← Questão Anterior
                   </button>
 
                   {tentativaAtual.status !== "EM_ANDAMENTO" ? (
-                    <span className="font-black text-xs">
+                    <span className="font-black text-xs text-slate-800 dark:text-slate-200">
                       Acertos: {tentativaAtual.acertos ?? 0} /{" "}
                       {tentativaAtual.totalQuestoes}
                     </span>
                   ) : (
-                    <span className="font-black text-xs text-slate-500">
+                    <span className="font-black text-xs text-slate-500 dark:text-slate-400">
                       Simulado em andamento
                     </span>
                   )}
@@ -486,7 +487,7 @@ export default function SimuladosPage() {
                         Math.min(tentativaAtual.questoes.length - 1, prev + 1)
                       )
                     }
-                    className="bg-[#00D2DF] border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] disabled:opacity-40 cursor-pointer"
+                    className="bg-[#00D2DF] dark:bg-cyan-600 text-black dark:text-white border-2 border-black dark:border-slate-700 px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] dark:shadow-none disabled:opacity-40 cursor-pointer"
                   >
                     Próxima Questão →
                   </button>
@@ -494,7 +495,7 @@ export default function SimuladosPage() {
 
                 <button
                   onClick={() => setTentativaAtual(null)}
-                  className="w-full bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] mt-2 cursor-pointer hover:bg-[#6c4ee2] transition"
+                  className="w-full bg-[#7B5CFA] dark:bg-violet-600 text-white border-2 border-black dark:border-slate-700 rounded-xl py-3 font-black shadow-[3px_3px_0_black] dark:shadow-none mt-2 cursor-pointer hover:bg-[#6c4ee2] transition"
                 >
                   VOLTAR PARA A LISTA DE SIMULADOS
                 </button>
@@ -503,20 +504,20 @@ export default function SimuladosPage() {
           </div>
         ) : (
           /* Listagem de Simulados para o Aluno */
-          <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6 max-w-4xl mx-auto w-full">
+          <Card className="bg-[#F4EFE6] dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-2xl shadow-[6px_6px_0_black] dark:shadow-none p-6 max-w-4xl mx-auto w-full">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h1 className="text-2xl font-black uppercase">
+                <h1 className="text-2xl font-black uppercase text-slate-900 dark:text-slate-100">
                   Simulados Disponíveis
                 </h1>
-                <p className="text-sm font-bold text-slate-600">
+                <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
                   Resolva simulados com tempo cronometrado e acompanhe seu
                   histórico
                 </p>
               </div>
               <button
                 onClick={() => navigate("/user")}
-                className="bg-slate-200 border-2 border-black px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] cursor-pointer hover:bg-slate-300 transition"
+                className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-2 border-black dark:border-slate-700 px-4 py-2 font-black text-xs rounded-xl shadow-[2px_2px_0_black] dark:shadow-none cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700 transition"
               >
                 Voltar ao Painel Principal
               </button>
@@ -524,26 +525,26 @@ export default function SimuladosPage() {
 
             <div className="space-y-4">
               {simulados.length === 0 ? (
-                <p className="font-bold text-slate-500 py-6 text-center">
+                <p className="font-bold text-slate-500 dark:text-slate-400 py-6 text-center">
                   Nenhum simulado disponível no momento.
                 </p>
               ) : (
                 simulados.map((s) => (
                   <div
                     key={s.id}
-                    className="bg-white border-2 border-black rounded-xl p-5 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center"
+                    className="bg-white dark:bg-slate-800 border-2 border-black dark:border-slate-700 rounded-xl p-5 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center"
                   >
                     <div className="space-y-1">
                       <div className="flex flex-wrap gap-2 items-center">
-                        <span className="bg-[#00D2DF] border-2 border-black px-2 py-0.5 text-xs font-black rounded-lg">
+                        <span className="bg-[#00D2DF] dark:bg-cyan-600 text-black dark:text-white border-2 border-black dark:border-slate-700 px-2 py-0.5 text-xs font-black rounded-lg">
                           ⏱️ {s.duracaoMinutos} min
                         </span>
-                        <span className="bg-[#FFD700] border-2 border-black px-2 py-0.5 text-xs font-black rounded-lg">
+                        <span className="bg-[#FFD700] dark:bg-amber-500 text-black border-2 border-black dark:border-slate-700 px-2 py-0.5 text-xs font-black rounded-lg">
                           📝 {s.totalQuestoes} Questões
                         </span>
                       </div>
-                      <h3 className="font-black text-lg mt-1">{s.titulo}</h3>
-                      <p className="text-xs font-bold text-slate-600">
+                      <h3 className="font-black text-lg mt-1 text-slate-900 dark:text-slate-100">{s.titulo}</h3>
+                      <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
                         {s.descricao}
                       </p>
                     </div>
@@ -552,7 +553,7 @@ export default function SimuladosPage() {
                       <button
                         onClick={() => handleVerHistorico(s)}
                         disabled={carregandoHistoricoId === s.id}
-                        className="bg-slate-100 border-2 border-black px-3 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] hover:bg-slate-200 transition disabled:opacity-50 cursor-pointer"
+                        className="bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 border-2 border-black dark:border-slate-600 px-3 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] dark:shadow-none hover:bg-slate-200 dark:hover:bg-slate-600 transition disabled:opacity-50 cursor-pointer"
                       >
                         {carregandoHistoricoId === s.id
                           ? "Carregando histórico..."
@@ -561,7 +562,7 @@ export default function SimuladosPage() {
                       <button
                         onClick={() => handleIniciarSimulado(s.id)}
                         disabled={loadingSimulados}
-                        className="bg-[#7B5CFA] text-white border-2 border-black px-4 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] hover:translate-x-0.5 hover:translate-y-0.5 transition disabled:opacity-50 cursor-pointer"
+                        className="bg-[#7B5CFA] dark:bg-violet-600 text-white border-2 border-black dark:border-slate-700 px-4 py-2 text-xs font-black rounded-xl shadow-[2px_2px_0_black] dark:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition disabled:opacity-50 cursor-pointer"
                       >
                         {loadingSimulados
                           ? "Carregando..."
@@ -579,25 +580,25 @@ export default function SimuladosPage() {
       {/* Modal de Histórico */}
       {showHistoricoModal && simuladoSelecionadoHistorico && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#F4EFE6] border-2 border-black rounded-2xl p-6 max-w-lg w-full shadow-[8px_8px_0_black]">
+          <div className="bg-[#F4EFE6] dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-[8px_8px_0_black] dark:shadow-none">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-black uppercase">
+              <h3 className="text-lg font-black uppercase text-slate-900 dark:text-slate-100">
                 Histórico: {simuladoSelecionadoHistorico.titulo}
               </h3>
               <button
                 onClick={() => setShowHistoricoModal(false)}
-                className="bg-red-400 text-white border-2 border-black px-3 py-1 font-black rounded-lg cursor-pointer hover:bg-red-500 transition"
+                className="bg-red-400 dark:bg-red-700 text-white border-2 border-black dark:border-slate-700 px-3 py-1 font-black rounded-lg cursor-pointer hover:bg-red-500 transition"
               >
                 ✕
               </button>
             </div>
-            <p className="text-xs font-bold text-slate-600 mb-3">
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-3">
               Clique em uma tentativa para ver o gabarito detalhado (acertos e
               erros):
             </p>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {historicoTentativas.length === 0 ? (
-                <p className="text-xs font-bold text-slate-500 text-center py-4">
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center py-4">
                   Você ainda não realizou tentativas neste simulado.
                 </p>
               ) : (
@@ -612,37 +613,37 @@ export default function SimuladosPage() {
                           handleSelecionarTentativaHistorico(h.id);
                         }
                       }}
-                      className={`bg-white border-2 border-black rounded-xl p-3 flex justify-between items-center text-xs transition ${
+                      className={`bg-white dark:bg-slate-800 border-2 border-black dark:border-slate-700 rounded-xl p-3 flex justify-between items-center text-xs transition ${
                         carregandoTentativaHistorico
                           ? "opacity-60 cursor-not-allowed"
-                          : "cursor-pointer hover:bg-cyan-50"
+                          : "cursor-pointer hover:bg-cyan-50 dark:hover:bg-slate-700"
                       }`}
                     >
                       <div>
-                        <span className="font-black mr-2">
+                        <span className="font-black mr-2 text-slate-900 dark:text-slate-100">
                           {estaCarregandoEstaTentativa
                             ? "Carregando tentativa..."
                             : `Tentativa #${h.numero}`}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded font-black border border-black ${
+                          className={`px-2 py-0.5 rounded font-black border border-black dark:border-slate-700 ${
                             h.status === "FINALIZADO"
-                              ? "bg-emerald-200"
+                              ? "bg-emerald-200 dark:bg-emerald-900 text-emerald-950 dark:text-emerald-100"
                               : h.status === "EXPIRADO"
-                              ? "bg-amber-200"
-                              : "bg-cyan-200"
+                              ? "bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-100"
+                              : "bg-cyan-200 dark:bg-cyan-900 text-cyan-950 dark:text-cyan-100"
                           }`}
                         >
                           {h.status}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-black">
+                        <span className="font-black text-slate-800 dark:text-slate-200">
                           Acertos: {h.acertos ?? 0} /{" "}
                           {h.totalQuestoes ||
                             simuladoSelecionadoHistorico.totalQuestoes}
                         </span>
-                        <span className="text-slate-400 font-black">→</span>
+                        <span className="text-slate-400 dark:text-slate-500 font-black">→</span>
                       </div>
                     </div>
                   );
