@@ -4,18 +4,20 @@ import { paymentService } from "../service/payment";
 const CONTAINER_ID = "checkout-card-payment";
 let brickLifecycle = Promise.resolve();
 
-export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, onError, onExpired }) {
+export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, onError, onExpired, payerAddress }) {
   const submitting = useRef(false);
   const onOrderRef = useRef(onOrder);
+  const payerAddressRef = useRef(payerAddress);
   const onErrorRef = useRef(onError);
   const onExpiredRef = useRef(onExpired);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     onOrderRef.current = onOrder;
+    payerAddressRef.current = payerAddress;
     onErrorRef.current = onError;
     onExpiredRef.current = onExpired;
-  }, [onOrder, onError, onExpired]);
+  }, [onOrder, onError, onExpired, payerAddress]);
 
   useEffect(() => {
     if (!publicKey || !quote?.quoteId) return undefined;
@@ -45,6 +47,10 @@ export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, 
         onReady: () => { if (active) setReady(true); },
         onError: () => { if (active) onErrorRef.current("Verifique os dados do cartão e tente novamente."); },
         onSubmit: async (cardData, additionalData) => {
+          if (!payerAddressRef.current) {
+            onErrorRef.current("Preencha o endereço real do pagador antes de pagar.");
+            throw new Error("Endereço do pagador incompleto");
+          }
           if (submitting.current) throw new Error("Pagamento em processamento.");
           if (!active || Date.parse(quote.expiresAt) <= Date.now()) {
             onErrorRef.current("A cotação expirou. Atualize o pagamento antes de tentar novamente.");
@@ -68,6 +74,7 @@ export default function CardPaymentBrick({ publicKey, quote, courseId, onOrder, 
               installments,
               paymentMethodId: cardData.payment_method_id,
               cardToken: cardData.token,
+              payerAddress: payerAddressRef.current,
             });
             if (active) onOrderRef.current(order);
           } catch (error) {
