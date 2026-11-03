@@ -414,7 +414,7 @@ export default function PaymentPage() {
                     </div>
 
                     <div className="flex justify-between items-baseline text-xs font-bold text-slate-600">
-                      <span>Ajuste do método:</span>
+                      <span>Taxas do cartão:</span>
                       <span>{taxAmount === null ? "—" : formatMoney(taxAmount)}</span>
                     </div>
                   </div>
@@ -593,6 +593,28 @@ export default function PaymentPage() {
                         ))}
                       </select>
                     </label>
+                    {validQuote && (
+                      <div className="rounded-xl border-2 border-[#7B5CFA] bg-[#7B5CFA]/5 p-3 text-sm text-slate-800" aria-live="polite">
+                        <p className="font-black">Resumo do parcelamento</p>
+                        <p className="mt-1">
+                          {installments}x de aproximadamente {formatMoney(finalAmount / installments)}
+                        </p>
+                        <p className="font-bold">Total no cartão: {formatMoney(finalAmount)}</p>
+                        {taxAmount > 0 ? (
+                          <p className="mt-2 text-xs">
+                            As taxas do cartão, no valor de {formatMoney(taxAmount)}, já estão incluídas no total antes da confirmação.
+                            Nenhuma taxa será acrescentada depois que o pagamento for confirmado.
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-xs">Esse é o total que será enviado para pagamento.</p>
+                        )}
+                        {installments > 1 && (
+                          <p className="mt-1 text-xs text-slate-600">
+                            O valor médio por parcela é aproximado; o total cobrado será exatamente {formatMoney(finalAmount)}.
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {validQuote && mpPublicKey ? (
                       <CardPaymentBrick
                         key={quote.quoteId}
