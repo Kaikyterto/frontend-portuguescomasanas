@@ -296,8 +296,8 @@ export default function SimuladosAdminPage() {
     }
   };
 
-  
-const handleAbrirModalGabarito = async (simuladoResumo) => {
+  // --- CORREÇÃO DE GABARITO (PATCH /api/simulados/{id}/gabarito) ---
+  const handleAbrirModalGabarito = async (simuladoResumo) => {
     try {
       const detalhe = await simuladoService.detalhar(simuladoResumo.id, token);
       
