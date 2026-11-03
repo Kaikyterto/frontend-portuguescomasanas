@@ -87,67 +87,8 @@ export default function UserPage() {
   // Estado para armazenar os cursos vindos da API
   const [cursos, setCursos] = useState([]);
 
-  // Função de Adquirir Curso com Integração Real ao Backend e Mercado Pago
-  const handleAdquirirCurso = async (curso) => {
-    const titulo = curso?.title || "o curso";
-
-    setModalConfig({
-      isOpen: true,
-      type: "success",
-      message: `Gerando link de pagamento seguro para "${titulo}"...`,
-    });
-
-    try {
-      const token = localStorage.getItem("@PortuguessComAnas:token");
-
-      const response = await fetch(
-        `https://backend-portugues-anas-9ffe.onrender.com/api/payments/checkout`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            cursoId: curso.id,
-            description: titulo,
-            amount: curso.precoNum,
-          }),
-        }
-      );
-
-      if (!response.ok)
-        throw new Error("Erro ao criar preferência de pagamento.");
-
-      const data = await response.json();
-
-      const checkoutUrl =
-        data.initPoint ||
-        data.sandboxInitPoint ||
-        data.init_point ||
-        data.sandbox_init_point ||
-        data.checkoutUrl ||
-        curso.checkoutUrl;
-
-      setTimeout(() => {
-        if (checkoutUrl) {
-          window.location.href = checkoutUrl;
-        } else {
-          setModalConfig({
-            isOpen: true,
-            type: "error",
-            message: "Link de pagamento não retornado pelo servidor.",
-          });
-        }
-      }, 1000);
-    } catch (error) {
-      console.error("Erro ao iniciar checkout:", error);
-      setModalConfig({
-        isOpen: true,
-        type: "error",
-        message: "Não foi possível iniciar o pagamento. Tente novamente.",
-      });
-    }
+  const handleAdquirirCurso = (curso) => {
+    if (curso?.id) navigate(`/payment/${curso.id}`);
   };
 
   useEffect(() => {

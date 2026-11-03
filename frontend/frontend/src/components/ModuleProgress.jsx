@@ -67,11 +67,13 @@ export default function ModuleProgress({ currentModule, onAdquirir }) {
         </button>
       ) : (
         <button
-  disabled
-  className="w-full sm:w-auto bg-slate-300 text-slate-500 border-2 border-black rounded-xl py-2 px-4 font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-not-allowed shrink-0 uppercase whitespace-nowrap self-end sm:self-auto"
->
-  Em breve
-</button>
+          type="button"
+          onClick={onAdquirir}
+          data-mp-checkout-cta="checkout-api"
+          className="w-full sm:w-auto bg-[#7B5CFA] text-white border-2 border-black rounded-xl py-2 px-4 font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer shrink-0 uppercase whitespace-nowrap self-end sm:self-auto"
+        >
+          Adquirir curso
+        </button>
       )}
     </Card>
   );

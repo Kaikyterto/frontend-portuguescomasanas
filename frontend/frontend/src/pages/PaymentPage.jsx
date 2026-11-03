@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { buscarPorId } from "../service/curso";
 import { paymentService } from "../service/payment";
+import CardPaymentBrick from "../components/CardPaymentBrick";
+
+const ORDER_KEY = (courseId) => `checkout-order:${courseId}`;
+const FINAL_FAILURES = new Set(["REJECTED", "CANCELED", "REFUNDED", "CHARGED_BACK", "ERROR"]);
 
 export default function PaymentPage() {
   const { id } = useParams();
@@ -16,11 +20,11 @@ export default function PaymentPage() {
 
   const [method, setMethod] = useState("PIX");
   const [installments, setInstallments] = useState(1);
-  const [availableMethods, setAvailableMethods] = useState([]);
-  const [installmentOptions, setInstallmentOptions] = useState([]);
+  const [availableChoices, setAvailableChoices] = useState([]);
   
   const [quote, setQuote] = useState(null);
   const [loadingQuote, setLoadingQuote] = useState(false);
+  const [quoteRevision, setQuoteRevision] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -34,11 +38,6 @@ export default function PaymentPage() {
     firstName: "",
     lastName: "",
     cpf: "",
-    cardNumber: "",
-    cardHolder: "",
-    cardExpiry: "",
-    cardCvv: "",
-    paymentMethodId: "visa",
     streetName: "",
     streetNumber: "",
     zipCode: "",
@@ -90,9 +89,15 @@ export default function PaymentPage() {
 
         try {
           const options = await paymentService.getQuoteOptions();
-          if (options) {
-            setAvailableMethods(options.methods || ["PIX", "BOLETO", "CREDIT_CARD"]);
-            setInstallmentOptions(options.installments || [1]);
+          if (Array.isArray(options)) {
+            setAvailableChoices(options);
+            if (!options.some((option) => option.method === "PIX" && option.installments === 1)) {
+              const first = options[0];
+              if (first) {
+                setMethod(first.method);
+                setInstallments(first.installments);
+              }
+            }
           }
         } catch (e) {
           console.warn("Não foi possível carregar as opções de cotação", e);
@@ -109,11 +114,27 @@ export default function PaymentPage() {
     carregarDadosIniciais();
   }, [cursoId]);
 
+  useEffect(() => {
+    if (!curso?.id) return;
+    const savedId = localStorage.getItem(ORDER_KEY(curso.id));
+    if (!savedId) return;
+    let active = true;
+    paymentService.getOrderStatus(savedId).then((order) => {
+      if (active) {
+        setMethod(order.method);
+        setInstallments(order.installments);
+        setCreatedOrder(order);
+      }
+    }).catch(() => localStorage.removeItem(ORDER_KEY(curso.id)));
+    return () => { active = false; };
+  }, [curso?.id]);
+
   const totalAmount = curso?.precoNum || 0;
 
   useEffect(() => {
     if (!curso?.id) return;
 
+    let active = true;
     async function atualizarCotacao() {
       try {
         setLoadingQuote(true);
@@ -125,66 +146,57 @@ export default function PaymentPage() {
           installments: method === "CREDIT_CARD" ? Number(installments) : 1,
         });
 
-        setQuote(quoteResp);
+        if (active) setQuote(quoteResp);
       } catch (err) {
         console.error("Erro ao criar cotação:", err);
-        setErrorMessage("Erro ao atualizar cotação do pagamento.");
+        if (active) setErrorMessage("Erro ao atualizar cotação do pagamento.");
       } finally {
-        setLoadingQuote(false);
+        if (active) setLoadingQuote(false);
       }
     }
 
     atualizarCotacao();
-  }, [curso?.id, method, installments]);
+    return () => { active = false; };
+  }, [curso?.id, method, installments, quoteRevision]);
 
   useEffect(() => {
-    let intervalId = null;
-
-    if (createdOrder?.id && !paymentSuccess) {
-      intervalId = setInterval(async () => {
+    if (!createdOrder?.id || paymentSuccess) return undefined;
+    let active = true;
+    const checkStatus = async () => {
         try {
           const statusResp = await paymentService.getOrderStatus(createdOrder.id);
-          const currentStatus = statusResp.status || statusResp.orderStatus;
+          if (!active) return;
+          setCreatedOrder(statusResp);
+          const currentStatus = statusResp.status;
 
-          if (currentStatus === "APPROVED" || currentStatus === "PAID" || currentStatus === "CONFIRMED") {
+          if (currentStatus === "APPROVED") {
             setPaymentSuccess(true);
             setLoading(false);
-            clearInterval(intervalId);
-          } else if (currentStatus === "REJECTED" || currentStatus === "CANCELLED" || currentStatus === "EXPIRED") {
-            setErrorMessage("O pagamento foi recusado ou expirou. Tente novamente.");
+            localStorage.removeItem(ORDER_KEY(curso.id));
+          } else if (FINAL_FAILURES.has(currentStatus)) {
+            const detail = statusResp.statusDetail ? `: ${statusResp.statusDetail}` : ".";
+            setErrorMessage(`Pagamento não concluído (${currentStatus})${detail} Pedido local: ${statusResp.id}.`);
             setLoading(false);
             setCreatedOrder(null);
-            clearInterval(intervalId);
+            localStorage.removeItem(ORDER_KEY(curso.id));
           }
         } catch (err) {
           console.error("Erro ao consultar status da ordem:", err);
         }
-      }, 5000);
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
     };
-  }, [createdOrder, paymentSuccess]);
+    checkStatus();
+    const intervalId = setInterval(checkStatus, 5000);
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, [createdOrder?.id, paymentSuccess, curso?.id]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let formattedVal = value;
 
-    if (name === "cardNumber") {
-      formattedVal = value
-        .replace(/\D/g, "")
-        .replace(/(.{4})/g, "$1 ")
-        .trim()
-        .slice(0, 19);
-    } else if (name === "cardExpiry") {
-      formattedVal = value
-        .replace(/\D/g, "")
-        .replace(/(\d{2})(\d)/, "$1/$2")
-        .slice(0, 5);
-    } else if (name === "cardCvv") {
-      formattedVal = value.replace(/\D/g, "").slice(0, 4);
-    } else if (name === "cpf") {
+    if (name === "cpf") {
       formattedVal = value.replace(/\D/g, "").slice(0, 11);
       formattedVal = formattedVal.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
     } else if (name === "state") {
@@ -213,41 +225,20 @@ export default function PaymentPage() {
     setTimeout(() => setPixCopied(false), 3000);
   };
 
-  const tokenizeCard = async () => {
-    if (!window.MercadoPago) {
-      throw new Error("SDK do Mercado Pago não encontrado no navegador.");
-    }
-
-    const mp = new window.MercadoPago(mpPublicKey);
-
-    const [expirationMonth, expirationYear] = formData.cardExpiry.split("/");
-
-    const tokenResult = await mp.createCardToken({
-      cardNumber: formData.cardNumber.replace(/\s+/g, ""),
-      cardholderName: formData.cardHolder || `${formData.firstName} ${formData.lastName}`,
-      cardExpirationMonth: expirationMonth,
-      cardExpirationYear: expirationYear?.length === 2 ? `20${expirationYear}` : expirationYear,
-      securityCode: formData.cardCvv,
-      identification: {
-        type: "CPF",
-        number: formData.cpf.replace(/\D/g, ""),
-      },
-    });
-
-    const deviceSessionId = mp.getDeviceSessionId ? mp.getDeviceSessionId() : undefined;
-
-    return {
-      cardToken: tokenResult.id,
-      deviceSessionId,
-    };
+  const handleCreatedOrder = (order) => {
+    localStorage.setItem(ORDER_KEY(curso.id), String(order.id));
+    setCreatedOrder(order);
+    if (order.challengeUrl) window.location.assign(order.challengeUrl);
   };
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     setErrorMessage("");
 
-    if (!quote?.id && !quote?.quoteId) {
-      setErrorMessage("Cotação inválida ou não carregada.");
+    if (!quote?.quoteId || Date.parse(quote.expiresAt) <= Date.now()
+        || quote.method !== method || Number(quote.installments) !== Number(installments)) {
+      setErrorMessage("Cotação inválida ou expirada. Aguarde a atualização.");
+      setQuoteRevision((current) => current + 1);
       return;
     }
 
@@ -279,23 +270,10 @@ export default function PaymentPage() {
           city: formData.city,
           state: formData.state,
         };
-      } else if (method === "CREDIT_CARD") {
-        payload.paymentMethodId = formData.paymentMethodId || "visa";
-        const { cardToken, deviceSessionId } = await tokenizeCard();
-        payload.cardToken = cardToken;
-        if (deviceSessionId) {
-          payload.deviceSessionId = deviceSessionId;
-        }
       }
 
       const orderResp = await paymentService.createOrder(payload);
-
-      if (orderResp?.challengeUrl) {
-        window.location.href = orderResp.challengeUrl;
-        return;
-      }
-
-      setCreatedOrder(orderResp);
+      handleCreatedOrder(orderResp);
     } catch (err) {
       console.error(err);
       setLoading(false);
@@ -330,9 +308,16 @@ export default function PaymentPage() {
     );
   }
 
-  const finalAmount = quote?.totalAmount ?? totalAmount;
-  const taxAmount = Number((finalAmount - totalAmount).toFixed(2));
-  const taxPercentage = totalAmount > 0 ? ((taxAmount / totalAmount) * 100).toFixed(1) : "0.0";
+  const validQuote = quote?.method === method
+    && Number(quote.installments) === Number(installments)
+    && Boolean(quote.quoteId)
+    && availableChoices.some((choice) => choice.method === method
+      && Number(choice.installments) === Number(installments));
+  const finalAmount = validQuote ? Number(quote.totalAmount) : null;
+  const taxAmount = validQuote ? Number(quote.adjustmentAmount) : null;
+  const installmentOptions = availableChoices
+    .filter((choice) => choice.method === "CREDIT_CARD")
+    .map((choice) => choice.installments);
 
   return (
     <div className="min-h-screen bg-[#F4EFE6] font-sans p-4 md:p-8 flex flex-col justify-center items-center">
@@ -397,8 +382,8 @@ export default function PaymentPage() {
                     </div>
 
                     <div className="flex justify-between items-baseline text-xs font-bold text-slate-600">
-                      <span>Taxa Mercado Pago ({taxPercentage}%):</span>
-                      <span>{formatMoney(taxAmount)}</span>
+                      <span>Ajuste do método:</span>
+                      <span>{taxAmount === null ? "—" : formatMoney(taxAmount)}</span>
                     </div>
                   </div>
                 </div>
@@ -408,7 +393,7 @@ export default function PaymentPage() {
                 <div className="flex justify-between items-center text-lg font-black text-slate-900">
                   <span>Total Final:</span>
                   <span className="text-xl text-[#7B5CFA]">
-                    {loadingQuote ? "Atualizando..." : formatMoney(finalAmount)}
+                    {loadingQuote || !validQuote ? "Atualizando..." : formatMoney(finalAmount)}
                   </span>
                 </div>
               </div>
@@ -423,6 +408,7 @@ export default function PaymentPage() {
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   <button
                     type="button"
+                    disabled={!availableChoices.some((choice) => choice.method === "CREDIT_CARD") || Boolean(createdOrder)}
                     onClick={() => setMethod("CREDIT_CARD")}
                     className={`p-3 rounded-xl border-3 border-black font-black text-xs md:text-sm flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
                       method === "CREDIT_CARD"
@@ -435,7 +421,8 @@ export default function PaymentPage() {
 
                   <button
                     type="button"
-                    onClick={() => setMethod("PIX")}
+                    disabled={!availableChoices.some((choice) => choice.method === "PIX") || Boolean(createdOrder)}
+                    onClick={() => { setMethod("PIX"); setInstallments(1); }}
                     className={`p-3 rounded-xl border-3 border-black font-black text-xs md:text-sm flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
                       method === "PIX"
                         ? "bg-[#00D2DF] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5"
@@ -447,7 +434,8 @@ export default function PaymentPage() {
 
                   <button
                     type="button"
-                    onClick={() => setMethod("BOLETO")}
+                    disabled={!availableChoices.some((choice) => choice.method === "BOLETO") || Boolean(createdOrder)}
+                    onClick={() => { setMethod("BOLETO"); setInstallments(1); }}
                     className={`p-3 rounded-xl border-3 border-black font-black text-xs md:text-sm flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
                       method === "BOLETO"
                         ? "bg-[#00D2DF] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5"
@@ -469,7 +457,9 @@ export default function PaymentPage() {
                     {method === "PIX" && (
                       <div className="p-4 bg-[#00D2DF]/10 border-2 border-black rounded-xl text-center space-y-3">
                         <p className="text-xs font-bold text-slate-800">
-                          Escaneie o QR Code ou copie o código Pix abaixo:
+                          {createdOrder.pixCode || createdOrder.qrCodeBase64
+                            ? "Escaneie o QR Code ou copie o código Pix abaixo:"
+                            : "Aguardando a emissão do Pix..."}
                         </p>
                         {createdOrder.qrCodeBase64 && (
                           <img
@@ -496,7 +486,7 @@ export default function PaymentPage() {
                     {method === "BOLETO" && (
                       <div className="p-4 bg-slate-100 border-2 border-black rounded-xl text-center space-y-3">
                         <p className="text-xs font-bold text-slate-800">
-                          Seu boleto foi gerado com sucesso!
+                          {createdOrder.ticketUrl ? "Seu boleto está disponível." : "Aguardando a emissão do boleto..."}
                         </p>
                         {createdOrder.ticketUrl && (
                           <a
@@ -525,8 +515,37 @@ export default function PaymentPage() {
                       </div>
                     )}
                   </div>
+                ) : method === "CREDIT_CARD" ? (
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black uppercase text-slate-800">
+                      Opções de parcelamento
+                      <select
+                        value={installments}
+                        onChange={(event) => setInstallments(Number(event.target.value))}
+                        className="w-full border-2 border-black rounded-lg p-2.5 font-bold text-xs bg-white"
+                      >
+                        {installmentOptions.map((count) => (
+                          <option key={count} value={count}>{count}x {count === 1 ? "(À vista)" : ""}</option>
+                        ))}
+                      </select>
+                    </label>
+                    {validQuote && mpPublicKey ? (
+                      <CardPaymentBrick
+                        key={quote.quoteId}
+                        publicKey={mpPublicKey}
+                        quote={quote}
+                        courseId={curso.id}
+                        onOrder={handleCreatedOrder}
+                        onError={setErrorMessage}
+                        onExpired={() => setQuoteRevision((current) => current + 1)}
+                      />
+                    ) : (
+                      <p className="text-xs font-bold">Aguardando cotação e formulário seguro do cartão...</p>
+                    )}
+                  </div>
                 ) : (
                   <form onSubmit={handleSubmitPayment} className="space-y-4">
+                    {method === "BOLETO" && <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-black uppercase mb-1 text-slate-800">
@@ -573,6 +592,7 @@ export default function PaymentPage() {
                       />
                     </div>
 
+                    </>}
                     {method === "BOLETO" && (
                       <div className="space-y-3 pt-2 border-t-2 border-slate-200">
                         <h3 className="text-xs font-black uppercase text-slate-700">
@@ -667,103 +687,13 @@ export default function PaymentPage() {
                       </div>
                     )}
 
-                    {method === "CREDIT_CARD" && (
-                      <div className="space-y-3 pt-2 border-t-2 border-slate-200">
-                        <div>
-                          <label className="block text-xs font-black uppercase mb-1 text-slate-800">
-                            Nome Impresso no Cartão
-                          </label>
-                          <input
-                            type="text"
-                            name="cardHolder"
-                            required
-                            placeholder="MARIA SILVA"
-                            value={formData.cardHolder}
-                            onChange={handleInputChange}
-                            className="w-full border-2 border-black rounded-lg p-2 font-bold text-xs bg-slate-50 focus:bg-white focus:outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-black uppercase mb-1 text-slate-800">
-                            Número do Cartão
-                          </label>
-                          <input
-                            type="text"
-                            name="cardNumber"
-                            required
-                            placeholder="0000 0000 0000 0000"
-                            value={formData.cardNumber}
-                            onChange={handleInputChange}
-                            className="w-full border-2 border-black rounded-lg p-2 font-bold text-xs bg-slate-50 focus:bg-white focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-black uppercase mb-1 text-slate-800">
-                              Validade (MM/AA)
-                            </label>
-                            <input
-                              type="text"
-                              name="cardExpiry"
-                              required
-                              placeholder="12/28"
-                              value={formData.cardExpiry}
-                              onChange={handleInputChange}
-                              className="w-full border-2 border-black rounded-lg p-2 font-bold text-xs bg-slate-50 text-center"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-black uppercase mb-1 text-slate-800">
-                              CVV
-                            </label>
-                            <input
-                              type="text"
-                              name="cardCvv"
-                              required
-                              placeholder="123"
-                              value={formData.cardCvv}
-                              onChange={handleInputChange}
-                              className="w-full border-2 border-black rounded-lg p-2 font-bold text-xs bg-slate-50 text-center"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-black uppercase mb-1 text-slate-800">
-                            Opções de Parcelamento
-                          </label>
-                          <select
-                            value={installments}
-                            onChange={(e) => setInstallments(Number(e.target.value))}
-                            className="w-full border-2 border-black rounded-lg p-2.5 font-bold text-xs bg-white cursor-pointer"
-                          >
-                            {installmentOptions.map((opt) => {
-                              const count = typeof opt === "object" ? opt.installments : opt;
-                              return (
-                                <option key={count} value={count}>
-                                  {count}x {count === 1 ? "(À vista)" : ""}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        </div>
-                      </div>
-                    )}
 
                     <button
                       type="submit"
-                      disabled={loading || loadingQuote}
+                      disabled={loading || loadingQuote || !validQuote}
                       className="w-full mt-6 bg-[#7B5CFA] text-white border-3 border-black rounded-xl py-3.5 font-black text-sm uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 transition cursor-pointer disabled:opacity-50"
                     >
-                      {loading
-                        ? "PROCESSANDO..."
-                        : method === "CREDIT_CARD"
-                        ? `PAGAR ${formatMoney(finalAmount)}`
-                        : method === "PIX"
-                        ? "GERAR PIX ➔"
-                        : "GERAR BOLETO BANCÁRIO ➔"}
+                      {loading ? "PROCESSANDO..." : method === "PIX" ? "GERAR PIX ➔" : "GERAR BOLETO BANCÁRIO ➔"}
                     </button>
                   </form>
                 )}
