@@ -174,7 +174,8 @@ export default function PaymentPage() {
             setLoading(false);
             localStorage.removeItem(ORDER_KEY(curso.id));
           } else if (FINAL_FAILURES.has(currentStatus)) {
-            setErrorMessage(`Pagamento não concluído${statusResp.statusDetail ? `: ${statusResp.statusDetail}` : "."}`);
+            const detail = statusResp.statusDetail ? `: ${statusResp.statusDetail}` : ".";
+            setErrorMessage(`Pagamento não concluído (${currentStatus})${detail} Pedido local: ${statusResp.id}.`);
             setLoading(false);
             setCreatedOrder(null);
             localStorage.removeItem(ORDER_KEY(curso.id));
