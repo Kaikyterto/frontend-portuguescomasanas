@@ -48,6 +48,7 @@ export default function PaymentPage() {
     firstName: "",
     lastName: "",
     cpf: "",
+    phone: "",
     streetName: "",
     streetNumber: "",
     zipCode: "",
@@ -209,6 +210,8 @@ export default function PaymentPage() {
     if (name === "cpf") {
       formattedVal = value.replace(/\D/g, "").slice(0, 11);
       formattedVal = formattedVal.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    } else if (name === "phone") {
+      formattedVal = value.replace(/\D/g, "").slice(0, 11);
     } else if (name === "state") {
       formattedVal = value.toUpperCase().slice(0, 2);
     }
@@ -256,6 +259,10 @@ export default function PaymentPage() {
 
     try {
       const cleanCpf = formData.cpf.replace(/\D/g, "");
+      const phoneDigits = formData.phone.replace(/\D/g, "");
+      if (phoneDigits && !/^\d{10,11}$/.test(phoneDigits)) {
+        throw new Error("Informe um telefone com DDD válido.");
+      }
       if (method === "PIX" && !isValidPayerAddress(formData)) {
         throw new Error("Preencha o endereço real do pagador para continuar.");
       }
@@ -267,6 +274,17 @@ export default function PaymentPage() {
         method,
         installments: method === "CREDIT_CARD" ? Number(installments) : 1,
       };
+      if (phoneDigits) {
+        payload.payerPhone = { areaCode: phoneDigits.slice(0, 2), number: phoneDigits.slice(2) };
+      }
+
+      if (method !== "BOLETO") {
+        const cpf = cleanCpf;
+        if (!/^[0-9]{11}$/.test(cpf)) {
+          throw new Error("Informe um CPF válido para identificar o pagador.");
+        }
+        payload.payerIdentification = { type: "CPF", number: cpf };
+      }
 
       if (method === "PIX") {
         payload.paymentMethodId = "pix";
@@ -468,7 +486,20 @@ export default function PaymentPage() {
 
                 {!createdOrder && method !== "BOLETO" && (
                   <div className="grid grid-cols-2 gap-2 mb-4">
-                    <p className="col-span-2 text-xs font-bold">Endereço do pagador</p>
+                    <p className="col-span-2 text-xs font-bold">Dados do pagador</p>
+                    <label className="col-span-2 text-xs font-bold">CPF
+                      <input name="cpf" value={formData.cpf} onChange={handleInputChange}
+                        inputMode="numeric" autoComplete="off" required maxLength={14}
+                        placeholder="000.000.000-00"
+                        className="w-full border-2 border-black rounded-lg p-2" />
+                    </label>
+                    <label className="col-span-2 text-xs font-bold">Telefone com DDD (opcional)
+                      <input name="phone" value={formData.phone} onChange={handleInputChange}
+                        inputMode="numeric" autoComplete="tel-national" maxLength={11}
+                        placeholder="11912345678"
+                        className="w-full border-2 border-black rounded-lg p-2" />
+                    </label>
+                    <p className="col-span-2 text-xs font-bold mt-2">Endereço do pagador</p>
                     {[['streetName', 'Rua'], ['streetNumber', 'Número'], ['zipCode', 'CEP'], ['city', 'Cidade'], ['state', 'UF']].map(([name, label]) => (
                       <label key={name} className="text-xs font-bold">{label}
                         <input name={name} value={formData[name]} onChange={handleInputChange}
@@ -569,6 +600,12 @@ export default function PaymentPage() {
                         quote={quote}
                         courseId={curso.id}
                         payerAddress={isValidPayerAddress(formData) ? toPayerAddress(formData) : null}
+                        payerIdentification={/^[0-9]{11}$/.test(formData.cpf.replace(/\D/g, ""))
+                          ? { type: "CPF", number: formData.cpf.replace(/\D/g, "") }
+                          : null}
+                        payerPhone={/^\d{10,11}$/.test(formData.phone.replace(/\D/g, ""))
+                          ? { areaCode: formData.phone.replace(/\D/g, "").slice(0, 2), number: formData.phone.replace(/\D/g, "").slice(2) }
+                          : null}
                         onOrder={handleCreatedOrder}
                         onError={setErrorMessage}
                         onExpired={() => setQuoteRevision((current) => current + 1)}
@@ -624,6 +661,14 @@ export default function PaymentPage() {
                         onChange={handleInputChange}
                         className="w-full border-2 border-black rounded-lg p-2 font-bold text-xs bg-slate-50 focus:bg-white focus:outline-none"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase mb-1 text-slate-800">Telefone com DDD (opcional)</label>
+                      <input type="tel" name="phone" inputMode="numeric" autoComplete="tel-national"
+                        maxLength={11} placeholder="11912345678" value={formData.phone}
+                        onChange={handleInputChange}
+                        className="w-full border-2 border-black rounded-lg p-2 font-bold text-xs bg-slate-50 focus:bg-white focus:outline-none" />
                     </div>
 
                     </>}
