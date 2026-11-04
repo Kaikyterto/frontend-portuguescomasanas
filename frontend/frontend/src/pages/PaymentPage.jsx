@@ -151,15 +151,23 @@ export default function PaymentPage() {
         setLoadingQuote(true);
         setErrorMessage("");
 
+        console.log("🟡 [DEBUG] Solicitando cotação...", {
+          cursoId: Number(curso.id),
+          method,
+          installments: method === "CREDIT_CARD" ? Number(installments) : 1,
+        });
+
         const quoteResp = await paymentService.createQuote({
           cursoId: Number(curso.id),
           method: method,
           installments: method === "CREDIT_CARD" ? Number(installments) : 1,
         });
 
+        console.log("🟢 [DEBUG] Cotação recebida com sucesso:", quoteResp);
+
         if (active) setQuote(quoteResp);
       } catch (err) {
-        console.error("Erro ao criar cotação:", err);
+        console.error("🔴 [DEBUG] Erro ao criar cotação:", err);
         if (active) setErrorMessage("Erro ao atualizar cotação do pagamento.");
       } finally {
         if (active) setLoadingQuote(false);
@@ -241,15 +249,26 @@ export default function PaymentPage() {
   const handleCreatedOrder = (order) => {
     localStorage.setItem(ORDER_KEY(curso.id), String(order.id));
     setCreatedOrder(order);
-
   };
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     setErrorMessage("");
 
+    console.log("🚀 [DEBUG] Tentando submeter pagamento. Estado atual:", {
+      method,
+      installments,
+      quote,
+    });
+
     if (!quote?.quoteId || Date.parse(quote.expiresAt) <= Date.now()
         || quote.method !== method || Number(quote.installments) !== Number(installments)) {
+      console.warn("⚠️ [DEBUG] Cotação inválida ou expirada no momento do submit!", {
+        quoteId: quote?.quoteId,
+        expiresAt: quote?.expiresAt,
+        quoteMethod: quote?.method,
+        quoteInstallments: quote?.installments,
+      });
       setErrorMessage("Cotação inválida ou expirada. Aguarde a atualização.");
       setQuoteRevision((current) => current + 1);
       return;
@@ -585,7 +604,11 @@ export default function PaymentPage() {
                       Opções de parcelamento
                       <select
                         value={installments}
-                        onChange={(event) => setInstallments(Number(event.target.value))}
+                        onChange={(event) => {
+                          const novaQtd = Number(event.target.value);
+                          console.log("🔄 [DEBUG] Alterando quantidade de parcelas para:", novaQtd);
+                          setInstallments(novaQtd);
+                        }}
                         className="w-full border-2 border-black rounded-lg p-2.5 font-bold text-xs bg-white"
                       >
                         {installmentOptions.map((count) => (

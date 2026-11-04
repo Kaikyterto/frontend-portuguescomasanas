@@ -1,16 +1,22 @@
 import { useState } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import Logo from "../assets/logo-sem-fundo.png";
 import { useTheme } from "../ThemeContext"; 
 
 export default function Navbar({ links = [], usuario }) {
   const nomeUsuario = usuario?.nome || "Estudante";
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
   const { theme, toggleTheme } = useTheme(); 
 
   // Verifica se o usuário é administrador
   const isAdmin = usuario?.perfil === "ADMIN" || usuario?.perfi === "admin";
+
+  const handleLogout = () => {
+    localStorage.removeItem("@PortuguessComAnas:token");
+    navigate("/login");
+  };
 
   return (
     <nav
@@ -79,12 +85,12 @@ export default function Navbar({ links = [], usuario }) {
           })}
         </div>
 
-        {/* ÁREA DO USUÁRIO, BOTÃO DE TEMA, PAINEL ADMIN E HAMBÚRGUER MOBILE */}
+        {/* ÁREA DO USUÁRIO, BOTÃO DE TEMA, PAINEL ADMIN, SAIR E HAMBÚRGUER MOBILE */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* BOTÃO DE TEMA (DESKTOP) */}
           <button
             onClick={toggleTheme}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-wider bg-amber-200 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-wider bg-amber-200 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition cursor-pointer"
             title="Alternar tema"
           >
             {theme === "dark" ? "☀️"  : "🌙"}
@@ -106,6 +112,15 @@ export default function Navbar({ links = [], usuario }) {
               {nomeUsuario.split(" ")[0]}
             </span>
           </div>
+
+          {/* BOTÃO DE SAIR / LOGOUT (DESKTOP) */}
+          <button
+            onClick={handleLogout}
+            className="hidden sm:flex items-center gap-1 bg-[#FF6B6B] hover:bg-red-500 text-black text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition cursor-pointer"
+            title="Terminar sessão"
+          >
+            Sair
+          </button>
 
           {/* BOTÃO HAMBÚRGUER (Visível apenas no mobile) */}
           <button
@@ -171,6 +186,17 @@ export default function Navbar({ links = [], usuario }) {
               Painel Admin
             </Link>
           )}
+
+          {/* BOTÃO DE SAIR / LOGOUT (MOBILE) */}
+          <button
+            onClick={() => {
+              setMenuAberto(false);
+              handleLogout();
+            }}
+            className="bg-[#FF6B6B] text-black text-xs font-black uppercase tracking-wider p-2.5 text-center rounded-lg border border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
+          >
+             Sair da conta
+          </button>
         </div>
       )}
     </nav>
