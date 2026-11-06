@@ -589,7 +589,13 @@ export default function UserPage() {
             )}
 
             <div className="flex-1 relative p-3 md:p-5 overflow-hidden flex flex-col bg-[#F4EFE6] dark:bg-slate-900">
-              <div className="flex-1 flex flex-col gap-3 max-h-[60vh] lg:max-h-[calc(100vh-320px)] overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4">
+             <div
+  className={`flex-1 flex flex-col gap-3 overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4 ${
+    questaoSelecionada
+      ? "max-h-none"
+      : "max-h-[60vh] lg:max-h-[calc(100vh-320px)]"
+  }`}
+>
                 {carregandoQuestoes && exibirBanco ? (
                   <div className="text-center font-bold text-slate-700 dark:text-slate-300 py-10 animate-pulse">
                     Carregando questões...
