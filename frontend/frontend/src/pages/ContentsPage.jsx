@@ -9,6 +9,7 @@ import { moduloService } from "../service/module";
 import { gravacaoService } from "../service/gravacao";
 import { aulaService } from "../service/aula";
 import { pdfService } from "../service/pdf";
+import { meetService } from "../service/meet"; 
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { links } from "../ultils/linksAdmin";
 import { API_URL } from "../config/api";
@@ -141,6 +142,7 @@ export default function ContentsPage() {
   const [isSubmittingDeleteQuestao, setIsSubmittingDeleteQuestao] =
     useState(false);
   const [isSubmittingPdf, setIsSubmittingPdf] = useState(false);
+  const [isSubmittingMeet, setIsSubmittingMeet] = useState(false); // 👈 Estado de submissão do Meet
 
   // Alerta Modal
   const [alertConfig, setAlertConfig] = useState({
@@ -188,6 +190,14 @@ export default function ContentsPage() {
   const [pdfOrdem, setPdfOrdem] = useState(1);
   const [pdfPublicado, setPdfPublicado] = useState(false);
   const [materiaisPdfCurso, setMateriaisPdfCurso] = useState([]);
+
+  // ==========================================
+  // ESTADOS PARA LINKS DO MEET
+  // ==========================================
+  const [selectedCursoForMeet, setSelectedCursoForMeet] = useState("");
+  const [meetTitulo, setMeetTitulo] = useState("");
+  const [meetUrl, setMeetUrl] = useState("");
+  const [meetLinksCurso, setMeetLinksCurso] = useState([]);
 
   // Modal de Módulos
   const [showModuloModal, setShowModuloModal] = useState(false);
@@ -470,6 +480,68 @@ export default function ContentsPage() {
         }
       }
     );
+  };
+
+  // ==========================================
+  // HANDLERS PARA LINKS DO MEET
+  // ==========================================
+  const handleCursoMeetChange = async (cursoId) => {
+    setSelectedCursoForMeet(cursoId);
+    setMeetLinksCurso([]);
+
+    if (!cursoId) return;
+    try {
+      const data = await meetService.listar(cursoId, { page: 0, size: 50 }, token);
+      setMeetLinksCurso(data?.content || (Array.isArray(data) ? data : []));
+    } catch (error) {
+      console.error("Erro ao carregar links do Meet:", error);
+    }
+  };
+
+  const handleCreateMeetLink = async (e) => {
+    e.preventDefault();
+    if (isSubmittingMeet) return;
+
+    if (!selectedCursoForMeet || !meetTitulo.trim() || !meetUrl.trim()) {
+      showAlert("Por favor, selecione o curso, preencha o título e a URL do Meet.", "error");
+      return;
+    }
+
+    setIsSubmittingMeet(true);
+    try {
+      const payload = {
+        titulo: meetTitulo.trim(),
+        url: meetUrl.trim(),
+      };
+
+      await meetService.criar(selectedCursoForMeet, payload, token);
+      showAlert("Link do Meet criado e vinculado com sucesso!");
+
+      setMeetTitulo("");
+      setMeetUrl("");
+
+      // Atualizar listagem
+      const data = await meetService.listar(selectedCursoForMeet, { page: 0, size: 50 }, token);
+      setMeetLinksCurso(data?.content || (Array.isArray(data) ? data : []));
+    } catch (error) {
+      console.error("Erro ao criar link do Meet:", error);
+      showAlert(`Erro ao criar link do Meet: ${error.message || error}`, "error");
+    } finally {
+      setIsSubmittingMeet(false);
+    }
+  };
+
+  const handleDeleteMeetLink = async (linkId) => {
+    showAlert("Deseja realmente excluir este link do Meet?", "confirm", async () => {
+      try {
+        await meetService.excluir(selectedCursoForMeet, linkId, token);
+        showAlert("Link do Meet excluído com sucesso!");
+        const data = await meetService.listar(selectedCursoForMeet, { page: 0, size: 50 }, token);
+        setMeetLinksCurso(data?.content || (Array.isArray(data) ? data : []));
+      } catch (err) {
+        showAlert("Erro ao excluir link do Meet: " + err.message, "error");
+      }
+    });
   };
 
   const handleCreateAula = async (e) => {
@@ -1021,7 +1093,7 @@ export default function ContentsPage() {
               Gerenciar Conteúdos
             </h1>
             <p className="font-bold text-slate-600 text-sm sm:text-base">
-              Crie cursos, aulas, materiais PDF, assuntos, bancas e questões integradas
+              Crie cursos, aulas, materiais PDF, links do Meet, assuntos, bancas e questões integradas
             </p>
           </div>
         </div>
@@ -2123,6 +2195,98 @@ export default function ContentsPage() {
                 </div>
               )}
             </Card>
+
+            {/* ========================================== */}
+            {/* FORMULÁRIO: CRIAR E VINCULAR LINKS DO MEET */}
+            {/* ========================================== */}
+            <Card className="bg-[#F4EFE6] border-2 border-black rounded-2xl shadow-[6px_6px_0_black] p-6">
+              <h2 className="font-black uppercase mb-5 text-xl">🔴 Criar e Vincular Link Meet</h2>
+              <form onSubmit={handleCreateMeetLink} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Selecione o Curso *
+                  </label>
+                  <select
+                    value={selectedCursoForMeet}
+                    disabled={isSubmittingMeet}
+                    onChange={(e) => handleCursoMeetChange(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  >
+                    <option value="">Escolha o curso...</option>
+                    {cursos.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.titulo || c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    Título da Aula / Reunião *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Aula Ao Vivo - Quarta-feira"
+                    value={meetTitulo}
+                    disabled={isSubmittingMeet}
+                    onChange={(e) => setMeetTitulo(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase mb-1">
+                    URL do Google Meet *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: https://meet.google.com/abc-defg-hij"
+                    value={meetUrl}
+                    disabled={isSubmittingMeet}
+                    onChange={(e) => setMeetUrl(e.target.value)}
+                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingMeet}
+                  className="w-full bg-red-400 text-white border-2 border-black rounded-xl py-3 font-black shadow-[3px_3px_0_black] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-red-500 transition"
+                >
+                  {isSubmittingMeet ? "A Criar Link..." : "Criar e Vincular Link Meet"}
+                </button>
+              </form>
+
+              {/* LISTAGEM DOS LINKS DO MEET DO CURSO SELECIONADO */}
+              {selectedCursoForMeet && meetLinksCurso.length > 0 && (
+                <div className="mt-6 pt-4 border-t-2 border-black">
+                  <h3 className="font-black uppercase text-xs mb-3">
+                    Links do Meet Vinculados ({meetLinksCurso.length})
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {meetLinksCurso.map((meet) => (
+                      <div
+                        key={meet.id}
+                        className="bg-white border-2 border-black rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="flex flex-col truncate">
+                          <span className="font-black truncate">{meet.titulo}</span>
+                          <span className="text-[10px] text-slate-500 truncate">{meet.url}</span>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteMeetLink(meet.id)}
+                          className="bg-red-400 text-white border border-black px-2 py-1 rounded text-[10px] font-black shrink-0 hover:bg-red-500 transition"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+
           </div>
         </div>
 
