@@ -87,8 +87,67 @@ export default function UserPage() {
   // Estado para armazenar os cursos vindos da API
   const [cursos, setCursos] = useState([]);
 
-  const handleAdquirirCurso = (curso) => {
-    if (curso?.id) navigate(`/payment/${curso.id}`);
+  // Função de Adquirir Curso com Integração Real ao Backend e Mercado Pago
+  const handleAdquirirCurso = async (curso) => {
+    const titulo = curso?.title || "o curso";
+
+    setModalConfig({
+      isOpen: true,
+      type: "success",
+      message: `Gerando link de pagamento seguro para "${titulo}"...`,
+    });
+
+    try {
+      const token = localStorage.getItem("@PortuguessComAnas:token");
+
+      const response = await fetch(
+        `https://backend-portugues-anas-9ffe.onrender.com/api/payments/checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            cursoId: curso.id,
+            description: titulo,
+            amount: curso.precoNum,
+          }),
+        }
+      );
+
+      if (!response.ok)
+        throw new Error("Erro ao criar preferência de pagamento.");
+
+      const data = await response.json();
+
+      const checkoutUrl =
+        data.initPoint ||
+        data.sandboxInitPoint ||
+        data.init_point ||
+        data.sandbox_init_point ||
+        data.checkoutUrl ||
+        curso.checkoutUrl;
+
+      setTimeout(() => {
+        if (checkoutUrl) {
+          window.location.href = checkoutUrl;
+        } else {
+          setModalConfig({
+            isOpen: true,
+            type: "error",
+            message: "Link de pagamento não retornado pelo servidor.",
+          });
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Erro ao iniciar checkout:", error);
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        message: "Não foi possível iniciar o pagamento. Tente novamente.",
+      });
+    }
   };
 
   useEffect(() => {
@@ -432,7 +491,7 @@ export default function UserPage() {
 
         {/* CONTAINER 2 */}
         <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
-          <Card className="flex-1 flex flex-col bg-[#F4EFE6] dark:bg-slate-900 h-[calc(100vh-140px)] lg:h-[calc(100vh-120px)] !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl">
+          <Card className="flex-1 flex flex-col bg-[#F4EFE6] dark:bg-slate-900 h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl">
             <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 ">
                 <span className="text-lg md:text-xl">
@@ -589,7 +648,7 @@ export default function UserPage() {
             )}
 
             <div className="flex-1 relative p-3 md:p-5 overflow-hidden flex flex-col bg-[#F4EFE6] dark:bg-slate-900">
-              <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4">
+              <div className="flex-1 flex flex-col gap-3 max-h-[60vh] lg:max-h-[calc(100vh-320px)] overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4">
                 {carregandoQuestoes && exibirBanco ? (
                   <div className="text-center font-bold text-slate-700 dark:text-slate-300 py-10 animate-pulse">
                     Carregando questões...
