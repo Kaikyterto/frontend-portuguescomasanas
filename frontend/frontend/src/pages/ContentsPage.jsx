@@ -196,7 +196,6 @@ export default function ContentsPage() {
   // ==========================================
   const [selectedCursoForMeet, setSelectedCursoForMeet] = useState("");
   const [meetTitulo, setMeetTitulo] = useState("");
-  const [meetDescricao, setMeetDescricao] = useState("");
   const [meetUrl, setMeetUrl] = useState("");
   const [meetLinksCurso, setMeetLinksCurso] = useState([]);
 
@@ -512,7 +511,6 @@ export default function ContentsPage() {
     try {
       const payload = {
         titulo: meetTitulo.trim(),
-        descricao: meetDescricao.trim() || null,
         url: meetUrl.trim(),
       };
 
@@ -520,7 +518,6 @@ export default function ContentsPage() {
       showAlert("Link do Meet criado e vinculado com sucesso!");
 
       setMeetTitulo("");
-      setMeetDescricao("");
       setMeetUrl("");
 
       // Atualizar listagem
@@ -2234,20 +2231,6 @@ export default function ContentsPage() {
                     value={meetTitulo}
                     disabled={isSubmittingMeet}
                     onChange={(e) => setMeetTitulo(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-black uppercase mb-1">
-                    Descrição / Horários (Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Quarta 20:40min e Sábado 16:40min"
-                    value={meetDescricao}
-                    disabled={isSubmittingMeet}
-                    onChange={(e) => setMeetDescricao(e.target.value)}
                     className="w-full border-2 border-black rounded-xl p-3 font-bold bg-white text-sm disabled:opacity-50"
                   />
                 </div>
