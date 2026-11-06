@@ -432,7 +432,7 @@ export default function UserPage() {
 
         {/* CONTAINER 2 */}
         <div className="flex-1 flex flex-col order-2 lg:order-2 w-full min-w-0">
-          <Card className="flex-1 flex flex-col bg-[#F4EFE6] dark:bg-slate-900 h-full !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl">
+          <Card className="flex-1 flex flex-col bg-[#F4EFE6] dark:bg-slate-900 h-[calc(100vh-140px)] lg:h-[calc(100vh-120px)] !overflow-x-hidden overflow-x-hidden !p-0 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl">
             <div className="px-4 py-3 md:px-5 md:py-4 border-b-2 border-black dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 ">
                 <span className="text-lg md:text-xl">
@@ -589,13 +589,7 @@ export default function UserPage() {
             )}
 
             <div className="flex-1 relative p-3 md:p-5 overflow-hidden flex flex-col bg-[#F4EFE6] dark:bg-slate-900">
-             <div
-  className={`flex-1 flex flex-col gap-3 overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4 ${
-    questaoSelecionada
-      ? "max-h-none"
-      : "max-h-[60vh] lg:max-h-[calc(100vh-320px)]"
-  }`}
->
+              <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-4">
                 {carregandoQuestoes && exibirBanco ? (
                   <div className="text-center font-bold text-slate-700 dark:text-slate-300 py-10 animate-pulse">
                     Carregando questões...
