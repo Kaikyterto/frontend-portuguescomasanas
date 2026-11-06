@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../assets/logo-sem-fundo.png";
 import { login } from "../service/auth";
 
 export default function Login() {
   const navigate = useNavigate();
+
+  // Verifica se já existe um token válido salvo ao carregar a tela de login
+  useEffect(() => {
+    const token = localStorage.getItem("@PortuguessComAnas:token");
+    if (token) {
+      navigate("/user");
+    }
+  }, [navigate]);
 
   const [form, setForm] = useState({
     email: "",
