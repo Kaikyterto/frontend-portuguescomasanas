@@ -7,7 +7,7 @@ import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
 import { aulaService } from "../service/aula";
 import { pdfService } from "../service/pdf";
-import { meetService } from "../service/meet"; // 👈 Importação do serviço do Meet
+import { meetService } from "../service/meet";
 
 export default function CursePage() {
   const navigate = useNavigate();
@@ -29,7 +29,6 @@ export default function CursePage() {
 
   // ESTADOS PARA OS LINKS DO MEET DA API
   const [meetLinks, setMeetLinks] = useState([]);
-  const [carregandoMeet, setCarregandoMeet] = useState(false);
 
   const [aulasAssistidas, setAulasAssistidas] = useState(() => {
     const salvo = localStorage.getItem(
@@ -57,24 +56,6 @@ export default function CursePage() {
     }
   };
 
-  // Handler para aceder à reunião de forma segura usando o endpoint /acessar
-  const handleAcessarMeet = async (linkId) => {
-    const token = localStorage.getItem("@PortuguessComAnas:token");
-    try {
-      setCarregandoMeet(true);
-      const urlDestino = await meetService.obterUrlAcesso(cursoId, linkId, token);
-      if (urlDestino) {
-        window.open(urlDestino, "_blank", "noopener,noreferrer");
-      } else {
-        alert("Não foi possível obter o link de redirecionamento.");
-      }
-    } catch (err) {
-      alert("Erro ao aceder ao Meet: " + err.message);
-    } finally {
-      setCarregandoMeet(false);
-    }
-  };
-
   useEffect(() => {
     async function carregarDadosPagina() {
       const token = localStorage.getItem("@PortuguessComAnas:token");
@@ -95,7 +76,6 @@ export default function CursePage() {
         setCursoData(dadosCurso);
         setModulos(dadosModulos || []);
 
-        // Carrega materiais PDF e Links do Meet em paralelo/sequência
         await Promise.all([
           carregarMateriaisPdf(token),
           carregarMeetLinks(token),
@@ -155,10 +135,6 @@ export default function CursePage() {
         : [...prev, aulaId]
     );
   };
-
-  // ==========================================
-  // HANDLERS PARA VISUALIZAÇÃO E DOWNLOAD DE PDF
-  // ==========================================
 
   const handleVisualizarPdf = async (material) => {
     const token = localStorage.getItem("@PortuguessComAnas:token");
@@ -251,7 +227,7 @@ export default function CursePage() {
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 sm:gap-6">
           <Card className="bg-[#F4EFE6] dark:bg-slate-900 !p-4 sm:!p-6 md:!p-8 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl sm:rounded-2xl flex flex-col gap-4 sm:gap-6">
             
-            {/* SECÇÃO DE LINKS DO MEET DINÂMICOS VINDO DO BACKEND */}
+            {/* SECÇÃO DE LINKS DO MEET DINÂMICOS */}
             {meetLinks.length > 0 && (
               <div className="flex flex-col gap-3">
                 {meetLinks.map((meet) => (
@@ -266,23 +242,22 @@ export default function CursePage() {
                       </span>
                       <div className="flex flex-col">
                         <span className="text-xs font-black uppercase tracking-wider text-red-700 dark:text-red-300 bg-red-200 dark:bg-red-900 px-2 py-0.5 rounded border border-red-400 dark:border-red-700 w-fit mb-1">
-                          🔴 AO VIVO: {meet.titulo || "Aula Ao Vivo"}
+                          🔴 AO VIVO
                         </span>
-                        {meet.descricao && (
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 break-all">
-                            {meet.descricao}
-                          </span>
-                        )}
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 break-all">
+                          {meet.titulo}
+                        </span>
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleAcessarMeet(meet.id)}
-                      disabled={carregandoMeet}
-                      className="bg-emerald-400 dark:bg-emerald-600 text-black dark:text-white text-center text-xs font-black px-4 py-2.5 rounded-lg border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-emerald-300 dark:hover:bg-emerald-500 transition shrink-0 cursor-pointer"
+                    <a
+                      href={meet.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-emerald-400 dark:bg-emerald-600 text-black dark:text-white text-center text-xs font-black px-4 py-2.5 rounded-lg border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-emerald-300 dark:hover:bg-emerald-500 transition shrink-0"
                     >
-                      {carregandoMeet ? "A aceder..." : "Entrar na Aula Ao Vivo"}
-                    </button>
+                      Entrar na Aula Ao Vivo
+                    </a>
                   </div>
                 ))}
               </div>
