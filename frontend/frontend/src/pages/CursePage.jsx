@@ -7,6 +7,7 @@ import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
 import { aulaService } from "../service/aula";
 import { pdfService } from "../service/pdf";
+import { meetService } from "../service/meet"; // 👈 Importação do serviço do Meet
 
 export default function CursePage() {
   const navigate = useNavigate();
@@ -26,12 +27,9 @@ export default function CursePage() {
   const [pdfVisualizando, setPdfVisualizando] = useState(null);
   const [carregandoPdf, setCarregandoPdf] = useState(false);
 
-  let LINK_MEET_FIXO = "";
-  if (Number(cursoId) === 8) {
-    LINK_MEET_FIXO = "https://meet.google.com/yfm-ektc-svr";
-  } else if (Number(cursoId) === 9) {
-    LINK_MEET_FIXO = "https://meet.google.com/ddq-bsqk-gaw";
-  }
+  // ESTADOS PARA OS LINKS DO MEET DA API
+  const [meetLinks, setMeetLinks] = useState([]);
+  const [carregandoMeet, setCarregandoMeet] = useState(false);
 
   const [aulasAssistidas, setAulasAssistidas] = useState(() => {
     const salvo = localStorage.getItem(
@@ -46,6 +44,34 @@ export default function CursePage() {
       setMateriaisPdf(data?.content || []);
     } catch (err) {
       console.error("Erro ao carregar materiais PDF do curso:", err);
+    }
+  };
+
+  // Função para carregar os links do Meet do backend
+  const carregarMeetLinks = async (token) => {
+    try {
+      const data = await meetService.listar(cursoId, { page: 0, size: 10 }, token);
+      setMeetLinks(data?.content || (Array.isArray(data) ? data : []));
+    } catch (err) {
+      console.error("Erro ao carregar links do Meet do curso:", err);
+    }
+  };
+
+  // Handler para aceder à reunião de forma segura usando o endpoint /acessar
+  const handleAcessarMeet = async (linkId) => {
+    const token = localStorage.getItem("@PortuguessComAnas:token");
+    try {
+      setCarregandoMeet(true);
+      const urlDestino = await meetService.obterUrlAcesso(cursoId, linkId, token);
+      if (urlDestino) {
+        window.open(urlDestino, "_blank", "noopener,noreferrer");
+      } else {
+        alert("Não foi possível obter o link de redirecionamento.");
+      }
+    } catch (err) {
+      alert("Erro ao aceder ao Meet: " + err.message);
+    } finally {
+      setCarregandoMeet(false);
     }
   };
 
@@ -69,8 +95,11 @@ export default function CursePage() {
         setCursoData(dadosCurso);
         setModulos(dadosModulos || []);
 
-        // Carrega apenas a lista de materiais em PDF disponíveis
-        await carregarMateriaisPdf(token);
+        // Carrega materiais PDF e Links do Meet em paralelo/sequência
+        await Promise.all([
+          carregarMateriaisPdf(token),
+          carregarMeetLinks(token),
+        ]);
 
         if (dadosModulos && dadosModulos.length > 0) {
           setModuloAtivo(dadosModulos[0].id);
@@ -183,7 +212,7 @@ export default function CursePage() {
     return (
       <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex items-center justify-center p-4">
         <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 animate-pulse uppercase tracking-wider text-center">
-          Carregando informações do curso...
+          A carregar informações do curso...
         </h1>
       </div>
     );
@@ -221,33 +250,41 @@ export default function CursePage() {
 
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 sm:gap-6">
           <Card className="bg-[#F4EFE6] dark:bg-slate-900 !p-4 sm:!p-6 md:!p-8 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl sm:rounded-2xl flex flex-col gap-4 sm:gap-6">
-            {(Number(cursoId) === 8 || Number(cursoId) === 9) && (
-              <div className="bg-red-100 dark:bg-red-950 border-2 border-black dark:border-slate-700 p-4 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="relative flex h-3 w-3 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
-                  </span>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-black uppercase tracking-wider text-red-700 dark:text-red-300 bg-red-200 dark:bg-red-900 px-2 py-0.5 rounded border border-red-400 dark:border-red-700 w-fit mb-1">
-                      🔴 AO VIVO
-                    </span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 break-all">
-                      {Number(cursoId) === 8
-                        ? "Aulas ao vivo na Quarta 20:40min e Sábado 16:40min"
-                        : "Aulas ao vivo na Quarta 19h:30min e Sábado 15h"}
-                    </span>
-                  </div>
-                </div>
+            
+            {/* SECÇÃO DE LINKS DO MEET DINÂMICOS VINDO DO BACKEND */}
+            {meetLinks.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {meetLinks.map((meet) => (
+                  <div
+                    key={meet.id}
+                    className="bg-red-100 dark:bg-red-950 border-2 border-black dark:border-slate-700 p-4 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="relative flex h-3 w-3 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black uppercase tracking-wider text-red-700 dark:text-red-300 bg-red-200 dark:bg-red-900 px-2 py-0.5 rounded border border-red-400 dark:border-red-700 w-fit mb-1">
+                          🔴 AO VIVO: {meet.titulo || "Aula Ao Vivo"}
+                        </span>
+                        {meet.descricao && (
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 break-all">
+                            {meet.descricao}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                <a
-                  href={LINK_MEET_FIXO}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-emerald-400 dark:bg-emerald-600 text-black dark:text-white text-center text-xs font-black px-4 py-2.5 rounded-lg border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-emerald-300 dark:hover:bg-emerald-500 transition shrink-0"
-                >
-                  Entrar na Aula Ao Vivo
-                </a>
+                    <button
+                      onClick={() => handleAcessarMeet(meet.id)}
+                      disabled={carregandoMeet}
+                      className="bg-emerald-400 dark:bg-emerald-600 text-black dark:text-white text-center text-xs font-black px-4 py-2.5 rounded-lg border-2 border-black dark:border-slate-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:bg-emerald-300 dark:hover:bg-emerald-500 transition shrink-0 cursor-pointer"
+                    >
+                      {carregandoMeet ? "A aceder..." : "Entrar na Aula Ao Vivo"}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
