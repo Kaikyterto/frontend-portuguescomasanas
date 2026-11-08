@@ -55,10 +55,21 @@ export async function createQuote(quoteData) {
 }
 
 export async function createOrder(orderData) {
+  let deviceSessionId = window.MP_DEVICE_SESSION_ID;
+  if (orderData.method === "CREDIT_CARD") {
+    const deadline = Date.now() + 3000;
+    while (!deviceSessionId && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      deviceSessionId = window.MP_DEVICE_SESSION_ID;
+    }
+    if (!deviceSessionId) {
+      throw new Error("Não foi possível validar este dispositivo. Atualize a página e tente novamente.");
+    }
+  }
   const response = await fetch(`${API_URL}/api/payments/orders`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ ...orderData, ...(window.MP_DEVICE_SESSION_ID ? { deviceSessionId: window.MP_DEVICE_SESSION_ID } : {}) }),
+    body: JSON.stringify({ ...orderData, ...(deviceSessionId ? { deviceSessionId } : {}) }),
   });
 
   const data = await response.json();
