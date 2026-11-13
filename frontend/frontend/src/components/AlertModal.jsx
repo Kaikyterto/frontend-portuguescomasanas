@@ -9,7 +9,7 @@ export default function AlertModal({
 }) {
   if (!isOpen) return null;
 
-  // Efeito para fechar sozinho após 3 segundos se for do tipo sucesso ou erro
+  
   useEffect(() => {
     if (type === "success" || type === "error") {
       const timer = setTimeout(() => {
