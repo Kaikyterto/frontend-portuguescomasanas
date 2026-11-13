@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Card from "../components/Card";
+import AlertModal from "../components/AlertModal"; 
 import { buscarDadosUsuarioLogado } from "../service/user";
 import { cursoService } from "../service/curso";
 import { moduloService } from "../service/module";
@@ -30,6 +31,14 @@ export default function CursePage() {
   // ESTADOS PARA OS LINKS DO MEET DA API
   const [meetLinks, setMeetLinks] = useState([]);
 
+  // ESTADO PARA O MODAL DE ALERTAS
+  const [modalInfo, setModalInfo] = useState({
+    isOpen: false,
+    type: "success",
+    message: "",
+    onConfirm: null,
+  });
+
   const [aulasAssistidas, setAulasAssistidas] = useState(() => {
     const salvo = localStorage.getItem(
       `@PortuguessComAnas:curso_${cursoId}_assistidas`
@@ -46,7 +55,6 @@ export default function CursePage() {
     }
   };
 
-  // Função para carregar os links do Meet do backend
   const carregarMeetLinks = async (token) => {
     try {
       const data = await meetService.listar(cursoId, { page: 0, size: 10 }, token);
@@ -151,7 +159,11 @@ export default function CursePage() {
         blobUrl,
       });
     } catch (err) {
-      alert("Erro ao abrir PDF: " + err.message);
+      setModalInfo({
+        isOpen: true,
+        type: "error",
+        message: "Erro ao abrir PDF: " + err.message,
+      });
     } finally {
       setCarregandoPdf(false);
     }
@@ -173,7 +185,11 @@ export default function CursePage() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (err) {
-      alert("Erro ao baixar PDF: " + err.message);
+      setModalInfo({
+        isOpen: true,
+        type: "error",
+        message: "Erro ao baixar PDF: " + err.message,
+      });
     }
   };
 
@@ -227,7 +243,6 @@ export default function CursePage() {
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 sm:gap-6">
           <Card className="bg-[#F4EFE6] dark:bg-slate-900 !p-4 sm:!p-6 md:!p-8 border-2 border-black dark:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none rounded-xl sm:rounded-2xl flex flex-col gap-4 sm:gap-6">
             
-            {/* SECÇÃO DE LINKS DO MEET DINÂMICOS */}
             {meetLinks.length > 0 && (
               <div className="flex flex-col gap-3">
                 {meetLinks.map((meet) => (
@@ -272,7 +287,6 @@ export default function CursePage() {
               </p>
             </div>
 
-            {/* MATERIAIS COMPLEMENTARES GERAIS DO CURSO (Sem vínculo a módulo/aula) */}
             {materiaisPdf.filter((m) => !m.moduloId).length > 0 && (
               <div className="flex flex-col gap-3 p-4 bg-amber-50 dark:bg-slate-800 border-2 border-black dark:border-slate-700 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
                 <h3 className="text-xs sm:text-sm font-black uppercase text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -325,7 +339,6 @@ export default function CursePage() {
               </div>
             )}
 
-            {/* LISTA DE MÓDULOS */}
             <div className="flex flex-col gap-3 sm:gap-4 mt-1">
               <h2 className="text-xs sm:text-sm font-black uppercase text-slate-900 dark:text-slate-100 tracking-wider">
                 Módulos do Curso ({modulos.length})
@@ -373,7 +386,6 @@ export default function CursePage() {
 
                         {isOpen && (
                           <div className="bg-slate-50 dark:bg-slate-950 p-3 sm:p-4 border-t-2 border-black dark:border-slate-800 flex flex-col gap-4">
-                            {/* AULAS DO MÓDULO */}
                             <div className="flex flex-col gap-2 mt-1">
                               <h4 className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">
                                 🎥 Aulas e Gravações do Módulo (
@@ -450,7 +462,6 @@ export default function CursePage() {
                                           </div>
                                         </div>
 
-                                        {/* PDFs VINCULADOS A ESTA AULA ESPECÍFICA */}
                                         {pdfsDaAula.length > 0 && (
                                           <div className="mt-2 pt-2 border-t border-dashed border-slate-300 dark:border-slate-700 flex flex-col gap-1.5">
                                             <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">
@@ -497,7 +508,6 @@ export default function CursePage() {
                               )}
                             </div>
 
-                            {/* PDFs DO MÓDULO (Sem vínculo direto com aula específica) */}
                             {pdfsDoModulo.filter((m) => !m.aulaId).length > 0 && (
                               <div className="flex flex-col gap-2 pt-2 border-t-2 border-black/10 dark:border-slate-800">
                                 <h4 className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">
@@ -653,6 +663,15 @@ export default function CursePage() {
           </div>
         </div>
       )}
+
+      
+      <AlertModal
+        isOpen={modalInfo.isOpen}
+        type={modalInfo.type}
+        message={modalInfo.message}
+        onClose={() => setModalInfo((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={modalInfo.onConfirm}
+      />
 
       <footer className="bg-[#F4EFE6] dark:bg-slate-950 py-4 text-center text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-400 border-t-2 border-black dark:border-slate-800 transition-colors">
         Português com Anas © 2026 - Todos os direitos reservados
