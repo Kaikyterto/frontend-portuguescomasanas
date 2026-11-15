@@ -39,12 +39,11 @@ export default function ForgotPasswordPage() {
     try {
       setLoading(true);
       await solicitarRedefinicao(email);
-      setSuccessMessage("Instruções enviadas! Verifique seu e-mail.");
+      setSuccessMessage(
+        "Instruções enviadas! Por favor, acesse seu e-mail e clique no link enviado para continuar com a redefinição de senha."
+      );
       
-      setTimeout(() => {
-        setSuccessMessage("");
-        setStep(2);
-      }, 1500);
+      // Mantemos a mensagem visível por mais tempo para o usuário ler o aviso do e-mail
     } catch (error) {
       setErrorMessage(error.message || "Erro ao solicitar redefinição.");
     } finally {
@@ -132,7 +131,7 @@ export default function ForgotPasswordPage() {
                   )}
 
                   {successMessage && (
-                    <div className="rounded-2xl border-[3px] border-black bg-[#4EFA94] p-3 text-center font-bold text-black shadow-[4px_4px_0px_#000]">
+                    <div className="rounded-2xl border-[3px] border-black bg-[#4EFA94] p-4 text-center font-bold text-black shadow-[4px_4px_0px_#000] text-sm leading-relaxed">
                       {successMessage}
                     </div>
                   )}
@@ -159,8 +158,6 @@ export default function ForgotPasswordPage() {
                 </p>
 
                 <form className="space-y-5" onSubmit={handleRedefinir}>
-                  {/* Campo de Token: Se quiser deixar oculto, pode trocar para type="hidden". 
-                      Caso queira permitir edição manual caso o link venha quebrado, mantenha como text. */}
                   <div>
                     <label className="font-semibold block mb-1.5 text-gray-800">
                       Código / Token
