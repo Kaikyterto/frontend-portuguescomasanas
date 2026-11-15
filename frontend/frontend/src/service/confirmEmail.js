@@ -1,22 +1,27 @@
-import api from "./api"; // Substitua pelo caminho da sua instância configurada do Axios
+import { API_URL } from "../config/api";
 
-/**
- * Confirma o cadastro do usuário através do token recebido via hash na URL.
- * @param {string} token - Token alfanumérico com traços/sublinhados.
- * @returns {Promise<void>}
- */
 export async function confirmarEmail(token) {
   try {
-    // O backend espera um POST na rota /api/usuario/email/confirmar 
-    // enviando um objeto com a propriedade { token }
-    await api.post("/api/usuario/email/confirmar", { token });
+    const response = await fetch(`${API_URL}/api/usuario/email/confirmar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token }),
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || data.error || `Erro ao confirmar e-mail (Status: ${response.status})`
+      );
+    }
+
+    return true;
   } catch (error) {
-    // Extrai a mensagem de erro formatada pelo backend, se houver
-    const mensagemErro =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      "Token inválido, expirado ou já utilizado.";
-      
-    throw new Error(mensagemErro);
+    console.error("Erro em confirmarEmail:", error);
+    throw error;
   }
 }
