@@ -1,22 +1,34 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../assets/logo-sem-fundo.png";
 import { solicitarRedefinicao, redefinirSenha } from "../service/esqueciSenha";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
-  // Controla em qual passo estamos: 1 (Pedir e-mail) ou 2 (Digitar token e nova senha)
-  const [step, setStep] = useState(1);
+  // Pega o token diretamente dos parâmetros da URL (?token=...)
+  const tokenFromUrl = searchParams.get("token") || "";
+
+  // Se houver token na URL, começa direto no passo 2; senão, começa no passo 1
+  const [step, setStep] = useState(tokenFromUrl ? 2 : 1);
 
   const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(tokenFromUrl);
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Atualiza o estado caso o token da URL mude dinamicamente
+  useEffect(() => {
+    if (tokenFromUrl) {
+      setToken(tokenFromUrl);
+      setStep(2);
+    }
+  }, [tokenFromUrl]);
 
   // Passo 1: Solicitar o envio do código/token
   const handleSolicitar = async (e) => {
@@ -29,7 +41,6 @@ export default function ForgotPasswordPage() {
       await solicitarRedefinicao(email);
       setSuccessMessage("Instruções enviadas! Verifique seu e-mail.");
       
-      // Avança para o passo 2 após 1.5s ou direto
       setTimeout(() => {
         setSuccessMessage("");
         setStep(2);
@@ -84,7 +95,7 @@ export default function ForgotPasswordPage() {
           <p className="mt-5 max-w-sm text-center text-gray-600 leading-7">
             {step === 1
               ? "Não se preocupe, vamos te ajudar a recuperar o acesso à sua conta de estudos."
-              : "Insira o código recebido por e-mail e defina sua nova senha de acesso."}
+              : "Insira sua nova senha de acesso."}
           </p>
         </div>
 
@@ -137,15 +148,19 @@ export default function ForgotPasswordPage() {
               </>
             )}
 
-            {/* PASSO 2: DIGITAR O TOKEN E A NOVA SENHA */}
+            {/* PASSO 2: DEFINIR A NOVA SENHA (TOKEN JÁ VINDO DA URL) */}
             {step === 2 && (
               <>
                 <h2 className="text-3xl sm:text-4xl font-black mb-2">Nova Senha</h2>
                 <p className="mb-8 text-gray-600">
-                  Insira o código/token recebido e sua nova senha.
+                  {tokenFromUrl 
+                    ? "Token reconhecido com sucesso! Insira sua nova senha abaixo." 
+                    : "Insira o código/token recebido e sua nova senha."}
                 </p>
 
                 <form className="space-y-5" onSubmit={handleRedefinir}>
+                  {/* Campo de Token: Se quiser deixar oculto, pode trocar para type="hidden". 
+                      Caso queira permitir edição manual caso o link venha quebrado, mantenha como text. */}
                   <div>
                     <label className="font-semibold block mb-1.5 text-gray-800">
                       Código / Token
@@ -156,7 +171,7 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => setToken(e.target.value)}
                       required
                       placeholder="Cole o código do e-mail"
-                      className="w-full rounded-2xl border-[3px] border-black px-5 py-3 sm:py-4 outline-none transition focus:border-[#57C2FF]"
+                      className="w-full rounded-2xl border-[3px] border-black px-5 py-3 sm:py-4 outline-none transition focus:border-[#57C2FF] bg-gray-100"
                     />
                   </div>
 
@@ -211,9 +226,9 @@ export default function ForgotPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="w-true text-center text-sm font-medium hover:underline text-gray-700 block mx-auto mt-2"
+                    className="text-center text-sm font-medium hover:underline text-gray-700 block mx-auto mt-2"
                   >
-                    ← Voltar e alterar e-mail
+                    ← Solicitar novo e-mail
                   </button>
                 </form>
               </>
