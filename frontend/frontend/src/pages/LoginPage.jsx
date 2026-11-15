@@ -136,7 +136,7 @@ export default function Login() {
             <div className="mt-6 flex flex-col gap-3 text-center text-sm sm:flex-row sm:justify-between">
               <button
                 type="button"
-                onClick={() => navigate("/esqueci-senha")}
+                onClick={() => navigate("/redefinir-senha")}
                 className="font-medium hover:underline text-left text-gray-700 hover:text-black"
               >
                 Esqueci minha senha
