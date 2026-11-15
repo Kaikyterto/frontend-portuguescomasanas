@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Logo from "../assets/logo-sem-fundo.png";
-import { confirmarEmail } from "../service/confirmarEmail"; // Ajuste o caminho do seu service
+import { confirmarEmail } from "../service/confirmEmail"; 
 
 export default function ConfirmEmailPage() {
   const navigate = useNavigate();
