@@ -94,11 +94,15 @@ export default function RegisterPage() {
         aceitouTermos: true,
       });
 
-      setSuccessMessage("Cadastro realizado com sucesso! Redirecionando...");
+      // Mensagem detalhada orientando a verificar o e-mail
+      setSuccessMessage(
+        "Cadastro realizado com sucesso! Enviamos um e-mail de confirmação para sua caixa de entrada. Por favor, acesse seu e-mail e clique no link para ativar o seu cadastro."
+      );
 
+      // Opcional: remover o redirecionamento automático imediato para dar tempo de ler o aviso, ou aumentar o tempo.
       setTimeout(() => {
         navigate("/login");
-      }, 2000);
+      }, 7000);
     } catch (error) {
       setErrorMessage(
         error.message || "Ocorreu um erro ao realizar o cadastro."
@@ -274,7 +278,7 @@ export default function RegisterPage() {
 
               {/* BOX DE SUCESSO ESTILIZADO NEO-BRUTALISTA (VERDE) */}
               {successMessage && (
-                <div className="rounded-2xl border-[3px] border-black bg-[#4EFA94] p-3 text-center font-bold text-black shadow-[4px_4px_0px_#000]">
+                <div className="rounded-2xl border-[3px] border-black bg-[#4EFA94] p-4 text-center font-bold text-black shadow-[4px_4px_0px_#000] text-sm leading-relaxed">
                   {successMessage}
                 </div>
               )}
