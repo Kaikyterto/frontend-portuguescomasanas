@@ -12,6 +12,7 @@ import SimuladosAdminPage from "./pages/SimuladosAdminPage";
 import SimuladosPage from "./pages/SimuladosPage";
 import PaymentPage from "./pages/PaymentPage";
 import ForgotPassword from "./pages/ForgotPasswordPage";
+import ConfirmEmailPage from "./pages/ConfirmEmailPage";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/redefinir-senha" element={<ForgotPassword />} />
+      <Route path="/confirmar-email" element={<ConfirmEmailPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/conteudos" element={<ConteudosPage />} />
